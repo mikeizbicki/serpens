@@ -1,0 +1,175 @@
+{
+  "crop": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "done": {
+    "nodes": {
+      "allenemieskilled": {
+        "condition": "all",
+        "variables": {
+          "countdown_enemy1": {
+            "op": "equal"
+          },
+          "countdown_enemy2": {
+            "op": "equal"
+          },
+          "countdown_enemy3": {
+            "op": "equal"
+          },
+          "countdown_enemy4": {
+            "op": "equal"
+          },
+          "countdown_enemy5": {
+            "op": "equal"
+          },
+          "countdown_enemy6": {
+            "op": "equal"
+          },
+          "countdown_rock1": {
+            "op": "equal"
+          },
+          "countdown_rock2": {
+            "op": "equal"
+          },
+          "countdown_rock3": {
+            "op": "equal"
+          },
+          "countdown_zora": {
+            "op": "equal"
+          },
+          "drop_enemy1": {
+            "op": "equal"
+          },
+          "drop_enemy2": {
+            "op": "equal"
+          },
+          "drop_enemy3": {
+            "op": "equal"
+          },
+          "drop_enemy4": {
+            "op": "equal"
+          },
+          "drop_enemy5": {
+            "op": "equal"
+          },
+          "drop_enemy6": {
+            "op": "equal"
+          },
+          "enemy_1_direction": {
+            "measurement": "delta",
+            "op": "equal"
+          },
+          "enemy_1_x": {
+            "measurement": "delta",
+            "op": "equal"
+          },
+          "enemy_1_y": {
+            "measurement": "delta",
+            "op": "equal"
+          },
+          "enemy_2_direction": {
+            "measurement": "delta",
+            "op": "equal"
+          },
+          "enemy_2_x": {
+            "measurement": "delta",
+            "op": "equal"
+          },
+          "enemy_2_y": {
+            "measurement": "delta",
+            "op": "equal"
+          },
+          "enemy_3_direction": {
+            "measurement": "delta",
+            "op": "equal"
+          },
+          "enemy_3_x": {
+            "measurement": "delta",
+            "op": "equal"
+          },
+          "enemy_3_y": {
+            "measurement": "delta",
+            "op": "equal"
+          },
+          "enemy_4_direction": {
+            "measurement": "delta",
+            "op": "equal"
+          },
+          "enemy_4_x": {
+            "measurement": "delta",
+            "op": "equal"
+          },
+          "enemy_4_y": {
+            "measurement": "delta",
+            "op": "equal"
+          },
+          "enemy_5_direction": {
+            "measurement": "delta",
+            "op": "equal"
+          },
+          "enemy_5_x": {
+            "measurement": "delta",
+            "op": "equal"
+          },
+          "enemy_5_y": {
+            "measurement": "delta",
+            "op": "equal"
+          },
+          "enemy_6_direction": {
+            "measurement": "delta",
+            "op": "equal"
+          },
+          "enemy_6_x": {
+            "measurement": "delta",
+            "op": "equal"
+          },
+          "enemy_6_y": {
+            "measurement": "delta",
+            "op": "equal"
+          },
+          "enemystate_1": {
+            "op": "equal"
+          },
+          "enemystate_2": {
+            "op": "equal"
+          },
+          "enemystate_3": {
+            "op": "equal"
+          },
+          "enemystate_4": {
+            "op": "equal"
+          },
+          "enemystate_unk": {
+            "op": "equal"
+          },
+          "framecounter": {
+            "op": "equal"
+          }
+        }
+      }
+    },
+    "script": "lua:all_enemies_killed",
+    "variables": {
+      "link_numdeaths": {
+        "op": "greater-than"
+      },
+      "screen_mode": {
+        "op": "not-equal",
+        "reference": 5
+      }
+    }
+  },
+  "reward": {
+    "variables": {
+      "killed_enemies": {
+        "reward": 1.0
+      }
+    }
+  },
+  "scripts": [
+    "script2.lua"
+  ]
+}

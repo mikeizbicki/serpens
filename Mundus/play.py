@@ -1,10 +1,12 @@
 import retro
 import gymnasium
 import pyglet
+import pyaudio
 import time
 import numpy as np
 import random
 import os
+import logging
 
 from Mundus.Wrappers import *
 
@@ -23,7 +25,7 @@ for name in dir(keycodes):
 
 
 class Interactive(gymnasium.Wrapper):
-    def __init__(self, env, maxfps=60):
+    def __init__(self, env, maxfps=30):
         super().__init__(env)
 
         self.action_override = False
@@ -132,10 +134,59 @@ class Interactive(gymnasium.Wrapper):
         return [inputs[b] for b in self.env.buttons]
 
 
+class PlayAudio(gymnasium.Wrapper):
+    def __init__(self, env):
+        super().__init__(env)
+        self.chunks = []
+        self.frame_index = 0
+    
+        def buffer_size():
+            return sum([len(chunk) for chunk in self.chunks]) - self.frame_index
+
+        def playing_callback(in_data, frame_count, time_info, status):
+            frame_count *= 2
+            if len(self.chunks) == 0:
+                data = np.array([0]*frame_count).astype('int16')
+            else:
+                chunk0 = self.chunks[0]
+                chunk0_len = self.chunks[0].shape[0]
+                data = chunk0[self.frame_index:self.frame_index + frame_count]
+                self.frame_index += frame_count
+                if len(data) < frame_count:
+                    self.chunks = self.chunks[1:]
+                    self.frame_index = 0
+                    frame_count_diff = frame_count - len(data)
+                    if len(self.chunks) == 0:
+                        data = np.concatenate([data, [0]*frame_count_diff])
+                    else:
+                        data = np.concatenate([data, self.chunks[0][:frame_count_diff]])
+                        self.frame_index = frame_count_diff
+            return (data, pyaudio.paContinue)
+
+        p = pyaudio.PyAudio()
+        self.stream = p.open(
+                format=pyaudio.paInt16,
+                channels=2,
+                rate=int(env.em.get_audio_rate()/2),
+                output=True,
+                stream_callback=playing_callback,
+                )
+
+    def step(self, actions):
+        data = self.env.em.get_audio().flatten().astype('int16')
+        self.chunks.append(data)
+        if len(self.chunks) > 10:
+            logging.warning('audiobuffer overflowing, truncating self.chunks')
+            self.chunks = self.chunks[-1:]
+        return super().step(actions)
+
+    def close(self):
+        self.stream.close()
+        p.terminate()
+        super().close()
+    
+
 def main():
-    '''
-    sound code: https://github.com/openai/retro/issues/76
-    '''
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--game", default="Zelda-Nes")
@@ -143,10 +194,9 @@ def main():
     parser.add_argument("--scenario", default=None)
     args = parser.parse_args()
 
+    # create the environment
     custom_path = os.path.join(os.getcwd(), 'custom_integrations')
     retro.data.Integrations.add_custom_path(custom_path)
-
-    # create the environment
     env = retro.make(
             game=args.game,
             inttype=retro.data.Integrations.ALL
@@ -155,29 +205,18 @@ def main():
     env = ObserveVariables(env)
     env = RandomStateReset(env, path='custom_integrations/'+args.game)
     env = Interactive(env)
+    env = PlayAudio(env)
     env.reset()
 
-    # main gaim loop
-    start_time = time.time()
-    i = 0
-    total_printed = 0
-    frames_since_print = 0
+    # main game loop
     while True:
-        i += 1
-        frames_since_print += 1
         action = env.action_space.sample()
         observation, reward, terminated, truncated, info = env.step(action)
         env.render()
         if terminated or truncated:
             env.reset()
-        elapsed = time.time() - start_time
-        if elapsed > total_printed:
-            total_printed += 1
-            print(f' total_printed={total_printed} elapsed={elapsed} fps={frames_since_print}')
-            frames_since_print = 0
 
     env.close()
-
 
 
 if __name__ == "__main__":

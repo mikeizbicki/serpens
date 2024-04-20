@@ -1,0 +1,9 @@
+[submodule "gym-zelda-1"]
+	path = gym-zelda-1
+	url = https://github.com/Kautenja/gym-zelda-1
+[submodule "nesgym"]
+	path = nesgym
+	url = https://github.com/codescv/nesgym
+[submodule "stable-retro"]
+	path = stable-retro
+	url = https://github.com/Farama-Foundation/stable-retro

@@ -2,6 +2,11 @@ import retro
 import gymnasium
 import pyglet
 import time
+import numpy as np
+import random
+import os
+
+from Mundus.Wrappers import *
 
 
 # pyglet doesn't seem to have a map built-in for converting keycodes to names;
@@ -18,7 +23,7 @@ for name in dir(keycodes):
 
 
 class Interactive(gymnasium.Wrapper):
-    def __init__(self, env, maxfps=60000):
+    def __init__(self, env, maxfps=60):
         super().__init__(env)
 
         self.action_override = False
@@ -29,7 +34,10 @@ class Interactive(gymnasium.Wrapper):
         # setup the key handler
         self._key_previous_states = {}
         self._key_handler = pyglet.window.key.KeyStateHandler()
-        self.render() # create the self.viewer object
+
+        # NOTE:
+        # self.render() is needed to create the self.viewer object
+        self.render() 
         self.viewer.window.push_handlers(self._key_handler)
 
     def get_maxfps(self):
@@ -65,14 +73,8 @@ class Interactive(gymnasium.Wrapper):
 
             if name == 'SPACE':
                 #lang_input = input('Language input: ')
-
                 import code
                 code.interact(local=locals())
-                #state = self.em.get_state()
-                #import gzip
-                #with gzip.open('snapshot.state', mode='wb') as f:
-                    #f.write(state)
-                #print(f"state={state}")
                 self.action_override = prev_action_override
 
         for name in keys_pressed:
@@ -129,47 +131,33 @@ class Interactive(gymnasium.Wrapper):
         #print(f"pushed_buttons={pushed_buttons}")
         return [inputs[b] for b in self.env.buttons]
 
+
 def main():
-    import os
+    '''
+    sound code: https://github.com/openai/retro/issues/76
+    '''
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--game", default="Zelda-Nes")
+    parser.add_argument("--state", default=retro.State.DEFAULT)
+    parser.add_argument("--scenario", default=None)
+    args = parser.parse_args()
+
     custom_path = os.path.join(os.getcwd(), 'custom_integrations')
     retro.data.Integrations.add_custom_path(custom_path)
 
+    # create the environment
     env = retro.make(
-            #game="GauntletII-Nes",
-            game="Zelda-Nes",
-            #game="MyMario-Nes",
-            #game="Gauntlet-Sms",
-            #game="Gauntlet-Genesis",
-            #render_mode="rgb_array",
+            game=args.game,
             inttype=retro.data.Integrations.ALL
             )
+    env = StochasticFrameSkip(env, 4, 0.25)
+    env = ObserveVariables(env)
+    env = RandomStateReset(env, path='custom_integrations/'+args.game)
     env = Interactive(env)
     env.reset()
 
-    #print(f"env.statename={env.statename}")
-
-
-    '''
-    from stable_baselines3 import PPO
-    model = PPO(
-        policy="CnnPolicy",
-        env=env,
-        learning_rate=lambda f: f * 2.5e-4,
-        n_steps=128,
-        batch_size=32,
-        n_epochs=4,
-        gamma=0.99,
-        gae_lambda=0.95,
-        clip_range=0.1,
-        ent_coef=0.01,
-        verbose=1,
-    )
-    model.learn(
-        total_timesteps=100_000_000,
-        log_interval=1,
-    )
-    '''
-
+    # main gaim loop
     start_time = time.time()
     i = 0
     total_printed = 0
@@ -191,6 +179,6 @@ def main():
     env.close()
 
 
+
 if __name__ == "__main__":
     main()
-

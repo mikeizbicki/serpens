@@ -208,6 +208,10 @@
       "address": 1584,
       "type": "|u1"
     },
+    "player1_buttons": {
+      "address": 250,
+      "type": "|u1"
+    },
     "projectile_1_direction": {
       "address": 160,
       "type": "|u1"

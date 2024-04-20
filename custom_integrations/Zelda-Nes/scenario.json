@@ -9,21 +9,9 @@
     "script": "lua:scenario_screenbattle_done"
   },
   "reward": {
-    "script": "lua:scenario_screenbattle_reward",
-    "variables": {
-      "link_items_bombs": {
-        "reward": 0.10000000149011612
-      },
-      "link_items_keys": {
-        "reward": 0.10000000149011612
-      },
-      "link_items_rupees": {
-        "reward": 0.10000000149011612
-      }
-    }
+    "script": "lua:scenario_screenbattle_reward"
   },
   "scripts": [
-    "script.lua",
     "script.lua"
   ]
 }

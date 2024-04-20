@@ -100,11 +100,33 @@ function diff_items_value()
     return retvalue
 end
 
+prev_link_direction = -1
+prev_link_sword = -1
+function spam_penalty()
+    local new_link_direction = data.link_direction
+    local new_link_sword = math.floor(data.player1_buttons / 126)
+    local retvalue = 0
+    if prev_link_sword ~= 1 and new_link_sword == 1 then
+        retvalue = retvalue + 1
+    end
+    if prev_link_direction >= 0 and prev_link_direction ~= new_link_direction then
+        retvalue = retvalue + 1
+    end
+    prev_link_direction = new_link_direction
+    prev_link_sword = new_link_sword
+    return retvalue
+end
+
+
 function scenario_screenbattle_done()
     return link_hearts() == 0 or data.screen_mode ~= 5 or all_enemies_killed()
 end
 
 function scenario_screenbattle_reward()
-    return diff_link_hearts() + diff_killed_enemies() + 0.1 * diff_items_value()
+    screen_change_penalty = 0
+    if data.screen_mode ~= 5 then
+        screen_change_penalty = -10
+    end
+    return diff_link_hearts() + diff_killed_enemies() + 0.1 * diff_items_value() + screen_change_penalty -- - 0.001 * spam_penalty() 
     -- return diff_killed_enemies()
 end

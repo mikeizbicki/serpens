@@ -123,10 +123,16 @@ function scenario_screenbattle_done()
 end
 
 function scenario_screenbattle_reward()
-    screen_change_penalty = 0
+    endmod = 0
     if data.screen_mode ~= 5 then
-        screen_change_penalty = -10
+        endmod = endmod - 10
     end
-    return diff_link_hearts() + diff_killed_enemies() + 0.1 * diff_items_value() + screen_change_penalty -- - 0.001 * spam_penalty() 
+    if link_hearts() == 0 then
+        endmod = endmod - 2
+    end
+    if all_enemies_killed() then
+        endmod = endmod + 2
+    end
+    return diff_link_hearts() + diff_killed_enemies() + 0.1 * diff_items_value() + endmod - 0.01 * spam_penalty() 
     -- return diff_killed_enemies()
 end

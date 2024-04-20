@@ -99,6 +99,9 @@ class ObserveVariables(gymnasium.Wrapper):
 
 class RandomStateReset(gymnasium.Wrapper):
     '''
+    Whenever reset() is called, restart at a random state instead of the scenario's predefined state.
+    This is useful when all the predefined states have some bias on what good behavior is,
+    and starting at random states can smooth over that bias.
     '''
     def __init__(self, env, path):
         super().__init__(env)

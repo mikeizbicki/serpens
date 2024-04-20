@@ -1,4 +1,12 @@
 venv*
 old
+
+# fceux junk
+*.cdl
+*.ram.nl
+
+# python junk
 *.pyc
+
+# vim junk
 *.swo

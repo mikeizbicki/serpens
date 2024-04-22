@@ -65,7 +65,7 @@ def main():
     parser.add_argument("--state", default=retro.State.DEFAULT)
     parser.add_argument("--scenario", default=None)
     parser.add_argument("--log_dir", default='log')
-    parser.add_argument("--nproc", type=int, default=3)
+    parser.add_argument("--nproc", type=int, default=4)
     args = parser.parse_args()
 
     # create the environment
@@ -80,6 +80,7 @@ def main():
         env = TimeLimit(env, max_episode_steps=30*60*5)
         #env = StochasticFrameSkip(env, 4, 0.25)
         env = ObserveVariables(env)
+        env = FrameStack(env, 4)
         env = RandomStateReset(env, path='custom_integrations/'+args.game)
         return env
     env = SubprocVecEnv([make_env] * args.nproc)
@@ -102,7 +103,7 @@ def main():
         clip_range=0.1,
         ent_coef=0.01,
         verbose=1,
-        policy_kwargs={'net_arch': [96, 96]}
+        #policy_kwargs={'net_arch': [96, 96]}
     )
     #model = stable_baselines3.PPO('MlpPolicy', env, verbose=1)
     callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=args.log_dir)

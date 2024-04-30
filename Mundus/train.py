@@ -65,7 +65,7 @@ def main():
     parser.add_argument("--state", default=retro.State.DEFAULT)
     parser.add_argument("--scenario", default=None)
     parser.add_argument("--log_dir", default='log')
-    parser.add_argument("--nproc", type=int, default=4)
+    parser.add_argument("--nproc", type=int, default=3)
     args = parser.parse_args()
 
     # create the environment
@@ -79,6 +79,7 @@ def main():
                 )
         env = TimeLimit(env, max_episode_steps=30*60*5)
         #env = StochasticFrameSkip(env, 4, 0.25)
+        env = ZeldaWrapper(env)
         env = ObserveVariables(env)
         env = FrameStack(env, 4)
         env = RandomStateReset(env, path='custom_integrations/'+args.game)
@@ -93,8 +94,8 @@ def main():
     model = stable_baselines3.PPO(
         policy="MlpPolicy",
         env=env,
-        #learning_rate=lambda f: f * 2.5e-4,
-        learning_rate=lambda f: f * 2.5e-3,
+        learning_rate=lambda f: f * 2.5e-4,
+        #learning_rate=lambda f: f * 2.5e-3,
         n_steps=128,
         batch_size=32,
         n_epochs=4,

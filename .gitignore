@@ -1,6 +1,7 @@
 venv*
 old
 log
+tmp
 
 # fceux junk
 *.cdl

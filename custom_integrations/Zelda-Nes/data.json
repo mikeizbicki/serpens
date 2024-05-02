@@ -8,27 +8,27 @@
       "address": 56,
       "type": "|u1"
     },
-    "countdown_enemy1": {
+    "enemy_1_countdown": {
       "address": 41,
       "type": "|u1"
     },
-    "countdown_enemy2": {
+    "enemy_2_countdown": {
       "address": 42,
       "type": "|u1"
     },
-    "countdown_enemy3": {
+    "enemy_3_countdown": {
       "address": 43,
       "type": "|u1"
     },
-    "countdown_enemy4": {
+    "enemy_4_countdown": {
       "address": 44,
       "type": "|u1"
     },
-    "countdown_enemy5": {
+    "enemy_5_countdown": {
       "address": 45,
       "type": "|u1"
     },
-    "countdown_enemy6": {
+    "enemy_6_countdown": {
       "address": 46,
       "type": "|u1"
     },
@@ -48,35 +48,27 @@
       "address": 51,
       "type": "|u1"
     },
-    "deleteme_6530": {
-      "address": 25904,
-      "type": "|u1"
-    },
-    "deleteme_6ba2": {
-      "address": 27554,
-      "type": "|u4"
-    },
-    "drop_enemy1": {
+    "enemy_1_drop": {
       "address": 173,
       "type": "|u1"
     },
-    "drop_enemy2": {
+    "enemy_2_drop": {
       "address": 174,
       "type": "|u1"
     },
-    "drop_enemy3": {
+    "enemy_3_drop": {
       "address": 175,
       "type": "|u1"
     },
-    "drop_enemy4": {
+    "enemy_4_drop": {
       "address": 176,
       "type": "|u1"
     },
-    "drop_enemy5": {
+    "enemy_5_drop": {
       "address": 177,
       "type": "|u1"
     },
-    "drop_enemy6": {
+    "enemy_6_drop": {
       "address": 178,
       "type": "|u1"
     },
@@ -200,23 +192,23 @@
       "address": 138,
       "type": "|u1"
     },
-    "enemystate_1": {
+    "enemy_1_state": {
       "address": 180,
       "type": "|u1"
     },
-    "enemystate_2": {
+    "enemy_2_state": {
       "address": 181,
       "type": "|u1"
     },
-    "enemystate_3": {
+    "enemy_3_state": {
       "address": 182,
       "type": "|u1"
     },
-    "enemystate_4": {
+    "enemy_4_state": {
       "address": 179,
       "type": "|u1"
     },
-    "enemystate_unk": {
+    "enemy_unk_state": {
       "address": 183,
       "type": "|u1"
     },
@@ -240,19 +232,19 @@
       "address": 150,
       "type": "|u1"
     },
-    "link_char_animation": {
+    "link_animation": {
       "address": 172,
       "type": "|u1"
     },
-    "link_char_direction": {
+    "link_direction": {
       "address": 152,
       "type": "|u1"
     },
-    "link_char_x": {
+    "link_x": {
       "address": 112,
       "type": "|u1"
     },
-    "link_char_y": {
+    "link_y": {
       "address": 132,
       "type": "|u1"
     },
@@ -288,31 +280,31 @@
       "address": 185,
       "type": "|u1"
     },
-    "link_sword_melee_direction": {
+    "sword_melee_direction": {
       "address": 165,
       "type": "|u1"
     },
-    "link_sword_melee_x": {
+    "sword_melee_x": {
       "address": 125,
       "type": "|u1"
     },
-    "link_sword_melee_y": {
+    "sword_melee_y": {
       "address": 145,
       "type": "|u1"
     },
-    "link_sword_projectile_direction": {
+    "sword_projectile_direction": {
       "address": 166,
       "type": "|u1"
     },
-    "link_sword_projectile_state": {
+    "sword_projectile_state": {
       "address": 186,
       "type": "|u1"
     },
-    "link_sword_projectile_x": {
+    "sword_projectile_x": {
       "address": 126,
       "type": "|u1"
     },
-    "link_sword_projectile_y": {
+    "sword_projectile_y": {
       "address": 146,
       "type": "|u1"
     },

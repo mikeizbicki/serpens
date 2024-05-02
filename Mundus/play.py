@@ -347,7 +347,6 @@ def main():
         data = env.unwrapped.get_ram()[0xba2+0x800:0xba2+0x800+4]
         data = env.unwrapped.get_ram()[0x12ba+0x800:0x12ba+0x800+4]
         #print(f"data={data}")
-        #pprint.pprint(observation)
         #for i, x in enumerate(env.unwrapped.get_ram()):
             #if x == 216:
                 #print(f"i, x={i, x}")

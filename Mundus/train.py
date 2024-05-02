@@ -105,6 +105,8 @@ def main():
         ent_coef=0.01,
         verbose=1,
         #policy_kwargs={'net_arch': [96, 96]}
+        policy_kwargs={'net_arch': [256, 256]}
+        #policy_kwargs={'net_arch': [256, 256], 'activation_fn': torch.nn.ReLU}
     )
     #model = stable_baselines3.PPO('MlpPolicy', env, verbose=1)
     callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=args.log_dir)

@@ -120,11 +120,12 @@ class RandomStateReset(gymnasium.Wrapper):
 class ZeldaWrapper(gymnasium.Wrapper):
     '''
     '''
-    def __init__(self, env, stdout_debug=False, use_full_subtiles=False, link_view_radius=2):
+    def __init__(self, env, stdout_debug=False, use_full_subtiles=False, link_view_radius=2, center_xy=True):
         super().__init__(env)
         self.stdout_debug = stdout_debug
         self.use_full_subtiles = use_full_subtiles
         self.link_view_radius = link_view_radius
+        self.center_xy = center_xy
         self.reset()
 
     def reset(self, **kwargs):
@@ -135,6 +136,7 @@ class ZeldaWrapper(gymnasium.Wrapper):
         for y in range(link_view.shape[0]):
             for x in range(link_view.shape[1]):
                 self.env.data.set_value(f'link_view_{x:2d}_{y:2d}', 0)
+
         values = self.env.data.lookup_all()
         for k in values:
             if 'direction' == k[-9:]:
@@ -143,6 +145,31 @@ class ZeldaWrapper(gymnasium.Wrapper):
                 self.env.data.set_value(k+'_south', 0)
                 self.env.data.set_value(k+'_north', 0)
                 self.env.data.set_value(k+'_other', 0)
+
+        for k in values:
+            if 'health' == k[-6:]:
+                if values[k] > 0 and (values[k] < 16 or values[k] >= 128):
+                    health_simple = 0
+                    health_weird = 1
+                else:
+                    health_simple = values[k]/16
+                    health_weird = 0
+                self.env.data.set_value(k+'_simple', health_simple)
+                self.env.data.set_value(k+'_weird', health_weird)
+
+        rels = []
+        rels += ['enemy_' + i for i in '123456']
+        rels += ['projectile_' + i for i in '1234']
+        rels += ['sword_melee', 'sword_projectile']
+        for k in rels:
+            self.env.data.set_value(k+'_xrel', 0)
+            self.env.data.set_value(k+'_yrel', 0)
+
+        if self.center_xy:
+            for k in values:
+                if k[-1] == 'x' or k[-1] == 'y':
+                    self.env.data.set_value(k+'center', 0)
+
         return results
 
     def step(self, action):
@@ -240,10 +267,10 @@ class ZeldaWrapper(gymnasium.Wrapper):
             tiles = subtiles[::2,::2]
 
         values = self.env.data.lookup_all()
-        link_tile_x = (values[f'link_char_x']+8)//16
-        link_tile_y = (values[f'link_char_y']-56)//16
+        link_tile_x = (values[f'link_x']+8)//16
+        link_tile_y = (values[f'link_y']-56)//16
         if not self.use_full_subtiles:
-            link_tile_y = (values[f'link_char_y']-48)//16
+            link_tile_y = (values[f'link_y']-48)//16
 
         padded_tiles = np.pad(tiles, self.link_view_radius, constant_values=0)
         link_view = padded_tiles[
@@ -274,79 +301,123 @@ class ZeldaWrapper(gymnasium.Wrapper):
                 self.env.data.set_value(k+'_simple', health_simple)
                 self.env.data.set_value(k+'_weird', health_weird)
 
+        for k in values:
+            if 'xrel' in k:
+                self.env.data.set_value(k, values[k[:-3]] - values['link_x'])
+            if 'yrel' in k:
+                self.env.data.set_value(k, values[k[:-3]] - values['link_y'])
+
+        if self.center_xy:
+            for k in values:
+                if k[-1] == 'x':
+                    self.env.data.set_value(k+'center', values[k] - 128)
+                if k[-1] == 'y':
+                    self.env.data.set_value(k+'center', values[k] - 56 - 88)
+
         if self.stdout_debug:
             values = self.env.data.lookup_all()
-            def print_tiles(tiles):
-                print('========================================')
-                for i in range(tiles.shape[0]):
-                    for j in range(tiles.shape[1]):
-                        if (j,i) == (link_tile_x, link_tile_y):
-                            print(' # ', end='')
-                        else:
-                            if tiles[i,j] & 32 == 32:
-                                print('   ', end='')
-                            else:
-                                print(f'{hex(tiles[i,j])[2:]:2} ', end='')
-                        #if subtiles[i,j] == 38:
-                            #print(' ', end='')
+            #def print_tiles(tiles):
+                #print('========================================')
+                #for i in range(tiles.shape[0]):
+                    #for j in range(tiles.shape[1]):
+                        #if (j,i) == (link_tile_x, link_tile_y):
+                            #print(' # ', end='')
                         #else:
-                            #print('X', end='')
-                    print()
-            print_tiles(tiles)
-            print_tiles(link_view)
-            print('========================================')
-            x = values[f'link_char_x']
-            y = values[f'link_char_y']
-            d = values[f'link_char_direction']
-            d1 = values.get(f'link_char_direction_north', '-')
-            d2 = values.get(f'link_char_direction_south', '-')
-            d3 = values.get(f'link_char_direction_east', '-')
-            d4 = values.get(f'link_char_direction_west', '-')
-            d5 = values.get(f'link_char_direction_other', '-')
-            a = values[f'link_char_animation']
-            print(f'   link x,y: {x:3d},{y:3d}  dir:{d:3d} {d1}{d2}{d3}{d4}{d5} state:{a:3d}') 
-            x = values[f'link_sword_melee_x']
-            y = values[f'link_sword_melee_y']
-            d = values[f'link_sword_melee_direction']
-            d1 = values.get(f'link_sword_melee_direction_north', '-')
-            d2 = values.get(f'link_sword_melee_direction_south', '-')
-            d3 = values.get(f'link_sword_melee_direction_east', '-')
-            d4 = values.get(f'link_sword_melee_direction_west', '-')
-            d5 = values.get(f'link_sword_melee_direction_other', '-')
-            a = values[f'link_sword_animation']
-            print(f'sword_m x,y: {x:3d},{y:3d}  dir:{d:3d} {d1}{d2}{d3}{d4}{d5} state:{a:3d}') 
-            x = values[f'link_sword_projectile_x']
-            y = values[f'link_sword_projectile_y']
-            d = values[f'link_sword_projectile_direction']
-            d1 = values.get(f'link_sword_projectile_direction_north', '-')
-            d2 = values.get(f'link_sword_projectile_direction_south', '-')
-            d3 = values.get(f'link_sword_projectile_direction_east', '-')
-            d4 = values.get(f'link_sword_projectile_direction_west', '-')
-            d5 = values.get(f'link_sword_projectile_direction_other', '-')
-            s = values[f'link_sword_projectile_state']
-            print(f'sword_p x,y: {x:3d},{y:3d}  dir:{d:3d} {d1}{d2}{d3}{d4}{d5} state:{s:3d}') 
-            for i in '123456':
-                x = values[f'enemy_{i}_x']
-                y = values[f'enemy_{i}_y']
-                d = values[f'enemy_{i}_direction']
-                t = values[f'enemy_{i}_type']
-                h = values[f'enemy_{i}_health_simple']
-                hw = values[f'enemy_{i}_health_weird']
-                d1 = values.get(f'enemy_{i}_direction_north', '-')
-                d2 = values.get(f'enemy_{i}_direction_south', '-')
-                d3 = values.get(f'enemy_{i}_direction_east', '-')
-                d4 = values.get(f'enemy_{i}_direction_west', '-')
-                d5 = values.get(f'enemy_{i}_direction_other', '-')
-                px = values.get(f'projectile_{i}_x', ' --')
-                py = values.get(f'projectile_{i}_y', ' --')
-                pd = values.get(f'projectile_{i}_direction', ' --')
-                pd1 = values.get(f'projectile_{i}_direction_north', '-')
-                pd2 = values.get(f'projectile_{i}_direction_south', '-')
-                pd3 = values.get(f'projectile_{i}_direction_east', '-')
-                pd4 = values.get(f'projectile_{i}_direction_west', '-')
-                pd5 = values.get(f'projectile_{i}_direction_other', '-')
-                drop = values[f'drop_enemy{i}']
-                s = values.get(f'enemystate_{i}', ' --')
-                c = values.get(f'countdown_enemy{i}')
-                print(f'enemy {i} x,y: {x:3},{y:3}  dir:{d:3} {d1}{d2}{d3}{d4}{d5} state:{s:3} type: {t:2} health: {h:3} {hw:1} drop:{drop:3} count:{c:3} | proj x,y: {px:3},{py:3}, pd: {pd:3} {pd1}{pd2}{pd3}{pd4}{pd5} ') 
+                            #if tiles[i,j] & 32 == 32:
+                                #print('   ', end='')
+                            #else:
+                                #print(f'{hex(tiles[i,j])[2:]:2} ', end='')
+                        ##if subtiles[i,j] == 38:
+                            ##print(' ', end='')
+                        ##else:
+                            ##print('X', end='')
+                    #print()
+            #print_tiles(tiles)
+            #print_tiles(link_view)
+            #print('========================================')
+
+            def makeline(name):
+                textout = ''
+                x = values.get(f'{name}_x', '-')
+                y = values.get(f'{name}_y', '-')
+                if self.center_xy:
+                    x = values.get(f'{name}_xcenter', '-')
+                    y = values.get(f'{name}_ycenter', '-')
+                xrel = values.get(f'{name}_xrel', '-')
+                yrel = values.get(f'{name}_yrel', '-')
+                d = values.get(f'{name}_direction', '-')
+                d1 = values.get(f'{name}_direction_north', '-')
+                d2 = values.get(f'{name}_direction_south', '-')
+                d3 = values.get(f'{name}_direction_east', '-')
+                d4 = values.get(f'{name}_direction_west', '-')
+                d5 = values.get(f'{name}_direction_other', '-')
+                a = values.get(f'{name}_animation', values.get(f'{name}_state', '-'))
+                c = values.get(f'{name}_countdown', '-')
+                drop = values.get(f'{name}_drop', '-')
+                h = values.get(f'{name}_health_simple', '-')
+                hw = values.get(f'{name}_health_weird', '-')
+                dispname = name[:7]
+                if name[-2] == '_':
+                    dispname = name[:5] + name [-2:]
+                textout = f'{dispname:7} x,y: {x:4},{y:4}  xrel,yrel: {xrel:4},{yrel:4}  dir:{d:3} {d1}{d2}{d3}{d4}{d5} health: {h:3} {hw:1} state: {a:3} drop: {drop:3} count: {c:3}'
+                return textout
+            lines = []
+            lines.append(makeline('link'))
+            lines.append(makeline('sword_melee'))
+            lines.append(makeline('sword_projectile'))
+            lines.append(makeline('enemy_1'))
+            lines.append(makeline('enemy_2'))
+            lines.append(makeline('enemy_3'))
+            lines.append(makeline('enemy_4'))
+            lines.append(makeline('enemy_5'))
+            lines.append(makeline('enemy_6'))
+            lines.append(makeline('projectile_1'))
+            lines.append(makeline('projectile_2'))
+            lines.append(makeline('projectile_3'))
+            lines.append(makeline('projectile_4'))
+            print(chr(27) + "[2J" + '\n'.join(lines))
+            #x = values[f'link_sword_melee_x']
+            #y = values[f'link_sword_melee_y']
+            #d = values[f'link_sword_melee_direction']
+            #d1 = values.get(f'link_sword_melee_direction_north', '-')
+            #d2 = values.get(f'link_sword_melee_direction_south', '-')
+            #d3 = values.get(f'link_sword_melee_direction_east', '-')
+            #d4 = values.get(f'link_sword_melee_direction_west', '-')
+            #d5 = values.get(f'link_sword_melee_direction_other', '-')
+            #a = values[f'link_sword_animation']
+            #print(f'sword_m x,y: {x:3d},{y:3d}  dir:{d:3d} {d1}{d2}{d3}{d4}{d5} state:{a:3d}') 
+            #x = values[f'link_sword_projectile_x']
+            #y = values[f'link_sword_projectile_y']
+            #d = values[f'link_sword_projectile_direction']
+            #d1 = values.get(f'link_sword_projectile_direction_north', '-')
+            #d2 = values.get(f'link_sword_projectile_direction_south', '-')
+            #d3 = values.get(f'link_sword_projectile_direction_east', '-')
+            #d4 = values.get(f'link_sword_projectile_direction_west', '-')
+            #d5 = values.get(f'link_sword_projectile_direction_other', '-')
+            #s = values[f'link_sword_projectile_state']
+            #print(f'sword_p x,y: {x:3d},{y:3d}  dir:{d:3d} {d1}{d2}{d3}{d4}{d5} state:{s:3d}') 
+            #for i in '123456':
+                #x = values[f'enemy_{i}_x']
+                #y = values[f'enemy_{i}_y']
+                #d = values[f'enemy_{i}_direction']
+                #t = values[f'enemy_{i}_type']
+                #h = values[f'enemy_{i}_health_simple']
+                #hw = values[f'enemy_{i}_health_weird']
+                #d1 = values.get(f'enemy_{i}_direction_north', '-')
+                #d2 = values.get(f'enemy_{i}_direction_south', '-')
+                #d3 = values.get(f'enemy_{i}_direction_east', '-')
+                #d4 = values.get(f'enemy_{i}_direction_west', '-')
+                #d5 = values.get(f'enemy_{i}_direction_other', '-')
+                #px = values.get(f'projectile_{i}_x', ' --')
+                #py = values.get(f'projectile_{i}_y', ' --')
+                #pd = values.get(f'projectile_{i}_direction', ' --')
+                #pd1 = values.get(f'projectile_{i}_direction_north', '-')
+                #pd2 = values.get(f'projectile_{i}_direction_south', '-')
+                #pd3 = values.get(f'projectile_{i}_direction_east', '-')
+                #pd4 = values.get(f'projectile_{i}_direction_west', '-')
+                #pd5 = values.get(f'projectile_{i}_direction_other', '-')
+                #drop = values[f'drop_enemy{i}']
+                #s = values.get(f'enemystate_{i}', ' --')
+                #c = values.get(f'countdown_enemy{i}')
+                #print(f'enemy {i} x,y: {x:3},{y:3}  dir:{d:3} {d1}{d2}{d3}{d4}{d5} state:{s:3} type: {t:2} health: {h:3} {hw:1} drop:{drop:3} count:{c:3} | proj x,y: {px:3},{py:3}, pd: {pd:3} {pd1}{pd2}{pd3}{pd4}{pd5} ') 
         return super().step(action)

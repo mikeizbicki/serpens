@@ -10,6 +10,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.results_plotter import load_results, ts2xy, plot_results
 from Mundus.Wrappers import *
+from Mundus.Zelda import *
 import torch
 
 

@@ -12,6 +12,7 @@ import sys
 import pprint
 
 from Mundus.Wrappers import *
+from Mundus.Zelda import *
 
 
 # FIXME:

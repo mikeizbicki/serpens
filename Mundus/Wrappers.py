@@ -1,3 +1,5 @@
+import copy
+import math
 import retro
 import gymnasium
 import pyglet
@@ -120,59 +122,50 @@ class RandomStateReset(gymnasium.Wrapper):
 class ZeldaWrapper(gymnasium.Wrapper):
     '''
     '''
-    def __init__(self, env, stdout_debug=False, use_full_subtiles=False, link_view_radius=2, center_xy=True):
+    def __init__(
+            self,
+            env,
+            stdout_debug=False,
+            use_full_subtiles=False,
+            link_view_radius=2,
+            center_xy=True,
+            output_link_view=False,
+            ):
+
+        # bookkeeping
         super().__init__(env)
         self.stdout_debug = stdout_debug
         self.use_full_subtiles = use_full_subtiles
         self.link_view_radius = link_view_radius
         self.center_xy = center_xy
-        self.reset()
+        self.output_link_view = output_link_view
+
+        # switch the terminal to the alternate screen
+        if self.stdout_debug:
+            print('\u001B[?1049h')
+
+        # reset the observation space
+        observations = self.generate_observations()
+        low = -256
+        high = 256
+        shape = [len(observations)]
+        dtype = np.float16
+        self.observation_space = gymnasium.spaces.Box(low, high, shape, dtype, seed=0)
+        logging.info(f'observations.shape={shape}')
+
+    def close(self):
+        # switch the terminal away from the alternate screen
+        if self.stdout_debug:
+            print('\u001B[?1049l')
+
+        # cleany close superclass
+        super().close()
 
     def reset(self, **kwargs):
-        results = super().reset(**kwargs)
+        obs, info = super().reset(**kwargs)
+        return self.observation_space.sample(), info
 
-        # create the new variables with default values so that future
-        link_view = np.zeros([1+2*self.link_view_radius, 1+2*self.link_view_radius])
-        for y in range(link_view.shape[0]):
-            for x in range(link_view.shape[1]):
-                self.env.data.set_value(f'link_view_{x:2d}_{y:2d}', 0)
-
-        values = self.env.data.lookup_all()
-        for k in values:
-            if 'direction' == k[-9:]:
-                self.env.data.set_value(k+'_east', 0)
-                self.env.data.set_value(k+'_west', 0)
-                self.env.data.set_value(k+'_south', 0)
-                self.env.data.set_value(k+'_north', 0)
-                self.env.data.set_value(k+'_other', 0)
-
-        for k in values:
-            if 'health' == k[-6:]:
-                if values[k] > 0 and (values[k] < 16 or values[k] >= 128):
-                    health_simple = 0
-                    health_weird = 1
-                else:
-                    health_simple = values[k]/16
-                    health_weird = 0
-                self.env.data.set_value(k+'_simple', health_simple)
-                self.env.data.set_value(k+'_weird', health_weird)
-
-        rels = []
-        rels += ['enemy_' + i for i in '123456']
-        rels += ['projectile_' + i for i in '1234']
-        rels += ['sword_melee', 'sword_projectile']
-        for k in rels:
-            self.env.data.set_value(k+'_xrel', 0)
-            self.env.data.set_value(k+'_yrel', 0)
-
-        if self.center_xy:
-            for k in values:
-                if k[-1] == 'x' or k[-1] == 'y':
-                    self.env.data.set_value(k+'center', 0)
-
-        return results
-
-    def step(self, action):
+    def generate_observations(self):
         '''
         Enemy Type:
         There are many different memory locations that seem to store the enemy type;
@@ -244,6 +237,9 @@ class ZeldaWrapper(gymnasium.Wrapper):
         3E= GANNON
         3F= FIRE
         '''
+        outputs = {}
+        inputs = self.env.data.lookup_all()
+
         # the screen is divided into an 11x16 grid,
         # and each tile is divided into 2x2 subtiles;
         # therefore, the subtile grid is 22x32 (=0x2c0).
@@ -266,11 +262,10 @@ class ZeldaWrapper(gymnasium.Wrapper):
         else:
             tiles = subtiles[::2,::2]
 
-        values = self.env.data.lookup_all()
-        link_tile_x = (values[f'link_x']+8)//16
-        link_tile_y = (values[f'link_y']-56)//16
+        link_tile_x = (inputs[f'link_x']+8)//16
+        link_tile_y = (inputs[f'link_y']-56)//16
         if not self.use_full_subtiles:
-            link_tile_y = (values[f'link_y']-48)//16
+            link_tile_y = (inputs[f'link_y']-48)//16
 
         padded_tiles = np.pad(tiles, self.link_view_radius, constant_values=0)
         link_view = padded_tiles[
@@ -278,90 +273,157 @@ class ZeldaWrapper(gymnasium.Wrapper):
                 link_tile_x : link_tile_x + 2*self.link_view_radius+1,
                 ]
 
-        for y in range(link_view.shape[0]):
-            for x in range(link_view.shape[1]):
-                self.env.data.set_value(f'link_view_{x:2d}_{y:2d}', link_view[y,x])
-        
-        for k in values:
-            if 'direction' == k[-9:]:
-                self.env.data.set_value(k+'_east', int(values[k] == 1))
-                self.env.data.set_value(k+'_west', int(values[k] == 2))
-                self.env.data.set_value(k+'_south', int(values[k] == 4))
-                self.env.data.set_value(k+'_north', int(values[k] == 8))
-                self.env.data.set_value(k+'_other', int(values[k] > 8))
+        if self.output_link_view:
+            for y in range(link_view.shape[0]):
+                for x in range(link_view.shape[1]):
+                    outputs[f'link_view_{x:2d}_{y:2d}'] = link_view[y,x]
 
-        for k in values:
+        # link specific data
+        if inputs['link_heart_partial'] == 0:
+            outputs['link_health_simple'] = 0
+        else:
+            partial = 0.5
+            if inputs['link_heart_partial'] > 127:
+                partial = 0
+            outputs['link_health_simple'] = inputs['link_heart_full'] - math.floor(inputs['link_heart_full'] / 16) * 16 - partial + 1
+        outputs['link_x'] = inputs['link_x']
+        outputs['link_y'] = inputs['link_y']
+        
+        # add appropriate data from the inputs to the outputs
+        for k in inputs:
+
+            # add data that needs no special modifications
+            if any([v in k for v in ['state', 'drop', 'count', 'direction']]):
+                outputs[k] = inputs[k]
+           
+            # add 1-hot encoded directions
+            if 'direction' == k[-9:]:
+                outputs[k+'_east'] = int(inputs[k] == 1)
+                outputs[k+'_west'] = int(inputs[k] == 2)
+                outputs[k+'_south'] = int(inputs[k] == 4)
+                outputs[k+'_north'] = int(inputs[k] == 8)
+                outputs[k+'_other'] = int(inputs[k] > 8)
+
+            # process the monster health to a usable format
             if 'health' == k[-6:]:
-                if values[k] > 0 and (values[k] < 16 or values[k] >= 128):
+                if inputs[k] > 0 and (inputs[k] < 16 or inputs[k] >= 128):
                     health_simple = 0
                     health_weird = 1
                 else:
-                    health_simple = values[k]/16
+                    health_simple = inputs[k]//16
                     health_weird = 0
-                self.env.data.set_value(k+'_simple', health_simple)
-                self.env.data.set_value(k+'_weird', health_weird)
+                outputs[k+'_simple'] = health_simple
+                outputs[k+'_weird'] = health_weird
 
-        for k in values:
-            if 'xrel' in k:
-                self.env.data.set_value(k, values[k[:-3]] - values['link_x'])
-            if 'yrel' in k:
-                self.env.data.set_value(k, values[k[:-3]] - values['link_y'])
+            # add relative positions
+            if k[-2:] == '_x':
+                outputs[k + 'rel'] = inputs[k] - inputs['link_x']
+            if k[-2:] == '_y':
+                outputs[k + 'rel'] = inputs[k] - inputs['link_y']
 
-        if self.center_xy:
-            for k in values:
+            # add centered absolute positions
+            if False:
                 if k[-1] == 'x':
-                    self.env.data.set_value(k+'center', values[k] - 128)
+                    outputs[k+'center'] = inputs[k] - 128
                 if k[-1] == 'y':
-                    self.env.data.set_value(k+'center', values[k] - 56 - 88)
+                    outputs[k+'center'] = inputs[k] - 56 - 88
 
+        # clean variables for dead entities
+        def prefixnum_is_active(prefixnum):
+            health = outputs.get(prefixnum + '_health_simple', 0)
+            drop = outputs.get(prefixnum + '_drop', 0)
+            state = outputs.get(prefixnum + '_state', 0)
+            return health > 0 or drop > 0 or state > 0 # or 'projectile' in prefixnum
+
+        prefixnums = set(['_'.join(k.split('_')[:2]) for k in outputs])
+        for prefixnum in prefixnums:
+            if not prefixnum_is_active(prefixnum):
+                def reset(k, v):
+                    if k in outputs:
+                        outputs[k] = v
+                reset(prefixnum + '_x', 999)
+                reset(prefixnum + '_y', 999)
+                reset(prefixnum + '_xrel', 999)
+                reset(prefixnum + '_yrel', 999)
+                reset(prefixnum + '_xcenter', 999)
+                reset(prefixnum + '_ycenter', 999)
+                reset(prefixnum + '_direction', 0)
+
+        # reorder the enemies/projectiles
+        def reorder_dictionary(outputs0, prefix):
+            def key(prefixnum):
+                distance = abs(outputs0[prefixnum+'_xrel']) + abs(outputs0[prefixnum+'_yrel']) + 1000
+                if prefixnum_is_active(prefixnum):
+                    penalty = 0
+                else:
+                    penalty = 10000
+                return distance + penalty
+            attrs = set([k[len(prefix)+2:] for k in outputs0 if k.startswith(prefix) and k[len(prefix)+2] == '_'])
+            prefixnums = list(set(k[:len(prefix)+2] for k in outputs0 if k.startswith(prefix) and k[len(prefix)+2] == '_'))
+            prefixnums.sort(key=key)
+            outputs1 = copy.copy(outputs0)
+            for i, prefixnum in enumerate(prefixnums):
+                for attr in attrs:
+                    if prefixnum + attr in outputs0:
+                        outputs1[f'{prefix}_{i+1}'+attr] = outputs0[prefixnum + attr]
+            return outputs1
+        outputs = reorder_dictionary(outputs, prefix='projectile')
+        outputs = reorder_dictionary(outputs, prefix='enemy')
+
+        # filter outputs
+        outputs = {k:v for k,v in outputs.items() if 'enemy_1' in k or 'link' in k}
+
+        # visualize the information in the outputs dictionary
         if self.stdout_debug:
-            values = self.env.data.lookup_all()
-            #def print_tiles(tiles):
-                #print('========================================')
-                #for i in range(tiles.shape[0]):
-                    #for j in range(tiles.shape[1]):
-                        #if (j,i) == (link_tile_x, link_tile_y):
-                            #print(' # ', end='')
-                        #else:
-                            #if tiles[i,j] & 32 == 32:
-                                #print('   ', end='')
-                            #else:
-                                #print(f'{hex(tiles[i,j])[2:]:2} ', end='')
-                        ##if subtiles[i,j] == 38:
-                            ##print(' ', end='')
-                        ##else:
-                            ##print('X', end='')
-                    #print()
-            #print_tiles(tiles)
-            #print_tiles(link_view)
-            #print('========================================')
+            lines = []
+            def display_tiles(tiles):
+                ret = ''
+                for i in range(tiles.shape[0]):
+                    for j in range(tiles.shape[1]):
+                        if (j,i) == (link_tile_x, link_tile_y):
+                            ret += ' # '
+                        else:
+                            if tiles[i,j] & 32 == 32:
+                                ret += '   '
+                            else:
+                                ret += f'{hex(tiles[i,j])[2:]:2} '
+                    ret += '\n'
+                return ret
+            #lines.append(display_tiles(tiles))
+            #lines.append('====================')
+            #lines.append(display_tiles(link_view))
+            #lines.append('====================')
 
             def makeline(name):
-                textout = ''
-                x = values.get(f'{name}_x', '-')
-                y = values.get(f'{name}_y', '-')
-                if self.center_xy:
-                    x = values.get(f'{name}_xcenter', '-')
-                    y = values.get(f'{name}_ycenter', '-')
-                xrel = values.get(f'{name}_xrel', '-')
-                yrel = values.get(f'{name}_yrel', '-')
-                d = values.get(f'{name}_direction', '-')
-                d1 = values.get(f'{name}_direction_north', '-')
-                d2 = values.get(f'{name}_direction_south', '-')
-                d3 = values.get(f'{name}_direction_east', '-')
-                d4 = values.get(f'{name}_direction_west', '-')
-                d5 = values.get(f'{name}_direction_other', '-')
-                a = values.get(f'{name}_animation', values.get(f'{name}_state', '-'))
-                c = values.get(f'{name}_countdown', '-')
-                drop = values.get(f'{name}_drop', '-')
-                h = values.get(f'{name}_health_simple', '-')
-                hw = values.get(f'{name}_health_weird', '-')
                 dispname = name[:7]
                 if name[-2] == '_':
                     dispname = name[:5] + name [-2:]
-                textout = f'{dispname:7} x,y: {x:4},{y:4}  xrel,yrel: {xrel:4},{yrel:4}  dir:{d:3} {d1}{d2}{d3}{d4}{d5} health: {h:3} {hw:1} state: {a:3} drop: {drop:3} count: {c:3}'
+                textout = f'{dispname:7} '
+                x = outputs.get(f'{name}_x', '-')
+                y = outputs.get(f'{name}_y', '-')
+                if x != '-':
+                    textout += f'x,y: {x:4},{y:4} '
+                xc = outputs.get(f'{name}_xcenter', '-')
+                yc = outputs.get(f'{name}_ycenter', '-')
+                if xc != '-':
+                    textout += f'xc,yc: {xc:4},{yc:4} '
+                xrel = outputs.get(f'{name}_xrel', '-')
+                yrel = outputs.get(f'{name}_yrel', '-')
+                if xrel != '-':
+                    textout += f'xrel,yrel: {xrel:4},{yrel:4} '
+                d = outputs.get(f'{name}_direction', '-')
+                d1 = outputs.get(f'{name}_direction_north', '-')
+                d2 = outputs.get(f'{name}_direction_south', '-')
+                d3 = outputs.get(f'{name}_direction_east', '-')
+                d4 = outputs.get(f'{name}_direction_west', '-')
+                d5 = outputs.get(f'{name}_direction_other', '-')
+                a = outputs.get(f'{name}_state', '-')
+                c = outputs.get(f'{name}_countdown', '-')
+                drop = outputs.get(f'{name}_drop', '-')
+                h = outputs.get(f'{name}_health_simple', '-')
+                hw = outputs.get(f'{name}_health_weird', '-')
+                textout += f'dir:{d:3} {d1}{d2}{d3}{d4}{d5} health: {h:3} {hw:1} state: {a:3} drop: {drop:3} count: {c:3}'
                 return textout
-            lines = []
             lines.append(makeline('link'))
             lines.append(makeline('sword_melee'))
             lines.append(makeline('sword_projectile'))
@@ -375,49 +437,13 @@ class ZeldaWrapper(gymnasium.Wrapper):
             lines.append(makeline('projectile_2'))
             lines.append(makeline('projectile_3'))
             lines.append(makeline('projectile_4'))
+            lines.append(f'total_variables: {len(outputs)}')
             print(chr(27) + "[2J" + '\n'.join(lines))
-            #x = values[f'link_sword_melee_x']
-            #y = values[f'link_sword_melee_y']
-            #d = values[f'link_sword_melee_direction']
-            #d1 = values.get(f'link_sword_melee_direction_north', '-')
-            #d2 = values.get(f'link_sword_melee_direction_south', '-')
-            #d3 = values.get(f'link_sword_melee_direction_east', '-')
-            #d4 = values.get(f'link_sword_melee_direction_west', '-')
-            #d5 = values.get(f'link_sword_melee_direction_other', '-')
-            #a = values[f'link_sword_animation']
-            #print(f'sword_m x,y: {x:3d},{y:3d}  dir:{d:3d} {d1}{d2}{d3}{d4}{d5} state:{a:3d}') 
-            #x = values[f'link_sword_projectile_x']
-            #y = values[f'link_sword_projectile_y']
-            #d = values[f'link_sword_projectile_direction']
-            #d1 = values.get(f'link_sword_projectile_direction_north', '-')
-            #d2 = values.get(f'link_sword_projectile_direction_south', '-')
-            #d3 = values.get(f'link_sword_projectile_direction_east', '-')
-            #d4 = values.get(f'link_sword_projectile_direction_west', '-')
-            #d5 = values.get(f'link_sword_projectile_direction_other', '-')
-            #s = values[f'link_sword_projectile_state']
-            #print(f'sword_p x,y: {x:3d},{y:3d}  dir:{d:3d} {d1}{d2}{d3}{d4}{d5} state:{s:3d}') 
-            #for i in '123456':
-                #x = values[f'enemy_{i}_x']
-                #y = values[f'enemy_{i}_y']
-                #d = values[f'enemy_{i}_direction']
-                #t = values[f'enemy_{i}_type']
-                #h = values[f'enemy_{i}_health_simple']
-                #hw = values[f'enemy_{i}_health_weird']
-                #d1 = values.get(f'enemy_{i}_direction_north', '-')
-                #d2 = values.get(f'enemy_{i}_direction_south', '-')
-                #d3 = values.get(f'enemy_{i}_direction_east', '-')
-                #d4 = values.get(f'enemy_{i}_direction_west', '-')
-                #d5 = values.get(f'enemy_{i}_direction_other', '-')
-                #px = values.get(f'projectile_{i}_x', ' --')
-                #py = values.get(f'projectile_{i}_y', ' --')
-                #pd = values.get(f'projectile_{i}_direction', ' --')
-                #pd1 = values.get(f'projectile_{i}_direction_north', '-')
-                #pd2 = values.get(f'projectile_{i}_direction_south', '-')
-                #pd3 = values.get(f'projectile_{i}_direction_east', '-')
-                #pd4 = values.get(f'projectile_{i}_direction_west', '-')
-                #pd5 = values.get(f'projectile_{i}_direction_other', '-')
-                #drop = values[f'drop_enemy{i}']
-                #s = values.get(f'enemystate_{i}', ' --')
-                #c = values.get(f'countdown_enemy{i}')
-                #print(f'enemy {i} x,y: {x:3},{y:3}  dir:{d:3} {d1}{d2}{d3}{d4}{d5} state:{s:3} type: {t:2} health: {h:3} {hw:1} drop:{drop:3} count:{c:3} | proj x,y: {px:3},{py:3}, pd: {pd:3} {pd1}{pd2}{pd3}{pd4}{pd5} ') 
-        return super().step(action)
+            #print('\n'.join(lines))
+        return outputs
+
+    def step(self, action):
+        new_observations = np.array(list(self.generate_observations().values()), dtype=np.float16)
+        observation, reward, terminated, truncated, info = super().step(action)
+        total_reward += reward
+        return new_observations, reward, terminated, truncated, info

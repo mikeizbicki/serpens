@@ -78,10 +78,10 @@ def main():
                 #render_mode='rgb_array',
                 )
         env = TimeLimit(env, max_episode_steps=30*60*5)
-        #env = StochasticFrameSkip(env, 4, 0.25)
-        env = ZeldaWrapper(env)
+        env = StochasticFrameSkip(env, 4, 0.25)
         env = ObserveVariables(env)
-        env = FrameStack(env, 4)
+        env = ZeldaWrapper(env)
+        #env = FrameStack(env, 4)
         env = RandomStateReset(env, path='custom_integrations/'+args.game)
         return env
     env = SubprocVecEnv([make_env] * args.nproc)
@@ -105,7 +105,7 @@ def main():
         ent_coef=0.01,
         verbose=1,
         #policy_kwargs={'net_arch': [96, 96]}
-        policy_kwargs={'net_arch': [256, 256]}
+        #policy_kwargs={'net_arch': [256, 256]}
         #policy_kwargs={'net_arch': [256, 256], 'activation_fn': torch.nn.ReLU}
     )
     #model = stable_baselines3.PPO('MlpPolicy', env, verbose=1)

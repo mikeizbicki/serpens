@@ -232,7 +232,7 @@
       "address": 150,
       "type": "|u1"
     },
-    "link_animation": {
+    "link_state": {
       "address": 172,
       "type": "|u1"
     },
@@ -276,7 +276,7 @@
       "address": 1584,
       "type": "|u1"
     },
-    "link_sword_animation": {
+    "sword_melee_state": {
       "address": 185,
       "type": "|u1"
     },

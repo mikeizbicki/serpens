@@ -95,7 +95,7 @@ class Interactive(gymnasium.Wrapper):
         self.this_log_reward = 0
         self.log_every = 1.0
         self.total_reward = 0
-        super().reset(**kwargs)
+        return super().reset(**kwargs)
 
     def get_maxfps(self):
         return self.maxfps0 * 2**(self.maxfps_multiplier)
@@ -332,29 +332,23 @@ def main():
     #env = StochasticFrameSkip(env, 4, 0.25)
     env = ObserveVariables(env)
     env = RandomStateReset(env, path='custom_integrations/'+args.game)
-    env = Interactive(env)
     env = ZeldaWrapper(env, stdout_debug=True)
+    env = Interactive(env)
     #env = PlayAudio(env)
     #env = ConsoleWrapper(env)
     env.reset()
 
     # main game loop
-    while True:
-        # set no action as the default
-        action = env.action_space.sample() * 0
-        observation, reward, terminated, truncated, info = env.step(action)
-        env.render()
-        data = env.unwrapped.get_ram()[0xba2+0x800:0xba2+0x800+4]
-        data = env.unwrapped.get_ram()[0x12ba+0x800:0x12ba+0x800+4]
-        #print(f"data={data}")
-        #for i, x in enumerate(env.unwrapped.get_ram()):
-            #if x == 216:
-                #print(f"i, x={i, x}")
-        #env.unwrapped.get_ram()[0x530+0x800:0xaaf+0x800+1].reshape([8,11,16])
-        #import code
-        #code.interact(local=locals())
-        #if terminated or truncated:
-            #env.reset()
+    try:
+        while True:
+            # set no action as the default
+            action = env.action_space.sample() * 0
+            observation, reward, terminated, truncated, info = env.step(action)
+            env.render()
+            data = env.unwrapped.get_ram()[0xba2+0x800:0xba2+0x800+4]
+            data = env.unwrapped.get_ram()[0x12ba+0x800:0x12ba+0x800+4]
+    except KeyboardInterrupt:
+        pass
 
     # clean all resources
     env.close()

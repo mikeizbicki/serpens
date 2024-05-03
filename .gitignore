@@ -1,7 +1,8 @@
 venv*
 old
 log
-tmp
+tmp*
+pdf
 
 # fceux junk
 *.cdl

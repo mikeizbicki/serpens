@@ -1,5 +1,6 @@
 import retro
 import gymnasium
+from  gymnasium.wrappers import *
 import pyglet
 import pyaudio
 import pygame
@@ -285,7 +286,7 @@ class PlayAudio(gymnasium.Wrapper):
         self.stream = self.p.open(
                 format=pyaudio.paInt16,
                 channels=2,
-                rate=int(env.em.get_audio_rate()/2),
+                rate=int(env.em.get_audio_rate()),
                 output=True,
                 stream_callback=playing_callback,
                 )
@@ -328,14 +329,17 @@ def main():
     retro.data.Integrations.add_custom_path(custom_path)
     env = retro.make(
             game=args.game,
-            inttype=retro.data.Integrations.ALL
+            inttype=retro.data.Integrations.ALL,
+            state='overworld_04',
+            #state='overworld_07',
             )
     #env = StochasticFrameSkip(env, 4, 0.25)
-    env = ObserveVariables(env)
-    env = RandomStateReset(env, path='custom_integrations/'+args.game)
+    #env = ObserveVariables(env)
+    #env = RandomStateReset(env, path='custom_integrations/'+args.game)
     env = ZeldaWrapper(env, stdout_debug=True)
     env = Interactive(env)
-    #env = PlayAudio(env)
+    env = PlayAudio(env)
+    env = FrameStack(env, 2)
     #env = ConsoleWrapper(env)
     env.reset()
 
@@ -345,9 +349,9 @@ def main():
             # set no action as the default
             action = env.action_space.sample() * 0
             observation, reward, terminated, truncated, info = env.step(action)
-            env.render()
-            data = env.unwrapped.get_ram()[0xba2+0x800:0xba2+0x800+4]
-            data = env.unwrapped.get_ram()[0x12ba+0x800:0x12ba+0x800+4]
+            #env.render()
+            #data = env.unwrapped.get_ram()[0xba2+0x800:0xba2+0x800+4]
+            #data = env.unwrapped.get_ram()[0x12ba+0x800:0x12ba+0x800+4]
     except KeyboardInterrupt:
         pass
 

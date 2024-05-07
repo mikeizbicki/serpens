@@ -1,0 +1,4 @@
+BreakPoint: startAddr=E45B  endAddr=0000  flags=-C--X-  condition="K==#07"  desc="" 
+BreakPoint: startAddr=E45E  endAddr=0000  flags=EC--X-  condition="K==#07"  desc="" 
+Bookmark: addr=0078  desc="" 
+Bookmark: addr=0079  desc="" 

@@ -50,7 +50,7 @@ function all_enemies_killed ()
   prev_enemy_3_x = data.enemy_3_x
   prev_enemy_2_x = data.enemy_2_x
   prev_enemy_1_x = data.enemy_1_x
-  return static_frames > 240
+  return static_frames > 480
 end
 
 function link_hearts()
@@ -100,20 +100,20 @@ function diff_items_value()
     return retvalue
 end
 
-prev_link_direction = -1
-prev_link_sword = -1
+prev_link_char_direction = -1
+prev_link_char_sword = -1
 function spam_penalty()
-    local new_link_direction = data.link_direction
-    local new_link_sword = math.floor(data.player1_buttons / 126)
+    local new_link_char_direction = data.link_char_direction
+    local new_link_char_sword = math.floor(data.player1_buttons / 126)
     local retvalue = 0
-    if prev_link_sword ~= 1 and new_link_sword == 1 then
+    if prev_link_char_sword ~= 1 and new_link_char_sword == 1 then
         retvalue = retvalue - 0.01
     end
-    if prev_link_direction >= 0 and prev_link_direction ~= new_link_direction then
-        retvalue = retvalue - 0.001
+    if prev_link_char_direction >= 0 and prev_link_char_direction ~= new_link_char_direction then
+        retvalue = retvalue - 0.01
     end
-    prev_link_direction = new_link_direction
-    prev_link_sword = new_link_sword
+    prev_link_char_direction = new_link_char_direction
+    prev_link_char_sword = new_link_char_sword
     return retvalue
 end
 
@@ -129,11 +129,11 @@ function scenario_screenbattle_reward()
         endmod = endmod - 2
     end
     if link_hearts() == 0 then
-        endmod = endmod - 2
+        endmod = endmod - 0 -- FIXME: used to be 2
     end
     if all_enemies_killed() then
         endmod = endmod + 2
     end
-    return diff_link_hearts() + diff_killed_enemies() + math.min(diff_items_value(), 1) + endmod + spam_penalty() 
+    return diff_link_hearts() + diff_killed_enemies() + math.min(diff_items_value(), 1) + endmod -- + spam_penalty() 
     -- return diff_killed_enemies()
 end

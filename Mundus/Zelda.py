@@ -36,7 +36,7 @@ class ZeldaWrapper(gymnasium.Wrapper):
         if self.stdout_debug:
             print('\u001B[?1049h')
 
-        # reset the observation space
+        # create a new observation space
         observations = self.generate_observations()
         low = -256
         high = 256
@@ -65,8 +65,12 @@ class ZeldaWrapper(gymnasium.Wrapper):
         self.episode_reward += reward
 
         if self.stdout_debug:
-            observations_string = _observations_to_str(new_observations)
-            print('\x1b[2J' + observations_string + f'\nepisode_reward = {self.episode_reward:0.4f}')
+            text = ''
+            text += '\x1b[2J' # clear the screen
+            text += _observations_to_str(new_observations)
+            text += f'\ntotal_variables: {len(new_observations)}'
+            text += f'\nepisode_reward = {self.episode_reward:0.4f}'
+            print(text)
 
         return new_observations_array, reward, terminated, truncated, info
 
@@ -167,10 +171,10 @@ class ZeldaWrapper(gymnasium.Wrapper):
         else:
             tiles = subtiles[::2,::2]
 
-        link_tile_x = (inputs[f'link_x']+8)//16
-        link_tile_y = (inputs[f'link_y']-56)//16
+        link_tile_x = (inputs[f'link_char_x']+8)//16
+        link_tile_y = (inputs[f'link_char_y']-56)//16
         if not self.use_full_subtiles:
-            link_tile_y = (inputs[f'link_y']-48)//16
+            link_tile_y = (inputs[f'link_char_y']-48)//16
 
         padded_tiles = np.pad(tiles, self.link_view_radius, constant_values=0)
         link_view = padded_tiles[
@@ -181,18 +185,18 @@ class ZeldaWrapper(gymnasium.Wrapper):
         if self.output_link_view:
             for y in range(link_view.shape[0]):
                 for x in range(link_view.shape[1]):
-                    outputs[f'link_view_{x:2d}_{y:2d}'] = link_view[y,x]
+                    outputs[f'link_char_view_{x:2d}_{y:2d}'] = link_view[y,x]
 
         # link specific data
         if inputs['link_heart_partial'] == 0:
-            outputs['link_health_simple'] = 0
+            outputs['link_char_health_simple'] = 0
         else:
             partial = 0.5
             if inputs['link_heart_partial'] > 127:
                 partial = 0
-            outputs['link_health_simple'] = inputs['link_heart_full'] - math.floor(inputs['link_heart_full'] / 16) * 16 - partial + 1
-        outputs['link_x'] = inputs['link_x']
-        outputs['link_y'] = inputs['link_y']
+            outputs['link_char_health_simple'] = inputs['link_heart_full'] - math.floor(inputs['link_heart_full'] / 16) * 16 - partial + 1
+        outputs['link_char_x'] = inputs['link_char_x']
+        outputs['link_char_y'] = inputs['link_char_y']
         
         # add appropriate data from the inputs to the outputs
         for k in inputs:
@@ -221,10 +225,26 @@ class ZeldaWrapper(gymnasium.Wrapper):
                 outputs[k+'_weird'] = health_weird
 
             # add relative positions
-            if k[-2:] == '_x':
-                outputs[k + 'rel'] = inputs[k] - inputs['link_x']
-            if k[-2:] == '_y':
-                outputs[k + 'rel'] = inputs[k] - inputs['link_y']
+            if 'link_char' not in k:
+                if k[-2:] == '_x':
+                    outputs[k + 'rel'] = inputs[k] - inputs['link_char_x']
+                if k[-2:] == '_y':
+                    outputs[k + 'rel'] = inputs[k] - inputs['link_char_y']
+
+            # add distance
+            if 'link_char' not in k:
+                if k[-2:] == '_x':
+                    base = k[:-2]
+                    xdist = abs(inputs[base + '_x'] - inputs['link_char_x'])
+                    ydist = abs(inputs[base + '_y'] - inputs['link_char_y'])
+                    outputs[base + '_dist'] = xdist + ydist
+
+            # add similarity positions
+            if 'link_char' not in k:
+                if k[-2:] == '_x':
+                    outputs[k + 'sim'] = 10/(abs(inputs[k] - inputs['link_char_x']) + 10)
+                if k[-2:] == '_y':
+                    outputs[k + 'sim'] = 10/(abs(inputs[k] - inputs['link_char_y']) + 10)
 
             # add centered absolute positions
             if False:
@@ -240,19 +260,24 @@ class ZeldaWrapper(gymnasium.Wrapper):
             state = outputs.get(prefixnum + '_state', 0)
             return health > 0 or drop > 0 or state > 0 # or 'projectile' in prefixnum
 
-        prefixnums = set(['_'.join(k.split('_')[:2]) for k in outputs])
-        for prefixnum in prefixnums:
-            if not prefixnum_is_active(prefixnum):
-                def reset(k, v):
-                    if k in outputs:
-                        outputs[k] = v
-                reset(prefixnum + '_x', 999)
-                reset(prefixnum + '_y', 999)
-                reset(prefixnum + '_xrel', 999)
-                reset(prefixnum + '_yrel', 999)
-                reset(prefixnum + '_xcenter', 999)
-                reset(prefixnum + '_ycenter', 999)
-                reset(prefixnum + '_direction', 0)
+
+        if True:
+            prefixnums = set(['_'.join(k.split('_')[:2]) for k in outputs])
+            for prefixnum in prefixnums:
+                if not prefixnum_is_active(prefixnum):
+                    def reset(k, v):
+                        if k in outputs:
+                            outputs[k] = v
+                    reset(prefixnum + '_x', 999)
+                    reset(prefixnum + '_y', 999)
+                    reset(prefixnum + '_xrel', 999)
+                    reset(prefixnum + '_yrel', 999)
+                    reset(prefixnum + '_xcenter', 999)
+                    reset(prefixnum + '_ycenter', 999)
+                    reset(prefixnum + '_dist', 999)
+                    reset(prefixnum + '_xsim', 0.0)
+                    reset(prefixnum + '_ysim', 0.0)
+                    reset(prefixnum + '_direction', 0)
 
         # reorder the enemies/projectiles
         def reorder_dictionary(outputs0, prefix):
@@ -272,20 +297,51 @@ class ZeldaWrapper(gymnasium.Wrapper):
                     if prefixnum + attr in outputs0:
                         outputs1[f'{prefix}_{i+1}'+attr] = outputs0[prefixnum + attr]
             return outputs1
-        outputs = reorder_dictionary(outputs, prefix='projectile')
-        outputs = reorder_dictionary(outputs, prefix='enemy')
+        #outputs = reorder_dictionary(outputs, prefix='projectile')
+        #outputs = reorder_dictionary(outputs, prefix='enemy')
 
         # filter outputs
-        outputs = {k:v for k,v in outputs.items() if 'enemy_1' in k or 'link' in k}
+        #outputs = {k:v for k,v in outputs.items() if 'enemy_1' in k or 'link' in k}
+        keeps = ['enemy', 'link_char', 'link_sword', 'projectile']
+        #keeps = ['enemy_1', 'link_char', 'projectile_1']
+        #keeps = ['enemy', 'link_char']
+        outputs = {k:v for k,v in outputs.items() if any([keep in k for keep in keeps])}
+
+        #keeps = ['_x', '_y', 'drop', 'count']
+        #outputs = {k:v for k,v in outputs.items() if any([keep in k for keep in keeps])}
 
         # return the output observations
         return outputs
+
+
+def _get_attrs(observations, prefix):
+    attrs = set()
+    for k in observations:
+        if k.startswith(prefix):
+            attrs.add('_'.join(k.split('_')[2:]))
+    return attrs
+    #return set([k[len(prefix)+3:] for k in observations if k.startswith(prefix) and k[len(prefix)+2: len(prefix)+3] == '_'])
+
+
+def _get_prefixnums(observations):
+    return set(['_'.join(k.split('_')[:2]) for k in observations])
+
+
+def _get_prefixes(observations):
+    return set(['_'.join(k.split('_')[:1]) for k in observations])
 
 
 def _observations_to_str(outputs):
     '''
     '''
     lines = []
+    prefixnums = _get_prefixnums(outputs)
+    prefixnums_width = max([len(x) for x in prefixnums])
+    prefixes = _get_prefixes(outputs)
+    attrs = []
+    for prefix in prefixes:
+        attrs.extend(_get_attrs(outputs, prefix))
+
     def display_tiles(tiles):
         ret = ''
         for i in range(tiles.shape[0]):
@@ -308,18 +364,28 @@ def _observations_to_str(outputs):
         dispname = name[:7]
         if name[-2] == '_':
             dispname = name[:5] + name [-2:]
-        textout = f'{dispname:7} '
-        x = outputs.get(f'{name}_x', '-')
-        y = outputs.get(f'{name}_y', '-')
-        if x != '-':
+        textout = f'{name:{prefixnums_width}} '
+        if 'x' in attrs:
+            x = outputs.get(f'{name}_x', '-')
+            y = outputs.get(f'{name}_y', '-')
             textout += f'x,y: {x:4},{y:4} '
-        xc = outputs.get(f'{name}_xcenter', '-')
-        yc = outputs.get(f'{name}_ycenter', '-')
-        if xc != '-':
+        if 'xcenter' in attrs:
+            xc = outputs.get(f'{name}_xcenter', '-')
+            yc = outputs.get(f'{name}_ycenter', '-')
             textout += f'xc,yc: {xc:4},{yc:4} '
-        xrel = outputs.get(f'{name}_xrel', '-')
-        yrel = outputs.get(f'{name}_yrel', '-')
-        if xrel != '-':
+        if 'dist' in attrs:
+            dist = outputs.get(f'{name}_dist', '-')
+            textout += f'dist: {dist:4} '
+        if 'xsim' in attrs:
+            xc = outputs.get(f'{name}_xsim')
+            yc = outputs.get(f'{name}_ysim')
+            if xc is not None:
+                textout += f'xsim,ysim: {xc:0.2f},{yc:0.2f} '
+            else:
+                textout += f'xsim,ysim:   - ,   - '
+        if 'xrel' in attrs:
+            xrel = outputs.get(f'{name}_xrel', '-')
+            yrel = outputs.get(f'{name}_yrel', '-')
             textout += f'xrel,yrel: {xrel:4},{yrel:4} '
         d = outputs.get(f'{name}_direction', '-')
         d1 = outputs.get(f'{name}_direction_north', '-')
@@ -334,19 +400,10 @@ def _observations_to_str(outputs):
         hw = outputs.get(f'{name}_health_weird', '-')
         textout += f'dir:{d:3} {d1}{d2}{d3}{d4}{d5} health: {h:3} {hw:1} state: {a:3} drop: {drop:3} count: {c:3}'
         return textout
-    lines.append(makeline('link'))
-    lines.append(makeline('sword_melee'))
-    lines.append(makeline('sword_projectile'))
-    lines.append(makeline('enemy_1'))
-    lines.append(makeline('enemy_2'))
-    lines.append(makeline('enemy_3'))
-    lines.append(makeline('enemy_4'))
-    lines.append(makeline('enemy_5'))
-    lines.append(makeline('enemy_6'))
-    lines.append(makeline('projectile_1'))
-    lines.append(makeline('projectile_2'))
-    lines.append(makeline('projectile_3'))
-    lines.append(makeline('projectile_4'))
-    lines.append(f'total_variables: {len(outputs)}')
+
+    lines.append('--------------------')
+    for prefixnum in sorted(prefixnums):
+        lines.append(makeline(prefixnum))
+    lines.append('--------------------')
 
     return '\n'.join(lines)

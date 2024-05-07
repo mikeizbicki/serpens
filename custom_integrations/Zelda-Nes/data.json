@@ -192,26 +192,6 @@
       "address": 138,
       "type": "|u1"
     },
-    "enemy_1_state": {
-      "address": 180,
-      "type": "|u1"
-    },
-    "enemy_2_state": {
-      "address": 181,
-      "type": "|u1"
-    },
-    "enemy_3_state": {
-      "address": 182,
-      "type": "|u1"
-    },
-    "enemy_4_state": {
-      "address": 179,
-      "type": "|u1"
-    },
-    "enemy_unk_state": {
-      "address": 183,
-      "type": "|u1"
-    },
     "killed_enemies": {
       "address": 1575,
       "type": "|u1"
@@ -232,19 +212,19 @@
       "address": 150,
       "type": "|u1"
     },
-    "link_state": {
+    "link_char_state": {
       "address": 172,
       "type": "|u1"
     },
-    "link_direction": {
+    "link_char_direction": {
       "address": 152,
       "type": "|u1"
     },
-    "link_x": {
+    "link_char_x": {
       "address": 112,
       "type": "|u1"
     },
-    "link_y": {
+    "link_char_y": {
       "address": 132,
       "type": "|u1"
     },
@@ -276,35 +256,35 @@
       "address": 1584,
       "type": "|u1"
     },
-    "sword_melee_state": {
+    "link_sword1_state": {
       "address": 185,
       "type": "|u1"
     },
-    "sword_melee_direction": {
+    "link_sword1_direction": {
       "address": 165,
       "type": "|u1"
     },
-    "sword_melee_x": {
+    "link_sword1_x": {
       "address": 125,
       "type": "|u1"
     },
-    "sword_melee_y": {
+    "link_sword1_y": {
       "address": 145,
       "type": "|u1"
     },
-    "sword_projectile_direction": {
+    "link_sword2_direction": {
       "address": 166,
       "type": "|u1"
     },
-    "sword_projectile_state": {
+    "link_sword2_state": {
       "address": 186,
       "type": "|u1"
     },
-    "sword_projectile_x": {
+    "link_sword2_x": {
       "address": 126,
       "type": "|u1"
     },
-    "sword_projectile_y": {
+    "link_sword2_y": {
       "address": 146,
       "type": "|u1"
     },
@@ -333,7 +313,7 @@
       "type": "|u1"
     },
     "projectile_2_state": {
-      "address": 180,
+      "address": 181,
       "type": "|u1"
     },
     "projectile_2_x": {
@@ -349,7 +329,7 @@
       "type": "|u1"
     },
     "projectile_3_state": {
-      "address": 181,
+      "address": 182,
       "type": "|u1"
     },
     "projectile_3_x": {
@@ -365,7 +345,7 @@
       "type": "|u1"
     },
     "projectile_4_state": {
-      "address": 182,
+      "address": 179,
       "type": "|u1"
     },
     "projectile_4_x": {
@@ -376,8 +356,36 @@
       "address": 139,
       "type": "|u1"
     },
-    "projectilestate_unk": {
+    "projectile_5_x": {
+      "address": 123,
+      "type": "|u1"
+    },
+    "projectile_5_y": {
+      "address": 143,
+      "type": "|u1"
+    },
+    "projectile_5_direction": {
+      "address": 163,
+      "type": "|u1"
+    },
+    "projectile_5_state": {
       "address": 183,
+      "type": "|u1"
+    },
+    "projectile_6_x": {
+      "address": 124,
+      "type": "|u1"
+    },
+    "projectile_6_y": {
+      "address": 144,
+      "type": "|u1"
+    },
+    "projectile_6_state": {
+      "address": 184,
+      "type": "|u1"
+    },
+    "projectile_6_direction": {
+      "address": 164,
       "type": "|u1"
     },
     "screen_mode": {

@@ -106,13 +106,15 @@ class RandomStateReset(gymnasium.Wrapper):
     This is useful when all the predefined states have some bias on what good behavior is,
     and starting at random states can smooth over that bias.
     '''
-    def __init__(self, env, path):
+    def __init__(self, env, path, globstr=None):
         super().__init__(env)
         self.path = path
+        if globstr:
+            self.globstr = globstr
 
     def reset(self, **kwargs):
         results = super().reset(**kwargs)
-        states = [os.path.basename(filepath).split('.')[0] for filepath in glob.glob(self.path + '/*.state')]
+        states = [os.path.basename(filepath).split('.')[0] for filepath in glob.glob(self.path + '/' + self.globstr)]
         newstate = random.choice(states)
         logging.info(f"newstate={newstate}")
         self.env.load_state(newstate, inttype=retro.data.Integrations.ALL)

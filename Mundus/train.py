@@ -7,6 +7,7 @@ from stable_baselines3 import TD3
 from stable_baselines3.common import results_plotter
 from stable_baselines3.common.vec_env import *
 from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.logger import HParam
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.results_plotter import load_results, ts2xy, plot_results
 from Mundus.Wrappers import *
@@ -59,13 +60,41 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         return True
 
 
+class HParamCallback(BaseCallback):
+    """
+    Saves the hyperparameters and metrics at the start of the training, and logs them to TensorBoard.
+    """
+
+    def _on_training_start(self) -> None:
+        hparam_dict = {
+            "algorithm": self.model.__class__.__name__,
+            "learning rate": self.model.learning_rate,
+            "gamma": self.model.gamma,
+        }
+        # define the metrics that will appear in the `HPARAMS` Tensorboard tab by referencing their tag
+        # Tensorbaord will find & display metrics from the `SCALARS` tab
+        metric_dict = {
+            "rollout/ep_len_mean": 0,
+            "train/value_loss": 0.0,
+        }
+        self.logger.record(
+            "hparams",
+            HParam(hparam_dict, metric_dict),
+            exclude=("stdout", "log", "json", "csv"),
+        )
+
+    def _on_step(self) -> bool:
+        return True
+
+
 def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--game", default="Zelda-Nes")
     parser.add_argument("--state", default=retro.State.DEFAULT)
     parser.add_argument("--scenario", default=None)
-    parser.add_argument("--log_dir", default='log')
+    parser.add_argument("--log_monitor", default='log_monitor')
+    parser.add_argument("--log_tensorboard", default='log_tensorboard')
     parser.add_argument("--nproc", type=int, default=3)
     args = parser.parse_args()
 
@@ -76,25 +105,29 @@ def main():
         env = retro.make(
                 game=args.game,
                 inttype=retro.data.Integrations.ALL,
+                state='overworld_07',
                 #render_mode='rgb_array',
                 )
         env = TimeLimit(env, max_episode_steps=30*60*5)
-        env = StochasticFrameSkip(env, 4, 0.25)
-        env = ObserveVariables(env)
+        #env = StochasticFrameSkip(env, 4, 0.25)
+        #env = ObserveVariables(env)
         env = ZeldaWrapper(env)
-        #env = FrameStack(env, 4)
-        env = RandomStateReset(env, path='custom_integrations/'+args.game)
+        env = FrameStack(env, 10)
+        #env = RandomStateReset(env, path='custom_integrations/'+args.game)
+        env = RandomStateReset(env, path='custom_integrations/'+args.game, globstr='spiders_lowhealth_01*.state')
+        #env = RandomStateReset(env, path='custom_integrations/'+args.game, globstr='overworld_07.state')
         return env
     env = SubprocVecEnv([make_env] * args.nproc)
-    env = VecMonitor(env, args.log_dir)
+    env = VecMonitor(env, args.log_monitor)
     #env = DummyVecEnv([make_env])
-    #env = Monitor(env, args.log_dir)
+    #env = Monitor(env, args.log_monitor)
     #env = make_env()
     env.reset()
 
     model = stable_baselines3.PPO(
         policy="MlpPolicy",
         env=env,
+        #learning_rate=lambda f: f * 2.5e-5,
         learning_rate=lambda f: f * 2.5e-4,
         #learning_rate=lambda f: f * 2.5e-3,
         n_steps=128,
@@ -105,15 +138,18 @@ def main():
         clip_range=0.1,
         ent_coef=0.01,
         verbose=1,
+        tensorboard_log=args.log_tensorboard,
+        #policy_kwargs={'net_arch': [1024], 'activation_fn': torch.nn.LeakyReLU}
         #policy_kwargs={'net_arch': [96, 96]}
-        #policy_kwargs={'net_arch': [256, 256]}
+        policy_kwargs={'net_arch': [256, 256]}
         #policy_kwargs={'net_arch': [256, 256], 'activation_fn': torch.nn.ReLU}
     )
     #model = stable_baselines3.PPO('MlpPolicy', env, verbose=1)
-    callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=args.log_dir)
+    callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=args.log_monitor)
     model.learn(
         total_timesteps=100_000_000,
         log_interval=1,
+        #callback = [callback, HParamCallback()],
         callback = callback,
     )
 

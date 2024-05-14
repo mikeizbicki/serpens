@@ -109,10 +109,10 @@ def main():
                 #render_mode='rgb_array',
                 )
         env = TimeLimit(env, max_episode_steps=30*60*5)
-        #env = StochasticFrameSkip(env, 4, 0.25)
+        env = StochasticFrameSkip(env, 4, 0.25)
         #env = ObserveVariables(env)
         env = ZeldaWrapper(env)
-        env = FrameStack(env, 10)
+        env = FrameStack(env, 1)
         #env = RandomStateReset(env, path='custom_integrations/'+args.game)
         env = RandomStateReset(env, path='custom_integrations/'+args.game, globstr='spiders_lowhealth_01*.state')
         #env = RandomStateReset(env, path='custom_integrations/'+args.game, globstr='overworld_07.state')
@@ -127,10 +127,12 @@ def main():
     model = stable_baselines3.PPO(
         policy="MlpPolicy",
         env=env,
+        #learning_rate=lambda f: f * 2.5e-6,
         #learning_rate=lambda f: f * 2.5e-5,
         learning_rate=lambda f: f * 2.5e-4,
         #learning_rate=lambda f: f * 2.5e-3,
-        n_steps=128,
+        #n_steps=128,
+        n_steps=1024,
         batch_size=32,
         n_epochs=4,
         gamma=0.99,
@@ -139,9 +141,12 @@ def main():
         ent_coef=0.01,
         verbose=1,
         tensorboard_log=args.log_tensorboard,
+        #policy_kwargs={'net_arch': [1024]}
         #policy_kwargs={'net_arch': [1024], 'activation_fn': torch.nn.LeakyReLU}
+        #policy_kwargs={'net_arch': [4024], 'activation_fn': torch.nn.ReLU}
+        #policy_kwargs={'net_arch': [1024], 'activation_fn': torch.nn.Tanh}
         #policy_kwargs={'net_arch': [96, 96]}
-        policy_kwargs={'net_arch': [256, 256]}
+        #policy_kwargs={'net_arch': [256, 256]}
         #policy_kwargs={'net_arch': [256, 256], 'activation_fn': torch.nn.ReLU}
     )
     #model = stable_baselines3.PPO('MlpPolicy', env, verbose=1)
@@ -149,8 +154,8 @@ def main():
     model.learn(
         total_timesteps=100_000_000,
         log_interval=1,
-        #callback = [callback, HParamCallback()],
-        callback = callback,
+        callback = [callback, HParamCallback()],
+        #callback = callback,
     )
 
     # cleanly close resources

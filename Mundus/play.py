@@ -333,22 +333,30 @@ def main():
             state='overworld_04',
             #state='overworld_07',
             )
-    #env = StochasticFrameSkip(env, 4, 0.25)
     #env = ObserveVariables(env)
     #env = RandomStateReset(env, path='custom_integrations/'+args.game)
     env = ZeldaWrapper(env, stdout_debug=True)
+    #env = ZeldaWrapper(env, stdout_debug=False)
     env = Interactive(env)
     env = PlayAudio(env)
-    env = FrameStack(env, 2)
+    #env = FrameStack(env, 2)
     #env = ConsoleWrapper(env)
     env.reset()
 
     # main game loop
     try:
+        # set the default action
+        action = env.action_space.sample() * 0
+
         while True:
-            # set no action as the default
-            action = env.action_space.sample() * 0
             observation, reward, terminated, truncated, info = env.step(action)
+            #print(f"observation.shape={observation.shape}")
+            #print(f"observation[env.dict_keys['enemy_1_dist']]={observation[env.dict_keys['enemy_1_dist']]}")
+            #if type(action) == list:
+                #action = env.action_space.sample() * 0
+            #if observation[env.dict_keys['enemy_1_dist']] < 20:
+                #action = env.keys_to_act(['Z'])
+                #print(f"action={action}")
             #env.render()
             #data = env.unwrapped.get_ram()[0xba2+0x800:0xba2+0x800+4]
             #data = env.unwrapped.get_ram()[0x12ba+0x800:0x12ba+0x800+4]

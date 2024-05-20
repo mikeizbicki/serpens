@@ -1,9 +1,3 @@
-import retro
-import gymnasium
-from  gymnasium.wrappers import *
-import pyglet
-import pyaudio
-import pygame
 import time
 import numpy as np
 import random
@@ -12,6 +6,14 @@ import logging
 import sys
 import pprint
 
+import pyglet
+import pyaudio
+import pygame
+import gymnasium
+from  gymnasium.wrappers import *
+import retro
+
+from Mundus.Audio import *
 from Mundus.Wrappers import *
 from Mundus.Zelda import *
 
@@ -19,34 +21,6 @@ from Mundus.Zelda import *
 # FIXME:
 import warnings
 warnings.filterwarnings("ignore")
-
-
-import threading
-class KeyboardThread(threading.Thread):
-    '''
-    Taken from <https://stackoverflow.com/a/57387909>.
-    '''
-
-    def __init__(self, prompt=None, input_cbk=None, name='keyboard-input-thread'):
-        self.input_cbk = input_cbk
-        self.prompt = prompt
-        super(KeyboardThread, self).__init__(name=name, daemon=True)
-        self.start()
-
-    def run(self):
-        while True:
-            self.input_cbk(input(self.prompt)) #waits to get input + Return
-
-
-class ConsoleWrapper(gymnasium.Wrapper):
-    def __init__(self, env):
-        super().__init__(env)
-
-        # create multithreaded keyboard input
-        self.current_command = None
-        def set_current_command(text):
-            self.current_command = text
-        self.input_thread = KeyboardThread('input: ', set_current_command)
 
 
 # pyglet doesn't seem to have a map built-in for converting keycodes to names;
@@ -189,6 +163,7 @@ class Interactive(gymnasium.Wrapper):
             self.action_override = False
         if self.action_override:
             action = self.keys_to_act(keys_pressed)
+        #print(f"action={action}")
         observation, reward, terminated, truncated, info = super().step(action)
         #results = (observation, lang_input), reward + manual_reward, terminated, truncated, info
         results = observation, reward + manual_reward, terminated, truncated, info
@@ -205,7 +180,7 @@ class Interactive(gymnasium.Wrapper):
         time_diff = time.time() - self.last_log_time
         self.frames_since_log += 1
         if time_diff >= self.log_every:
-            logging.info(f'fps={self.frames_since_log} reward_diff={self.this_log_reward:+0.4f} total_reward={self.total_reward:+0.4f}')
+            logging.debug(f'fps={self.frames_since_log} reward_diff={self.this_log_reward:+0.4f} total_reward={self.total_reward:+0.4f}')
             self.last_log_time = time.time()
             self.frames_since_log = 0
             self.this_log_reward = 0
@@ -315,6 +290,7 @@ def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--game", default="Zelda-Nes")
+    #parser.add_argument("--game", default="GauntletII-Nes")
     parser.add_argument("--state", default=retro.State.DEFAULT)
     parser.add_argument("--scenario", default=None)
     args = parser.parse_args()
@@ -330,15 +306,22 @@ def main():
     env = retro.make(
             game=args.game,
             inttype=retro.data.Integrations.ALL,
-            state='overworld_04',
+            use_restricted_actions=retro.Actions.ALL,
+            #state='overworld_04',
             #state='overworld_07',
             )
     #env = ObserveVariables(env)
     #env = RandomStateReset(env, path='custom_integrations/'+args.game)
-    env = ZeldaWrapper(env, stdout_debug=True)
-    #env = ZeldaWrapper(env, stdout_debug=False)
+    if 'Zelda' in args.game:
+        env = ZeldaWrapper(
+                env,
+                stdout_debug=True,
+                #stdout_debug=False,
+                no_render_skipped_frames=True,
+                )
     env = Interactive(env)
     env = PlayAudio(env)
+    env = Whisper(env)
     #env = FrameStack(env, 2)
     #env = ConsoleWrapper(env)
     env.reset()

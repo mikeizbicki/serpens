@@ -39,7 +39,7 @@ class StochasticFrameSkip(gymnasium.Wrapper):
         self.stickprob = stickprob
         self.curac = None
         self.rng = np.random.RandomState()
-        self.supports_want_render = hasattr(env, "supports_want_render")
+        self.supports_want_render = False #hasattr(env, "supports_want_render")
 
     def reset(self, **kwargs):
         self.curac = None

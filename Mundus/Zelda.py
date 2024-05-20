@@ -26,6 +26,8 @@ class ZeldaWrapper(gymnasium.Wrapper):
             normalize_output=True,
             reorder_outputs=False,
             clean_outputs=True,
+            no_render_skipped_frames=True,
+            skip_boring_frames=True,
             ):
 
         # bookkeeping
@@ -39,13 +41,20 @@ class ZeldaWrapper(gymnasium.Wrapper):
         self.normalize_output = normalize_output
         self.reorder_outputs = reorder_outputs
         self.clean_outputs = clean_outputs
+        self.no_render_skipped_frames=no_render_skipped_frames
+        self.skip_boring_frames = skip_boring_frames 
+
+        # these variables track what information in the info dict will be included in the observations 
+        self.keep_prefixes = ['enemy', 'link_char', 'link_sword', 'projectile']
+        self.keep_suffixes = ['_x', '_y', 'drop', 'count', '_direction_', 'health', 'state', 'type']
 
         # switch the terminal to the alternate screen
         if self.stdout_debug:
             print('\u001B[?1049h')
 
         # create a new observation space
-        observations = self.generate_observations()
+        info = self.generate_info()
+        observations = self.info_to_observations(info)
         if normalize_output:
             low = -1
             high = 1
@@ -71,7 +80,9 @@ class ZeldaWrapper(gymnasium.Wrapper):
         return self.observation_space.sample(), info
 
     def step(self, action):
-        new_observations = self.generate_observations()
+
+        new_info = self.generate_info()
+        new_observations = self.info_to_observations(new_info)
         new_observations_array = np.array(list(new_observations.values()), dtype=np.float16)
         observation, reward, terminated, truncated, info = super().step(action)
         self.episode_reward += reward
@@ -84,9 +95,67 @@ class ZeldaWrapper(gymnasium.Wrapper):
             text += f'\nepisode_reward = {self.episode_reward:0.4f}'
             print(text)
 
-        return new_observations_array, reward, terminated, truncated, info
+        # skip the boring frames
+        if self.skip_boring_frames:
 
-    def generate_observations(self):
+            # record the environment's render mode so that we can restore it after skipping
+            render_mode = self.env.render_mode
+            if self.no_render_skipped_frames:
+                self.env.render_mode = None
+            skipped_frames = 0
+
+            while any([
+                self._gamestate_is_screen_scrolling(),
+                self._gamestate_is_drawing_text(),
+                self._gamestate_is_cave_enter(),
+                self._gamestate_is_inventory_scroll(),
+                self._gamestate_hearts() <= 0,
+                self._gamestate_is_openning_scene(),
+                ]):
+                # normally we will not press any action to the environment;
+                # but if link has died, we need to press the "continue" button;
+                # to do this, we alternate between no action and pressing "start" every frame
+                skipped_frames += 1
+                skipaction = [False]*8
+                if self._gamestate_hearts() <= 0 and skipped_frames%2 == 0:
+                    skipaction[3] = True
+                super().step(skipaction)
+            self.env.render_mode = render_mode
+
+        # return step results
+        return new_observations_array, reward, terminated, truncated, new_info
+
+    def observations_diff(observations):
+        pass
+
+    # The _gamestate functions modified from gym-zelda-1 repo;
+    # that repo uses the nesgym library, which is a pure python nes emulator
+    # and about 10x slower than the gymretro environment;
+    # FIXME:
+    # the get_ram() functions below do some calculations before returning a np array;
+    # we should cache these results somewhere
+    def _gamestate_is_screen_scrolling(self):
+        SCROLL_GAME_MODES = {4, 6, 7}
+        return self.env.get_ram()[0x12] in SCROLL_GAME_MODES
+
+    def _gamestate_is_drawing_text(self):
+        return self.env.get_ram()[0x0605] == 0x10
+
+    def _gamestate_is_cave_enter(self):
+        return self.env.get_ram()[0x0606] == 0x08
+
+    def _gamestate_is_inventory_scroll(self):
+        return 65 < self.env.get_ram()[0xfc]
+    
+    def _gamestate_is_openning_scene(self):
+        return bool(self.env.get_ram()[0x007c])
+
+    def _gamestate_hearts(self):
+        link_full_hearts = 0x0f & self.env.get_ram()[0x066f]
+        link_partial_hearts = self.env.get_ram()[0x0670] / 255
+        return link_full_hearts + link_partial_hearts
+
+    def generate_info(self):
         outputs = OrderedDict()
         inputs = self.env.data.lookup_all()
 
@@ -259,23 +328,21 @@ class ZeldaWrapper(gymnasium.Wrapper):
                 elif '_count' in k:
                     outputs[k] /= 256
 
-        # filter outputs
-        #outputs = {k:v for k,v in outputs.items() if 'enemy_1' in k or 'link' in k}
-        keeps = ['enemy', 'link_char', 'link_sword', 'projectile']
-        #keeps = ['enemy_1', 'link_char', 'projectile_1']
-        #keeps = ['enemy', 'link_char']
-        outputs = {k:v for k,v in outputs.items() if any([keep in k for keep in keeps])}
-
-        keeps = ['_x', '_y', 'drop', 'count', '_direction_', 'health', 'state', 'type']
-        outputs = {k:v for k,v in outputs.items() if any([keep in k for keep in keeps])}
-
-        # the first time building the dictionary,
-        # we save the keys
-        if self.dict_keys is None:
-            self.dict_keys = {k:i for i,k in enumerate(outputs.keys())}
-
-        # return the output observations
+        # return the results
         return outputs
+
+    def info_to_observations(self, info):
+
+        # create the observations dict
+        observations = copy.copy(info)
+        observations = {k:v for k,v in observations.items() if any([keep in k for keep in self.keep_prefixes])}
+        observations = {k:v for k,v in observations.items() if any([keep in k for keep in self.keep_suffixes])}
+
+        # the first time building the dictionary, we save the keys
+        if self.dict_keys is None:
+            self.dict_keys = {k:i for i,k in enumerate(observations.keys())}
+
+        return observations
 
 
 def _get_attrs(observations, prefix):

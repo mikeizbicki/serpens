@@ -12,7 +12,19 @@ import logging
 from collections import OrderedDict
 
 
-class ZeldaWrapper(gymnasium.Wrapper):
+class RetroWithRam(gymnasium.Wrapper):
+    '''
+    The .get_ram() function is relatively expensive.
+    The only purpose of this wrapper is to store the result of .get_ram() in an attribute
+    to prevent multiple calls.
+    '''
+    def step(self, action):
+        self.ram = self.env.get_ram()
+        return super().step(action)
+
+
+#class ZeldaWrapper(gymnasium.Wrapper):
+class ZeldaWrapper(RetroWithRam):
     '''
     '''
     def __init__(
@@ -24,7 +36,7 @@ class ZeldaWrapper(gymnasium.Wrapper):
             center_xy=True,
             output_link_view=False,
             normalize_output=True,
-            reorder_outputs=False,
+            reorder_outputs=True,
             clean_outputs=True,
             no_render_skipped_frames=True,
             skip_boring_frames=True,
@@ -37,7 +49,7 @@ class ZeldaWrapper(gymnasium.Wrapper):
         self.link_view_radius = link_view_radius
         self.center_xy = center_xy
         self.output_link_view = output_link_view
-        self.dict_keys = None
+        self.observations_keys = None
         self.normalize_output = normalize_output
         self.reorder_outputs = reorder_outputs
         self.clean_outputs = clean_outputs
@@ -124,36 +136,6 @@ class ZeldaWrapper(gymnasium.Wrapper):
 
         # return step results
         return new_observations_array, reward, terminated, truncated, new_info
-
-    def observations_diff(observations):
-        pass
-
-    # The _gamestate functions modified from gym-zelda-1 repo;
-    # that repo uses the nesgym library, which is a pure python nes emulator
-    # and about 10x slower than the gymretro environment;
-    # FIXME:
-    # the get_ram() functions below do some calculations before returning a np array;
-    # we should cache these results somewhere
-    def _gamestate_is_screen_scrolling(self):
-        SCROLL_GAME_MODES = {4, 6, 7}
-        return self.env.get_ram()[0x12] in SCROLL_GAME_MODES
-
-    def _gamestate_is_drawing_text(self):
-        return self.env.get_ram()[0x0605] == 0x10
-
-    def _gamestate_is_cave_enter(self):
-        return self.env.get_ram()[0x0606] == 0x08
-
-    def _gamestate_is_inventory_scroll(self):
-        return 65 < self.env.get_ram()[0xfc]
-    
-    def _gamestate_is_openning_scene(self):
-        return bool(self.env.get_ram()[0x007c])
-
-    def _gamestate_hearts(self):
-        link_full_hearts = 0x0f & self.env.get_ram()[0x066f]
-        link_partial_hearts = self.env.get_ram()[0x0670] / 255
-        return link_full_hearts + link_partial_hearts
 
     def generate_info(self):
         outputs = OrderedDict()
@@ -328,10 +310,24 @@ class ZeldaWrapper(gymnasium.Wrapper):
                 elif '_count' in k:
                     outputs[k] /= 256
 
+        # create summary info
+        outputs['summary_enemies_totalhealth'] = sum([outputs[f'enemy_{i}_health_simple'] for i in range(1,7)])
+        outputs['summary_enemies_alive'] = sum([outputs[f'enemy_{i}_health_simple'] > 0 for i in range(1,7)])
+        outputs['summary_link_health'] = outputs['link_char_health_simple']
+        outputs['summary_link_rupees'] = inputs['link_items_rupees']
+        outputs['summary_link_bombs'] = inputs['link_items_bombs']
+        outputs['summary_link_keys'] = inputs['link_items_keys']
+        outputs['is_success'] = outputs['summary_enemies_alive'] == 0
+        outputs['summary_is_success'] = outputs['is_success']
+#
         # return the results
         return outputs
 
     def info_to_observations(self, info):
+        '''
+        Filter the info dictionary to remove information
+        that should not be available to the agent for training.
+        '''
 
         # create the observations dict
         observations = copy.copy(info)
@@ -339,11 +335,34 @@ class ZeldaWrapper(gymnasium.Wrapper):
         observations = {k:v for k,v in observations.items() if any([keep in k for keep in self.keep_suffixes])}
 
         # the first time building the dictionary, we save the keys
-        if self.dict_keys is None:
-            self.dict_keys = {k:i for i,k in enumerate(observations.keys())}
+        if self.observations_keys is None:
+            self.observations_keys = {k:i for i,k in enumerate(observations.keys())}
 
         return observations
 
+    # The _gamestate functions modified from gym-zelda-1 repo;
+    # that repo uses the nesgym library, which is a pure python nes emulator
+    # and about 10x slower than the gymretro environment;
+    def _gamestate_is_screen_scrolling(self):
+        SCROLL_GAME_MODES = {4, 6, 7}
+        return self.ram[0x12] in SCROLL_GAME_MODES
+
+    def _gamestate_is_drawing_text(self):
+        return self.ram[0x0605] == 0x10
+
+    def _gamestate_is_cave_enter(self):
+        return self.ram[0x0606] == 0x08
+
+    def _gamestate_is_inventory_scroll(self):
+        return 65 < self.ram[0xfc]
+    
+    def _gamestate_is_openning_scene(self):
+        return bool(self.ram[0x007c])
+
+    def _gamestate_hearts(self):
+        link_full_hearts = 0x0f & self.ram[0x066f]
+        link_partial_hearts = self.ram[0x0670] / 255
+        return link_full_hearts + link_partial_hearts
 
 def _get_attrs(observations, prefix):
     attrs = set()

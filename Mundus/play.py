@@ -334,10 +334,10 @@ def main():
         while True:
             observation, reward, terminated, truncated, info = env.step(action)
             #print(f"observation.shape={observation.shape}")
-            #print(f"observation[env.dict_keys['enemy_1_dist']]={observation[env.dict_keys['enemy_1_dist']]}")
+            #print(f"observation[env.observations_keys['enemy_1_dist']]={observation[env.observations_keys['enemy_1_dist']]}")
             #if type(action) == list:
                 #action = env.action_space.sample() * 0
-            #if observation[env.dict_keys['enemy_1_dist']] < 20:
+            #if observation[env.observations_keys['enemy_1_dist']] < 20:
                 #action = env.keys_to_act(['Z'])
                 #print(f"action={action}")
             #env.render()

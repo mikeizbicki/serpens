@@ -26,7 +26,7 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
       It must contains the file created by the ``Monitor`` wrapper.
     :param verbose: Verbosity level: 0 for no output, 1 for info messages, 2 for debug messages
     """
-    def __init__(self, check_freq: int, log_dir: str, verbose: int = 1, min_episodes=20):
+    def __init__(self, check_freq: int, log_dir: str, verbose: int = 1, min_episodes=100):
         super().__init__(verbose)
         self.check_freq = check_freq
         self.log_dir = log_dir
@@ -124,15 +124,24 @@ class HParamCallback(BaseCallback):
     """
 
     def _on_training_start(self) -> None:
+        def _wrap_value(x):
+            if hasattr(x, '__call__'):
+                return x(1)
+            else:
+                return x
+
         hparam_dict = {
             "algorithm": self.model.__class__.__name__,
-            "learning rate": self.model.learning_rate,
+            "learning rate": _wrap_value(self.model.learning_rate),
             "gamma": self.model.gamma,
         }
         # define the metrics that will appear in the `HPARAMS` Tensorboard tab by referencing their tag
-        # Tensorbaord will find & display metrics from the `SCALARS` tab
+        # Tensorboard will find & display metrics from the `SCALARS` tab
         metric_dict = {
+            "episode/is_success": 0,
             "rollout/ep_len_mean": 0,
+            "rollout/ep_rew_mean": 0,
+            "rollout/is_success": 0,
             "train/value_loss": 0.0,
             'evaluate/mean_reward': 0.0,
         }
@@ -146,12 +155,70 @@ class HParamCallback(BaseCallback):
         return True
 
 
+class TensorboardCallback(BaseCallback):
+    """
+    Custom callback for plotting additional values in tensorboard.
+    """
+
+    def __init__(self, verbose=0):
+        super().__init__(verbose)
+        self.screens = []
+        self.num_episodes = None
+        self.record_every = 10
+        self.max_video_length = 100
+
+    def _on_step(self) -> bool:
+
+        # on the first iteration,
+        # we set num_episodes to a list whose length is the number of vectorized environments;
+        # each entry will count the total number of episodes for that environment
+        if self.num_episodes is None:
+            self.num_episodes = [0] * len(self.locals['dones'])
+
+        # if self.screens is a list,
+        # then we are currently recording the screens of the first environment
+        if self.screens is not None and len(self.screens) < self.max_video_length:
+            #import code
+            #code.interact(local=locals())
+            #screen = self.env.get_wrapper_attr('get_screen')()
+            screen = self.training_env.get_images()[0]
+            self.screens.append(screen.transpose(2, 0, 1))
+        
+        # for each environment, we record our info if it is done
+        for i, done in enumerate(self.locals['dones']):
+            if done:
+                self.num_episodes[i] += 1
+
+                # special screen recording processing for the first environment only
+                if i == 0:
+
+                    # record the screen
+                    if type(self.screens) == list:
+                        self.logger.record(
+                            "trajectory/video",
+                            Video(torch.from_numpy(np.asarray([self.screens])), fps=60),
+                            exclude=("stdout", "log", "json", "csv"),
+                        )
+                        self.screens = None
+
+                    # begin processing a new screen only occasionally
+                    if self.num_episodes[i] % self.record_every == 0:
+                        self.screens = []
+
+                # record all of the "summary_*" keys within the info dict
+                keys = [key for key in self.locals['infos'][i].keys() if key.startswith('summary_')]
+                for key in keys:
+                    self.logger.record_mean('episode/'+key, self.locals['infos'][i][key])
+                self.logger.record('episode/num_episodes', sum(self.num_episodes))
+        return True
+
+
 def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--game", default="Zelda-Nes")
     parser.add_argument("--state", default=retro.State.DEFAULT)
-    parser.add_argument("--render_mode", default=None)
+    parser.add_argument("--render_mode", default='rgb_array')
     parser.add_argument("--log_monitor", default='log_monitor')
     parser.add_argument("--log_tensorboard", default='log_tensorboard')
     parser.add_argument("--nproc", type=int, default=3)
@@ -174,6 +241,7 @@ def main():
                 )
         env = TimeLimit(env, max_episode_steps=30*60*5)
         env = StochasticFrameSkip(env, 4, 0.25)
+        env = Monitor(env, info_keywords=['summary_enemies_alive'])
         #env = ObserveVariables(env)
         #env = FrameStack(env, 1)
         #env = RandomStateReset(env, path='custom_integrations/'+args.game)
@@ -184,24 +252,27 @@ def main():
     #eval_env = Monitor(eval_env, args.log_monitor + '/eval')
 
     train_env = SubprocVecEnv([lambda: make_env(render_mode=args.render_mode)] * args.nproc)
-    train_env = VecMonitor(train_env, args.log_monitor)
+    #train_env = VecMonitor(train_env, args.log_monitor)
     train_env.reset()
 
     model = stable_baselines3.PPO(
         policy="MlpPolicy",
         env=train_env,
-        #learning_rate=2.5e-4,
-        learning_rate=lambda f: f * 2.5e-4,
+        #learning_rate=2.5e-3,
+        learning_rate=2.5e-4,
+        #learning_rate=lambda f: f * 2.5e-4,
         #n_steps=128,
         n_steps=1024,
         batch_size=32,
         n_epochs=4,
+        #gamma=0.9,
         gamma=0.99,
         gae_lambda=0.95,
         clip_range=0.1,
         ent_coef=0.01,
         verbose=1,
         tensorboard_log=args.log_tensorboard,
+        policy_kwargs={'net_arch': []}
         #policy_kwargs={'net_arch': [1024]}
         #policy_kwargs={'net_arch': [1024], 'activation_fn': torch.nn.LeakyReLU}
         #policy_kwargs={'net_arch': [4024], 'activation_fn': torch.nn.ReLU}
@@ -216,7 +287,8 @@ def main():
         callback = [
             SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=args.log_monitor),
             #VideoRecorderCallback(eval_env, 1024*4),
-            #HParamCallback(),
+            HParamCallback(),
+            TensorboardCallback(),
             ],
     )
 

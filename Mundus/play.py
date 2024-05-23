@@ -258,13 +258,16 @@ class PlayAudio(gymnasium.Wrapper):
             return (data, pyaudio.paContinue)
 
         self.p = pyaudio.PyAudio()
-        self.stream = self.p.open(
-                format=pyaudio.paInt16,
-                channels=2,
-                rate=int(env.em.get_audio_rate()),
-                output=True,
-                stream_callback=playing_callback,
-                )
+        try:
+            self.stream = self.p.open(
+                    format=pyaudio.paInt16,
+                    channels=2,
+                    rate=int(env.em.get_audio_rate()),
+                    output=True,
+                    stream_callback=playing_callback,
+                    )
+        except OSError:
+            self.stream = None
 
         # FIXME:
         # commenting this line out will remove the underrun warnings;

@@ -26,22 +26,33 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
       It must contains the file created by the ``Monitor`` wrapper.
     :param verbose: Verbosity level: 0 for no output, 1 for info messages, 2 for debug messages
     """
-    def __init__(self, check_freq: int, log_dir: str, verbose: int = 1, min_episodes=100):
+    def __init__(
+            self,
+            check_freq: int=1_000,
+            log_dir: str=None,
+            verbose: int=1,
+            min_episodes=100,
+            ):
         super().__init__(verbose)
         self.check_freq = check_freq
         self.log_dir = log_dir
-        self.save_path = os.path.join(log_dir, "best_model")
         self.best_mean_reward = -np.inf
         self.min_episodes = min_episodes
 
     def _init_callback(self) -> None:
-        # Create folder if needed
-        if self.save_path is not None:
-            os.makedirs(self.save_path, exist_ok=True)
+        if self.log_dir is None:
+            self.log_dir = self.logger.get_dir()
+        self.save_path = os.path.join(self.log_dir, 'model')
 
     def _on_step(self) -> bool:
+        #import code
+        #code.interact(local=locals())
+        #print('self.n_calls=', self.n_calls)
         if self.n_calls % self.check_freq == 0:
+            logging.info(f'saving model to {self.save_path}')
+            self.model.save(self.save_path)
 
+        '''
           # Retrieve training reward
           x, y = ts2xy(load_results(self.log_dir), "timesteps")
           if len(x) > self.min_episodes:
@@ -58,63 +69,8 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
                   if self.verbose >= 1:
                     print(f"Saving new best model to {self.save_path}")
                   self.model.save(self.save_path)
+        '''
 
-        return True
-
-
-from typing import Any, Dict
-class VideoRecorderCallback(BaseCallback):
-    def __init__(self, eval_env: gymnasium.Env, render_freq: int, n_eval_episodes: int = 1, deterministic: bool = False):
-        """
-        Records a video of an agent's trajectory traversing ``eval_env`` and logs it to TensorBoard
-
-        :param eval_env: A gym environment from which the trajectory is recorded
-        :param render_freq: Render the agent's trajectory every eval_freq call of the callback.
-        :param n_eval_episodes: Number of episodes to render
-        :param deterministic: Whether to use deterministic or stochastic policy
-        """
-        super().__init__()
-        self._eval_env = eval_env
-        self._render_freq = render_freq
-        self._n_eval_episodes = n_eval_episodes
-        self._deterministic = deterministic
-
-    def _on_step(self) -> bool:
-        if self.n_calls % self._render_freq == 0:
-            screens = []
-
-            def grab_screens(_locals: Dict[str, Any], _globals: Dict[str, Any]) -> None:
-                """
-                Renders the environment in its current state, recording the screen in the captured `screens` list
-
-                :param _locals: A dictionary containing all local variables of the callback's scope
-                :param _globals: A dictionary containing all global variables of the callback's scope
-                """
-                # We expect `render()` to return a uint8 array with values in [0, 255] or a float array
-                # with values in [0, 1], as described in
-                # https://pytorch.org/docs/stable/tensorboard.html#torch.utils.tensorboard.writer.SummaryWriter.add_video
-                #screen = self._eval_env.render(mode="rgb_array")
-                screen = self._eval_env.get_wrapper_attr('get_screen')()
-                # PyTorch uses CxHxW vs HxWxC gym (and tensorflow) image convention
-                screens.append(screen.transpose(2, 0, 1))
-
-            mean, stddev = evaluate_policy(
-                self.model,
-                self._eval_env,
-                callback=grab_screens,
-                n_eval_episodes=self._n_eval_episodes,
-                deterministic=self._deterministic,
-            )
-            self.logger.record(
-                'evaluate/mean_reward',
-                mean,
-                exclude=("stdout", "log", "json", "csv"),
-            )
-            self.logger.record(
-                "trajectory/video",
-                Video(torch.from_numpy(np.asarray([screens])), fps=60),
-                exclude=("stdout", "log", "json", "csv"),
-            )
         return True
 
 
@@ -160,12 +116,16 @@ class TensorboardCallback(BaseCallback):
     Custom callback for plotting additional values in tensorboard.
     """
 
-    def __init__(self, verbose=0):
+    def __init__(self, verbose=0, max_video_length=60*30, record_every=1):
         super().__init__(verbose)
+
+        # store settings
+        self.record_every = record_every
+        self.max_video_length = max_video_length
+
+        # these variables are internally created/updated by ._on_step()
         self.screens = []
         self.num_episodes = None
-        self.record_every = 10
-        self.max_video_length = 100
 
     def _on_step(self) -> bool:
 
@@ -178,9 +138,6 @@ class TensorboardCallback(BaseCallback):
         # if self.screens is a list,
         # then we are currently recording the screens of the first environment
         if self.screens is not None and len(self.screens) < self.max_video_length:
-            #import code
-            #code.interact(local=locals())
-            #screen = self.env.get_wrapper_attr('get_screen')()
             screen = self.training_env.get_images()[0]
             self.screens.append(screen.transpose(2, 0, 1))
         
@@ -217,12 +174,39 @@ def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--game", default="Zelda-Nes")
-    parser.add_argument("--state", default=retro.State.DEFAULT)
     parser.add_argument("--render_mode", default='rgb_array')
     parser.add_argument("--log_monitor", default='log_monitor')
     parser.add_argument("--log_tensorboard", default='log_tensorboard')
-    parser.add_argument("--nproc", type=int, default=3)
+
+    debug = parser.add_argument_group('debug')
+    debug.add_argument("--log_dir", default='log')
+
+    hyperparameters = parser.add_argument_group('hyperparameters')
+    hyperparameters.add_argument('--net_arch', type=int, nargs='*', default=[])
+    hyperparameters.add_argument('--lr', type=float, default=3e-4)
+    hyperparameters.add_argument('--gamma', type=float, default=0.99)
+    hyperparameters.add_argument('--nproc', type=int, default=3)
+    hyperparameters.add_argument('--n_steps', type=int, default=128)
+    hyperparameters.add_argument('--seed', type=int, default=None)
+
     args = parser.parse_args()
+
+    # set seed
+    if args.seed is None:
+        args.seed = int(time.time()*10_000_000) % 2**32
+
+    # set logging level
+    import logging
+    logging.basicConfig()
+    logging.getLogger().setLevel(logging.INFO)
+
+    # experiment name
+    import datetime
+    starttime = datetime.datetime.now().isoformat()
+
+    experiment_name = f'net_arch={"-".join(args.net_arch)},lr={args.lr},gamma={args.gamma},starttime={starttime}'
+    experiment_name = f'net_arch={"-".join(args.net_arch)},lr={args.lr},gamma={args.gamma},nproc={args.nproc},n_steps={args.n_steps}'
+    logging.info(f'experiment_name: [{experiment_name}]')
 
     # create the environment
     def make_env(render_mode):
@@ -233,7 +217,6 @@ def main():
                 inttype=retro.data.Integrations.ALL,
                 state='overworld_07',
                 render_mode=render_mode,
-                #render_mode='rgb_array',
                 )
         env = ZeldaWrapper(
                 env,
@@ -241,52 +224,40 @@ def main():
                 )
         env = TimeLimit(env, max_episode_steps=30*60*5)
         env = StochasticFrameSkip(env, 4, 0.25)
-        env = Monitor(env, info_keywords=['summary_enemies_alive'])
+        #env = Monitor(env, info_keywords=['summary_enemies_alive'])
         #env = ObserveVariables(env)
         #env = FrameStack(env, 1)
         #env = RandomStateReset(env, path='custom_integrations/'+args.game)
         env = RandomStateReset(env, path='custom_integrations/'+args.game, globstr='spiders_lowhealth_01*.state')
         #env = RandomStateReset(env, path='custom_integrations/'+args.game, globstr='overworld_07.state')
         return env
-    #eval_env = make_env(render_mode='rgb_array')
-    #eval_env = Monitor(eval_env, args.log_monitor + '/eval')
 
     train_env = SubprocVecEnv([lambda: make_env(render_mode=args.render_mode)] * args.nproc)
-    #train_env = VecMonitor(train_env, args.log_monitor)
+    train_env = VecMonitor(train_env, args.log_monitor)
     train_env.reset()
 
     model = stable_baselines3.PPO(
         policy="MlpPolicy",
         env=train_env,
-        #learning_rate=2.5e-3,
-        learning_rate=2.5e-4,
-        #learning_rate=lambda f: f * 2.5e-4,
-        #n_steps=128,
-        n_steps=1024,
+        learning_rate=args.lr,
+        n_steps=args.n_steps,
         batch_size=32,
         n_epochs=4,
-        #gamma=0.9,
-        gamma=0.99,
+        gamma=args.gamma,
         gae_lambda=0.95,
         clip_range=0.1,
         ent_coef=0.01,
         verbose=1,
-        tensorboard_log=args.log_tensorboard,
-        policy_kwargs={'net_arch': []}
-        #policy_kwargs={'net_arch': [1024]}
-        #policy_kwargs={'net_arch': [1024], 'activation_fn': torch.nn.LeakyReLU}
-        #policy_kwargs={'net_arch': [4024], 'activation_fn': torch.nn.ReLU}
-        #policy_kwargs={'net_arch': [1024], 'activation_fn': torch.nn.Tanh}
-        #policy_kwargs={'net_arch': [96, 96]}
-        #policy_kwargs={'net_arch': [256, 256]}
-        #policy_kwargs={'net_arch': [256, 256], 'activation_fn': torch.nn.ReLU}
+        tensorboard_log=args.log_dir,
+        policy_kwargs={'net_arch': args.net_arch},
+        seed=args.seed,
     )
     model.learn(
         total_timesteps=100_000_000,
         log_interval=1,
+        tb_log_name=experiment_name,
         callback = [
-            SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=args.log_monitor),
-            #VideoRecorderCallback(eval_env, 1024*4),
+            SaveOnBestTrainingRewardCallback(),
             HParamCallback(),
             TensorboardCallback(),
             ],
@@ -294,7 +265,6 @@ def main():
 
     # cleanly close resources
     train_env.close()
-    #eval_env.close()
 
 
 if __name__ == "__main__":

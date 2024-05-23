@@ -319,7 +319,7 @@ class ZeldaWrapper(RetroWithRam):
         outputs['summary_link_keys'] = inputs['link_items_keys']
         outputs['is_success'] = outputs['summary_enemies_alive'] == 0
         outputs['summary_is_success'] = outputs['is_success']
-#
+
         # return the results
         return outputs
 

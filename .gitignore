@@ -1,8 +1,10 @@
 venv*
 old
-log
+log*
 tmp*
+
 pdf
+nohup.out
 
 # fceux junk
 *.cdl

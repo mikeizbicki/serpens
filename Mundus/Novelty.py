@@ -1,4 +1,4 @@
-from pysad.models import xStream
+from pysad.models import xStream, KNNCAD
 
 
 class NoveltyReward(gymnasium.Wrapper):
@@ -13,7 +13,7 @@ class NoveltyReward(gymnasium.Wrapper):
     def reset(self, **kwargs):
         results = super().reset(**kwargs)
         del self.model
-        self.model = xStream()
+        self.model = KNNCAD()
         return results
 
     def step(self, action):

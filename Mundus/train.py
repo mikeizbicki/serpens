@@ -204,8 +204,9 @@ def main():
     import datetime
     starttime = datetime.datetime.now().isoformat()
 
-    experiment_name = f'net_arch={"-".join(args.net_arch)},lr={args.lr},gamma={args.gamma},starttime={starttime}'
-    experiment_name = f'net_arch={"-".join(args.net_arch)},lr={args.lr},gamma={args.gamma},nproc={args.nproc},n_steps={args.n_steps}'
+    arch_string = '-'.join([str(i) for i in args.net_arch])
+    experiment_name = f'net_arch={arch_string},lr={args.lr},gamma={args.gamma},starttime={starttime}'
+    experiment_name = f'net_arch={arch_string},lr={args.lr},gamma={args.gamma},nproc={args.nproc},n_steps={args.n_steps}'
     logging.info(f'experiment_name: [{experiment_name}]')
 
     # create the environment

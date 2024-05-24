@@ -18,11 +18,6 @@ from Mundus.Wrappers import *
 from Mundus.Zelda import *
 
 
-# FIXME:
-import warnings
-warnings.filterwarnings("ignore")
-
-
 # pyglet doesn't seem to have a map built-in for converting keycodes to names;
 # this is my hack to make such a map
 from pyglet.window import key as keycodes
@@ -135,11 +130,11 @@ class Interactive(gymnasium.Wrapper):
         for name in keys_pressed_this_frame:
             if name == 'BRACKETLEFT':
                 self.maxfps_multiplier += 1
-                print(f"self.get_maxfps()={self.get_maxfps()}")
+                logging.debug(f"self.get_maxfps()={self.get_maxfps()}")
 
             if name == 'BRACKETRIGHT':
                 self.maxfps_multiplier -= 1
-                print(f"self.get_maxfps()={self.get_maxfps()}")
+                logging.debug(f"self.get_maxfps()={self.get_maxfps()}")
 
             if name == 'SPACE':
                 import code
@@ -151,12 +146,12 @@ class Interactive(gymnasium.Wrapper):
             if name == 'MINUS':
                 manual_reward -= 1
                 self.action_override = prev_action_override
-                print(f"manual_reward={manual_reward}")
+                logging.debug(f"manual_reward={manual_reward}")
 
             if name == 'EQUAL':
                 manual_reward += 1
                 self.action_override = prev_action_override
-                print(f"manual_reward={manual_reward}")
+                logging.debug(f"manual_reward={manual_reward}")
 
         # perform the action
         if self._key_handler.get(keycodes.ESCAPE):
@@ -295,7 +290,14 @@ def main():
     parser.add_argument("--game", default="Zelda-Nes")
     #parser.add_argument("--game", default="GauntletII-Nes")
     parser.add_argument("--state", default=retro.State.DEFAULT)
-    parser.add_argument("--scenario", default=None)
+
+    emulator_settings = parser.add_argument_group('emulator settings')
+    emulator_settings.add_argument('--no_render_skipped_frames', action='store_true')
+    emulator_settings.add_argument('--allframes', action='store_true')
+    emulator_settings.add_argument('--debug', action='store_true')
+    emulator_settings.add_argument('--noaudio', action='store_true')
+    emulator_settings.add_argument('--doresets', action='store_true')
+
     args = parser.parse_args()
 
     # set logging level
@@ -303,29 +305,42 @@ def main():
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
 
+    #import warnings
+    #warnings.filterwarnings("ignore")
+
     # create the environment
+    logging.info('creating environment')
     custom_path = os.path.join(os.getcwd(), 'custom_integrations')
     retro.data.Integrations.add_custom_path(custom_path)
     env = retro.make(
             game=args.game,
             inttype=retro.data.Integrations.ALL,
             use_restricted_actions=retro.Actions.ALL,
-            #state='overworld_04',
-            #state='overworld_07',
             )
-    #env = ObserveVariables(env)
-    #env = RandomStateReset(env, path='custom_integrations/'+args.game)
     if 'Zelda' in args.game:
         env = ZeldaWrapper(
                 env,
-                stdout_debug=True,
-                #stdout_debug=False,
-                no_render_skipped_frames=True,
+                stdout_debug=not args.debug,
+                no_render_skipped_frames=args.no_render_skipped_frames,
+                skip_boring_frames=not args.allframes,
                 )
+
+    # load models
+    logging.info('loading models')
+    custom_objects = {
+        'observation_space': env.observation_space,
+        'action_space': env.action_space,
+        }
+    from stable_baselines3 import PPO
+    model = PPO.load('models/simple_attack.zip', custom_objects=custom_objects)
+
+    logging.info('creating environment wrappers')
     env = Interactive(env)
-    env = PlayAudio(env)
-    env = Whisper(env)
-    #env = FrameStack(env, 2)
+    if not args.noaudio:
+        env = PlayAudio(env)
+    env = StochasticFrameSkip(env, 4, 0.25)
+    env = RandomStateReset(env, path='custom_integrations/'+args.game, globstr='spiders_lowhealth_01*.state')
+    #env = Whisper(env)
     #env = ConsoleWrapper(env)
     env.reset()
 
@@ -336,16 +351,14 @@ def main():
 
         while True:
             observation, reward, terminated, truncated, info = env.step(action)
-            #print(f"observation.shape={observation.shape}")
-            #print(f"observation[env.observations_keys['enemy_1_dist']]={observation[env.observations_keys['enemy_1_dist']]}")
-            #if type(action) == list:
-                #action = env.action_space.sample() * 0
-            #if observation[env.observations_keys['enemy_1_dist']] < 20:
-                #action = env.keys_to_act(['Z'])
-                #print(f"action={action}")
-            #env.render()
-            #data = env.unwrapped.get_ram()[0xba2+0x800:0xba2+0x800+4]
-            #data = env.unwrapped.get_ram()[0x12ba+0x800:0x12ba+0x800+4]
+            if args.doresets and (terminated or truncated):
+                env.reset()
+
+            # select the next action;
+            # ensure that the model does not press start/select
+            action, _states = model.predict(observation, deterministic=False)
+            action[2] = 0
+            action[3] = 0
     except KeyboardInterrupt:
         pass
 

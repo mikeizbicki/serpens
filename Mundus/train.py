@@ -185,7 +185,7 @@ def main():
     hyperparameters.add_argument('--net_arch', type=int, nargs='*', default=[])
     hyperparameters.add_argument('--lr', type=float, default=3e-4)
     hyperparameters.add_argument('--gamma', type=float, default=0.99)
-    hyperparameters.add_argument('--nproc', type=int, default=3)
+    hyperparameters.add_argument('--n_env', type=int, default=3)
     hyperparameters.add_argument('--n_steps', type=int, default=128)
     hyperparameters.add_argument('--seed', type=int, default=None)
 
@@ -206,7 +206,7 @@ def main():
 
     arch_string = '-'.join([str(i) for i in args.net_arch])
     experiment_name = f'net_arch={arch_string},lr={args.lr},gamma={args.gamma},starttime={starttime}'
-    experiment_name = f'net_arch={arch_string},lr={args.lr},gamma={args.gamma},nproc={args.nproc},n_steps={args.n_steps}'
+    experiment_name = f'net_arch={arch_string},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps}'
     logging.info(f'experiment_name: [{experiment_name}]')
 
     # create the environment
@@ -233,7 +233,7 @@ def main():
         #env = RandomStateReset(env, path='custom_integrations/'+args.game, globstr='overworld_07.state')
         return env
 
-    train_env = SubprocVecEnv([lambda: make_env(render_mode=args.render_mode)] * args.nproc)
+    train_env = SubprocVecEnv([lambda: make_env(render_mode=args.render_mode)] * args.n_env)
     train_env = VecMonitor(train_env, args.log_monitor)
     train_env.reset()
 

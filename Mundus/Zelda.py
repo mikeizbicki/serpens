@@ -95,7 +95,7 @@ class ZeldaWrapper(RetroWithRam):
 
         new_info = self.generate_info()
         new_observations = self.info_to_observations(new_info)
-        new_observations_array = np.array(list(new_observations.values()), dtype=np.float16)
+        new_observations_array = _dictionary_to_array(new_observations)
         observation, reward, terminated, truncated, info = super().step(action)
         self.episode_reward += reward
 
@@ -547,3 +547,15 @@ def _observations_to_str(outputs):
     lines.append('--------------------')
 
     return '\n'.join(lines)
+
+
+def _dictionary_to_array(d):
+    '''
+    Convert the dictionary into a numpy array.
+    We guarantee that the data will be put into the array in sorted order by key.
+    This is important so that the array will have a deterministic structure.
+    '''
+    kv = sorted([(k, v) for k, v in d.items()])
+    v = [v for k,v in kv]
+    return np.array(v, dtype=np.float64)
+

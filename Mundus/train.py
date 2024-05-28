@@ -175,7 +175,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--game", default="Zelda-Nes")
     parser.add_argument("--render_mode", default='rgb_array')
-    parser.add_argument("--log_monitor", default='log_monitor')
     parser.add_argument("--log_tensorboard", default='log_tensorboard')
 
     debug = parser.add_argument_group('debug')
@@ -189,6 +188,7 @@ def main():
     hyperparameters.add_argument('--n_env', type=int, default=3)
     hyperparameters.add_argument('--n_steps', type=int, default=128)
     hyperparameters.add_argument('--seed', type=int, default=None)
+    hyperparameters.add_argument('--warmstart', default=None)
 
     args = parser.parse_args()
 
@@ -235,7 +235,7 @@ def main():
         return env
 
     train_env = SubprocVecEnv([lambda: make_env(render_mode=args.render_mode)] * args.n_env)
-    train_env = VecMonitor(train_env, args.log_monitor)
+    train_env = VecMonitor(train_env)
     train_env.reset()
 
     model = stable_baselines3.PPO(
@@ -254,10 +254,17 @@ def main():
         policy_kwargs={'net_arch': args.net_arch},
         seed=args.seed,
     )
+    if args.warmstart:
+        warmstart = stable_baselines3.PPO.load(args.warmstart)
+        model.policy = warmstart.policy
+        model.num_timesteps = warmstart.num_timesteps
+        #import code
+        #code.interact(local=locals())
     model.learn(
         total_timesteps=100_000_000,
         log_interval=1,
         tb_log_name=experiment_name,
+        reset_num_timesteps=False,
         callback = [
             SaveOnBestTrainingRewardCallback(),
             HParamCallback(),

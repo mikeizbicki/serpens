@@ -336,7 +336,7 @@ class ZeldaWrapper(RetroWithRam):
 
         # the first time building the dictionary, we save the keys
         if self.observations_keys is None:
-            self.observations_keys = {k:i for i,k in enumerate(observations.keys())}
+            self.observations_keys = sorted(observations.keys())
 
         return observations
 
@@ -558,4 +558,3 @@ def _dictionary_to_array(d):
     kv = sorted([(k, v) for k, v in d.items()])
     v = [v for k,v in kv]
     return np.array(v, dtype=np.float64)
-

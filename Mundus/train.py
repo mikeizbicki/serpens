@@ -147,7 +147,7 @@ class TensorboardCallback(BaseCallback):
                 self.num_episodes[i] += 1
 
                 # special screen recording processing for the first environment only
-                if i == 0:
+                if self.record_every is not None and i == 0:
 
                     # record the screen
                     if type(self.screens) == list:
@@ -180,6 +180,7 @@ def main():
 
     debug = parser.add_argument_group('debug')
     debug.add_argument("--log_dir", default='log')
+    debug.add_argument("--disable_video", action='store_true')
 
     hyperparameters = parser.add_argument_group('hyperparameters')
     hyperparameters.add_argument('--net_arch', type=int, nargs='*', default=[])
@@ -260,7 +261,7 @@ def main():
         callback = [
             SaveOnBestTrainingRewardCallback(),
             HParamCallback(),
-            TensorboardCallback(),
+            TensorboardCallback(record_every=None if args.disable_video else 1),
             ],
     )
 

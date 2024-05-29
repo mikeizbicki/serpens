@@ -55,6 +55,8 @@ class ZeldaWrapper(RetroWithRam):
         self.clean_outputs = clean_outputs
         self.no_render_skipped_frames=no_render_skipped_frames
         self.skip_boring_frames = skip_boring_frames 
+        self.mousex = 0
+        self.mousey = 0
 
         # these variables track what information in the info dict will be included in the observations 
         self.keep_prefixes = ['enemy', 'link_char', 'link_sword', 'projectile']
@@ -105,6 +107,7 @@ class ZeldaWrapper(RetroWithRam):
             text += _observations_to_str(new_observations)
             text += f'\ntotal_variables: {len(new_observations)}'
             text += f'\nepisode_reward = {self.episode_reward:0.4f}'
+            text += f'\nmouse (x, y) = {self.mousex:0.2f}, {self.mousey:0.2f}'
             print(text)
 
         # skip the boring frames
@@ -140,6 +143,9 @@ class ZeldaWrapper(RetroWithRam):
     def generate_info(self):
         outputs = OrderedDict()
         inputs = self.env.data.lookup_all()
+
+        outputs['mouse_x'] = self.mousex
+        outputs['mouse_y'] = self.mousey
 
         # the screen is divided into an 11x16 grid,
         # and each tile is divided into 2x2 subtiles;

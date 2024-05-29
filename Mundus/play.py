@@ -47,17 +47,40 @@ class Interactive(gymnasium.Wrapper):
         self.total_reward = 0
 
         # initialize pygame joysticks
+        # NOTE:
+        # the only thing we use pygame for is access to the joystick;
+        # stable-retro only uses pyglet, but gymnasium uses pygame;
+        # since we're using the window created by stable-retro,
+        # all of the non-joystick code is based on pyglet;
+        # it might a bit nicer to move the joystick code over to pyglet as well
         pygame.init()
         self.joysticks = {}
+
+        # NOTE:
+        # self.render() is needed to create the self.viewer object;
+        # we need this to interact with the pyglet window
+        # and register the handlers
+        self.render() 
 
         # setup the key handler
         self._key_previous_states = {}
         self._key_handler = pyglet.window.key.KeyStateHandler()
-
-        # NOTE:
-        # self.render() is needed to create the self.viewer object
-        self.render() 
         self.viewer.window.push_handlers(self._key_handler)
+
+        # setup the mouse handler
+        # FIXME:
+        # this is a janky setup to set the mouse coordinates in the Zelda environment;
+        # it assumes that this Wrapper is called directly on the Zelda
+        self.env.mousex = 0
+        self.env.mousey = 0
+        def on_mouse_motion(x, y, dx, dy):
+            self.env.mousex = x / self.viewer.window.width
+            self.env.mousey = ((self.viewer.window.height - y) / self.viewer.window.height * 240 - 60) / (240 - 60)
+            # NOTE:
+            # the values above are hardcoded for zelda;
+            # 240 is the y resolution,
+            # and 60 is the height of the black bar
+        self.viewer.window.push_handlers(on_mouse_motion)
 
     def reset(self, **kwargs):
         self.frames_since_log = 0
@@ -72,7 +95,8 @@ class Interactive(gymnasium.Wrapper):
         return self.maxfps0 * 2**(self.maxfps_multiplier)
         
     def step(self, action):
-
+        #print(f"self.mousex, self.mousey={self.mousex, self.mousey}")
+        
         # register any pygame events
         for event in pygame.event.get():
             if event.type == pygame.JOYDEVICEADDED:
@@ -303,7 +327,8 @@ def main():
     # set logging level
     import logging
     logging.basicConfig()
-    logging.getLogger().setLevel(logging.DEBUG)
+    #logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger().setLevel(logging.INFO)
 
     #import warnings
     #warnings.filterwarnings("ignore")
@@ -338,7 +363,7 @@ def main():
     env = Interactive(env)
     if not args.noaudio:
         env = PlayAudio(env)
-    env = StochasticFrameSkip(env, 4, 0.25)
+    #env = StochasticFrameSkip(env, 4, 0.25)
     env = RandomStateReset(env, path='custom_integrations/'+args.game, globstr='spiders_lowhealth_01*.state')
     #env = Whisper(env)
     #env = ConsoleWrapper(env)
@@ -356,9 +381,31 @@ def main():
 
             # select the next action;
             # ensure that the model does not press start/select
-            action, _states = model.predict(observation, deterministic=False)
+            if False:
+                action = env.action_space.sample() * 0
+                enemy_1_xrel = observation[env.observations_keys.index('enemy_1_xrel')] 
+                enemy_1_yrel = observation[env.observations_keys.index('enemy_1_yrel')] 
+                if enemy_1_yrel < -0.10:
+                    action[4] = 1
+                elif enemy_1_yrel > 0.10:
+                    action[5] = 1
+                elif enemy_1_xrel < -0.10:
+                    action[6] = 1
+                elif enemy_1_xrel > 0.10:
+                    action[7] = 1
+                else:
+                    action[8] = 1
+            
+            action, _states = model.predict(observation, deterministic=True)
             action[2] = 0
             action[3] = 0
+
+            #import code
+            #code.interact(local=locals())
+            # >>> model.policy.value_net.weight
+            # >>> list(zip(env.observations_keys, model.policy.value_net.weight[0]))
+            # for x in list(zip(env.observations_keys, model.policy.value_net.weight[0])): print(x)
+            # for x in list(zip(env.observations_keys, model.policy.action_net.weight.T)):
     except KeyboardInterrupt:
         pass
 

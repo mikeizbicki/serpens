@@ -164,26 +164,28 @@ class ZeldaWrapper(RetroWithRam):
         # >>> tiles = self.env.unwrapped.em.get_state()[14657:14657+11*4*16]
         # >>> newstate = b'\x00'*88; state = self.env.unwrapped.em.get_state(); state = state[:14657]+newstate+state[14657+len(newstate):]; self.env.unwrapped.em.set_state(state)
 
-        if self.use_full_subtiles:
-            tiles = subtiles
-        else:
-            tiles = subtiles[::2,::2]
+        # compute tiling information
+        if False:
+            if self.use_full_subtiles:
+                tiles = subtiles
+            else:
+                tiles = subtiles[::2,::2]
 
-        link_tile_x = (inputs[f'link_char_x']+8)//16
-        link_tile_y = (inputs[f'link_char_y']-56)//16
-        if not self.use_full_subtiles:
-            link_tile_y = (inputs[f'link_char_y']-48)//16
+            link_tile_x = (inputs[f'link_char_x']+8)//16
+            link_tile_y = (inputs[f'link_char_y']-56)//16
+            if not self.use_full_subtiles:
+                link_tile_y = (inputs[f'link_char_y']-48)//16
 
-        padded_tiles = np.pad(tiles, self.link_view_radius, constant_values=0)
-        link_view = padded_tiles[
-                link_tile_y : link_tile_y + 2*self.link_view_radius+1,
-                link_tile_x : link_tile_x + 2*self.link_view_radius+1,
-                ]
+            padded_tiles = np.pad(tiles, self.link_view_radius, constant_values=0)
+            link_view = padded_tiles[
+                    link_tile_y : link_tile_y + 2*self.link_view_radius+1,
+                    link_tile_x : link_tile_x + 2*self.link_view_radius+1,
+                    ]
 
-        if self.output_link_view:
-            for y in range(link_view.shape[0]):
-                for x in range(link_view.shape[1]):
-                    outputs[f'link_char_view_{x:2d}_{y:2d}'] = link_view[y,x]
+            if self.output_link_view:
+                for y in range(link_view.shape[0]):
+                    for x in range(link_view.shape[1]):
+                        outputs[f'link_char_view_{x:2d}_{y:2d}'] = link_view[y,x]
 
         # link specific data
         if inputs['link_heart_partial'] == 0:
@@ -253,29 +255,29 @@ class ZeldaWrapper(RetroWithRam):
                     outputs[k+'center'] = inputs[k] - 56 - 88
 
         # clean variables for dead entities
-        if self.clean_outputs:
-            def prefixnum_is_active(prefixnum):
-                health = outputs.get(prefixnum + '_health_simple', 0)
-                drop = outputs.get(prefixnum + '_drop', 0)
-                state = outputs.get(prefixnum + '_state', 0)
-                return health > 0 or drop > 0 or state > 0 # or 'projectile' in prefixnum
+        def prefixnum_is_active(prefixnum):
+            health = outputs.get(prefixnum + '_health_simple', 0)
+            drop = outputs.get(prefixnum + '_drop', 0)
+            state = outputs.get(prefixnum + '_state', 0)
+            return health > 0 or drop > 0 or state > 0 # or 'projectile' in prefixnum
+        def reset_prefixnum(k, v):
+            if k in outputs:
+                outputs[k] = v
 
+        if self.clean_outputs:
             prefixnums = set(['_'.join(k.split('_')[:2]) for k in outputs])
             for prefixnum in prefixnums:
                 if not prefixnum_is_active(prefixnum):
-                    def reset(k, v):
-                        if k in outputs:
-                            outputs[k] = v
-                    reset(prefixnum + '_x', 999)
-                    reset(prefixnum + '_y', 999)
-                    reset(prefixnum + '_xrel', 999)
-                    reset(prefixnum + '_yrel', 999)
-                    reset(prefixnum + '_xcenter', 999)
-                    reset(prefixnum + '_ycenter', 999)
-                    reset(prefixnum + '_dist', 999)
-                    reset(prefixnum + '_xsim', 0.0)
-                    reset(prefixnum + '_ysim', 0.0)
-                    reset(prefixnum + '_direction', 0)
+                    reset_prefixnum(prefixnum + '_x', 999)
+                    reset_prefixnum(prefixnum + '_y', 999)
+                    reset_prefixnum(prefixnum + '_xrel', 999)
+                    reset_prefixnum(prefixnum + '_yrel', 999)
+                    reset_prefixnum(prefixnum + '_xcenter', 999)
+                    reset_prefixnum(prefixnum + '_ycenter', 999)
+                    reset_prefixnum(prefixnum + '_dist', 999)
+                    reset_prefixnum(prefixnum + '_xsim', 0.0)
+                    reset_prefixnum(prefixnum + '_ysim', 0.0)
+                    reset_prefixnum(prefixnum + '_direction', 0)
 
         # reorder the enemies/projectiles
         if self.reorder_outputs:

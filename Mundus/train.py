@@ -116,7 +116,12 @@ class TensorboardCallback(BaseCallback):
     Custom callback for plotting additional values in tensorboard.
     """
 
-    def __init__(self, verbose=0, max_video_length=60*30, record_every=1):
+    def __init__(
+            self,
+            verbose=0,
+            max_video_length=60*30,
+            record_every=1,
+            ):
         super().__init__(verbose)
 
         # store settings
@@ -124,8 +129,11 @@ class TensorboardCallback(BaseCallback):
         self.max_video_length = max_video_length
 
         # these variables are internally created/updated by ._on_step()
-        self.screens = []
         self.num_episodes = None
+        if self.record_every is None:
+            self.screens = None
+        else:
+            self.screens = []
 
     def _on_step(self) -> bool:
 
@@ -236,10 +244,19 @@ def main():
 
     train_env = SubprocVecEnv([lambda: make_env(render_mode=args.render_mode)] * args.n_env)
     train_env = VecMonitor(train_env)
+    #train_env = make_env(render_mode=args.render_mode)
     train_env.reset()
 
+    policy_kwargs = {
+        #'features_extractor_class': ObjectCNN,
+        #'features_extractor_kwargs': {
+            #'features_dim': 128,
+            #},
+        'net_arch': args.net_arch,
+        }
     model = stable_baselines3.PPO(
         policy="MlpPolicy",
+        #policy="CnnPolicy",
         env=train_env,
         learning_rate=args.lr,
         n_steps=args.n_steps,
@@ -251,7 +268,7 @@ def main():
         ent_coef=0.01,
         verbose=1,
         tensorboard_log=args.log_dir,
-        policy_kwargs={'net_arch': args.net_arch},
+        policy_kwargs=policy_kwargs,
         seed=args.seed,
     )
     if args.warmstart:
@@ -268,7 +285,7 @@ def main():
         callback = [
             SaveOnBestTrainingRewardCallback(),
             HParamCallback(),
-            TensorboardCallback(record_every=None if args.disable_video else 1),
+            TensorboardCallback(record_every=None if args.disable_video or args.render_mode=='human' else 1),
             ],
     )
 

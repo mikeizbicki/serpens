@@ -16,6 +16,7 @@ import retro
 from Mundus.Audio import *
 from Mundus.Wrappers import *
 from Mundus.Zelda import *
+from Mundus.ZeldaOld import ZeldaWrapperOld
 
 
 # pyglet doesn't seem to have a map built-in for converting keycodes to names;
@@ -342,7 +343,14 @@ def main():
             inttype=retro.data.Integrations.ALL,
             use_restricted_actions=retro.Actions.ALL,
             )
-    if 'Zelda' in args.game:
+    if 'ZeldaOld' in args.game:
+        env = ZeldaWrapperOld(
+                env,
+                stdout_debug=not args.debug,
+                no_render_skipped_frames=args.no_render_skipped_frames,
+                skip_boring_frames=not args.allframes,
+                )
+    elif 'Zelda' in args.game:
         env = ZeldaWrapper(
                 env,
                 stdout_debug=not args.debug,
@@ -350,14 +358,15 @@ def main():
                 skip_boring_frames=not args.allframes,
                 )
 
+
     # load models
-    logging.info('loading models')
-    custom_objects = {
-        'observation_space': env.observation_space,
-        'action_space': env.action_space,
-        }
-    from stable_baselines3 import PPO
-    model = PPO.load('models/simple_attack.zip', custom_objects=custom_objects)
+    #logging.info('loading models')
+    #custom_objects = {
+        #'observation_space': env.observation_space,
+        #'action_space': env.action_space,
+        #}
+    #from stable_baselines3 import PPO
+    #model = PPO.load('models/simple_attack.zip', custom_objects=custom_objects)
 
     logging.info('creating environment wrappers')
     env = Interactive(env)
@@ -396,9 +405,9 @@ def main():
                 else:
                     action[8] = 1
             
-            action, _states = model.predict(observation, deterministic=True)
-            action[2] = 0
-            action[3] = 0
+            #action, _states = model.predict(observation, deterministic=True)
+            #action[2] = 0
+            #action[3] = 0
 
             #import code
             #code.interact(local=locals())

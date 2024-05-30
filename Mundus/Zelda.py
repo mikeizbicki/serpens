@@ -9,7 +9,262 @@ import random
 import os
 import glob
 import logging
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
+import pprint
+
+import torch
+import torch.nn as nn
+from gymnasium import spaces
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+
+
+class ObjectCNN(BaseFeaturesExtractor):
+    def __init__(
+        self,
+        observation_space: gymnasium.Space,
+        features_dim: int = 64,
+    ) -> None:
+        assert isinstance(observation_space, spaces.Box), (
+            "NatureCNN must be used with a gym.spaces.Box ",
+            f"observation space, not {observation_space}",
+        )
+        super().__init__(observation_space, features_dim)
+        n_input_channels = observation_space.shape[0]
+        print(f"observation_space={observation_space}")
+        asd
+        self.cnn = nn.Sequential(
+            nn.Conv1d(n_input_channels, features_dim, kernel_size=1),
+            nn.ReLU(),
+            nn.Conv1d(features_dim, features_dim, kernel_size=1),
+            nn.ReLU(),
+            nn.Conv1d(features_dim, features_dim, kernel_size=1),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+        # Compute shape by doing one forward pass
+        with torch.no_grad():
+            n_flatten = self.cnn(torch.as_tensor(observation_space.sample()[None]).float()).shape[1]
+
+        self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
+
+    def forward(self, observations: torch.Tensor) -> torch.Tensor:
+        return self.linear(self.cnn(observations))
+
+
+class KnowledgeBase:
+    def __init__(self):
+        self.items = defaultdict(lambda: {})
+        self.columns = set()
+
+    def __setitem__(self, name, val):
+        self.items[name] = val
+        for k in val.keys():
+            self.columns.add(k)
+
+    def to_observation(self):
+        columns = sorted(self.columns)
+        stuff = []
+        for item, val in self.items.items():
+            stuff.append([])
+            for column in columns:
+                stuff[-1].append(val[column])
+        #return stuff
+        stuff += [[0] * 6] * (20 - len(stuff))
+        return np.array(stuff, dtype=np.float16)
+
+    def display(self):
+        columns = sorted(self.columns)
+        columns_lens = [max(len(column), 5) for column in columns]
+        item_len = 20 #max([len(item) for item in self.items])
+        ret = ''
+        ret += ' '*item_len
+        for column, column_len in zip(columns, columns_lens):
+            ret += f' {column:>{column_len}}'
+        ret += '\n'
+        for item,val in self.items.items():
+            ret += f'{item:>{item_len}}'
+            for column, column_len in zip(columns, columns_lens):
+                s = '-'
+                if column in val:
+                    s = val[column]
+                if isinstance(s, (np.floating, float)):
+                    ret += f' {s:>+0.{column_len-3}f}'
+                else:
+                    ret += f' {s:>{column_len}}'
+
+            ret += '\n'
+        return ret
+
+def _ram2kb(ram):
+    '''
+    Enemy Type:
+    There are many different memory locations that seem to store the enemy type;
+    I'm not sure about what is different about them,
+    and the particular location I chose may be wrong in some subtle situations.
+    The values represent:
+    00= NOTHING
+    01= B. LION GUYS
+    02= R. LION GUYS
+    03= B. MOBLINS
+    04= R. MOBLINS
+    05= B. RATS
+    06= R. RATS
+    07= SLOW R. OCTOROCKS
+    08= FAST R. OCTOROCKS
+    09= SLOW B. OCTOROCKS
+    0A= FAST B. OCTOROCKS
+    0B= R. DARKNUTS
+    0C= B. DARKNUTS
+    0D= B. TECHTIKES
+    0E= R. TECHTIKES
+    0F= R. LEVERS
+    10= B. LEVERS
+    11= ZORAS
+    12= VAMPIERS
+    13= BIG SLIMES
+    14= LIL, SLIMES
+    15= LIL, SLIMES
+    16= POLS VOICES
+    17= LIKE LIKES
+    18= ????
+    19= ???
+    1A= PEAHATS
+    1B= B.BATS
+    1C= R. BATS
+    1D= B. BATS
+    1E= ????
+    1F= FALLING ROCKS
+    20= R. LEVERS
+    21= MUMMIES
+    22= ????
+    23= B. WIZROBES
+    24= R. WIZROBES
+    25= ????
+    26= ????
+    27= WALL MASTERS
+    28= ROPES (SNAKES)
+    29= ????
+    2A= STALFOSE
+    2B= BUBBLES
+    2C= B. BUBBLES
+    2D= R. BUBBLES
+    2E= ????
+    2F= FAIRY AT POND
+    30= ????
+    31= 3 DODONGOS
+    32= 1 DODONGO
+    33= B. GHOMA
+    34= R. GHOMA
+    35= RUPIE STASH
+    36= GRUMBLE
+    37= ZELDA
+    38= DIGDOGER?
+    39= DIGDOGER?
+    3A= 2 R. WORMS
+    3B= 2 B. WORMS
+    3C= MANHANDELA
+    3D= AQUAMENTIS
+    3E= GANNON
+    3F= FIRE
+    '''
+    kb = KnowledgeBase()
+
+    # link info
+    item = {}
+    item['x'] = ram[112]
+    item['y'] = ram[132]
+    item['type'] = -1
+    item['state'] = ram[172]
+    item['direction'] = ram[152]
+    if ram[1648] == 0:
+        item['health'] = 0.0
+    else:
+        partial = 0.5
+        if ram[1648] > 127:
+            partial = 0
+        item['health'] = float(ram[1647] - math.floor(ram[1647] / 16) * 16 - partial + 1)
+    kb['link'] = item
+
+    # sword info
+    item = {}
+    item['state'] = ram[185]
+    item['direction'] = ram[165]
+    item['type'] = -2
+    item['health'] = 0
+    item['x'] = ram[125]
+    item['y'] = ram[145]
+    if item['state'] != 0:
+        kb['sword_melee'] = item
+
+    item = {}
+    item['state'] = ram[186]
+    item['direction'] = ram[166]
+    item['type'] = -2
+    item['health'] = 0
+    item['x'] = ram[126]
+    item['y'] = ram[146]
+    if item['state'] != 0:
+        kb['sword_proj'] = item
+
+    # enemy info
+    for i in range(6):
+        item = {}
+        #item['countdown'] = ram[41+i]
+        item['state'] = ram[173+i]
+        item['direction'] = ram[153+i]
+        item['type'] = ram[848+i]
+        item['x'] = ram[113+i]
+        item['y'] = ram[133+i]
+        rawhealth = ram[1158+i]
+        if rawhealth > 0 and (rawhealth < 16 or rawhealth >= 128):
+            item['health'] = 0
+        else:
+            item['health'] = rawhealth//16
+        if item['type'] > 0:
+            kb[f'enemy_{i}'] = item
+
+    # projectile info
+    for i in range(6):
+        item = {}
+        item['direction'] = ram[159+i]
+        item['state'] = ram[179+i]
+        item['type'] = -3
+        item['health'] = 0
+        item['x'] = ram[119+i]
+        item['y'] = ram[139+i]
+        if item['state'] != 0:
+            kb[f'projectile_{i}'] = item
+
+    # normalize and center all item positions
+    for item, val in kb.items.items():
+        # center on link
+        if item != 'link':
+            link_x = int(ram[112])
+            link_y = int(ram[132])
+        else:
+            link_x = 0
+            link_y = 0
+        kb.items[item]['x'] -= link_x
+        kb.items[item]['y'] -= link_y
+
+        # translate screen coordinates to map coordinates
+        # (i.e. account for the black bar on top)
+        kb.items[item]['y'] -=  61
+
+        # normlalize
+        kb.items[item]['x'] /= 240
+        kb.items[item]['y'] /= 160
+        # NOTE:
+        # the NES x resolution is 256,
+        # but all sprites are 16 pixels wide,
+        # so there are 240 available for positioning;
+        # the y resolution is 224,
+        # but the top vertical bar uses 56 pixels,
+        # and only 8 pixels are reserved for "link positioning"
+        # because he does not go "partially off the edge" on the top screen
+
+    return kb
 
 
 class RetroWithRam(gymnasium.Wrapper):
@@ -19,11 +274,11 @@ class RetroWithRam(gymnasium.Wrapper):
     to prevent multiple calls.
     '''
     def step(self, action):
+        self.ram2 = self.ram
         self.ram = self.env.get_ram()
         return super().step(action)
 
 
-#class ZeldaWrapper(gymnasium.Wrapper):
 class ZeldaWrapper(RetroWithRam):
     '''
     '''
@@ -67,17 +322,26 @@ class ZeldaWrapper(RetroWithRam):
             print('\u001B[?1049h')
 
         # create a new observation space
-        info = self.generate_info()
-        observations = self.info_to_observations(info)
-        if normalize_output:
-            low = -1
-            high = 1
-        else:
-            low = -256
-            high = 256
-        shape = [len(observations)]
+        #info = self.generate_info()
+        #observations = self.info_to_observations(info)
+        #if normalize_output:
+            #low = -1
+            #high = 1
+        #else:
+            #low = -256
+            #high = 256
+        #shape = [len(observations)]
+        #self.observation_space = gymnasium.spaces.Box(low, high, shape, dtype, seed=0)
         dtype = np.float16
+        low = -1
+        high = 1
+        shape = [20, 6]
         self.observation_space = gymnasium.spaces.Box(low, high, shape, dtype, seed=0)
+        #shape = [6]
+        #self.observation_space = gymnasium.spaces.Sequence(
+                #gymnasium.spaces.Box(low, high, shape, dtype, seed=0),
+                #seed=0,
+                #stack=True)
         logging.info(f'observations.shape={shape}')
 
     def close(self):
@@ -89,24 +353,63 @@ class ZeldaWrapper(RetroWithRam):
         super().close()
 
     def reset(self, **kwargs):
+        self.episode_reward_dict = {}
         self.episode_reward = 0
         obs, info = super().reset(**kwargs)
         return self.observation_space.sample(), info
 
     def step(self, action):
 
-        new_info = self.generate_info()
-        new_observations = self.info_to_observations(new_info)
-        new_observations_array = _dictionary_to_array(new_observations)
         observation, reward, terminated, truncated, info = super().step(action)
+        #self.ram2 = self.ram
+        #self.ram = self.env.get_ram()
+
+        kb = _ram2kb(self.ram)
+        observation = kb.to_observation()
+        terminated = any([
+            _gamestate_all_enemies_dead(self.ram),
+            _gamestate_hearts(self.ram) <= 0,
+            _gamestate_is_screen_scrolling(self.ram),
+            _gamestate_is_cave_enter(self.ram),
+            ])
+
+        info['is_success'] = _gamestate_all_enemies_dead(self.ram)
+        info['summary_gamestate_hearts(self.ram)'] = _gamestate_hearts(self.ram)
+        info['summary_gamestate_is_screen_scrolling(self.ram)'] = _gamestate_is_screen_scrolling(self.ram)
+        info['summary_gamestate_is_cave_enter(self.ram)'] = _gamestate_is_cave_enter(self.ram)
+        info['summary_gamestate_all_enemies_dead(self.ram)'] = _gamestate_all_enemies_dead(self.ram)
+
+        reward_dict = {
+            'scrolling': 0,
+            'enemy_hit': 0,
+            'link_hit': 0,
+            'link_dead': 0,
+            'all_enemies': 0,
+            }
+        if self.ram2 is not None:
+            if _gamestate_is_screen_scrolling(self.ram) or _gamestate_is_cave_enter(self.ram):
+                reward_dict['scrolling'] = -2
+            reward_dict['enemy_hit'] = max(0, _gamestate_all_enemies_health(self.ram2) - _gamestate_all_enemies_health(self.ram))
+            if _gamestate_all_enemies_health(self.ram) == 0 and _gamestate_all_enemies_health(self.ram2) != 0:
+                reward_dict['all_enemies'] = 2
+            if _gamestate_hearts(self.ram) == 0 and _gamestate_hearts(self.ram2) != 0:
+                reward_dict['link_dead'] = -2
+            reward_dict['link_hit'] = -1 * round(2*max(0, _gamestate_hearts(self.ram2) - _gamestate_hearts(self.ram)))
+        
+        reward = sum(reward_dict.values())
+
         self.episode_reward += reward
+        self.episode_reward_dict = {k: self.episode_reward_dict.get(k, 0) + reward_dict.get(k, 0) for k in set(self.episode_reward_dict) | set(reward_dict)}
 
         if self.stdout_debug:
             text = ''
             text += '\x1b[2J' # clear the screen
-            text += _observations_to_str(new_observations)
-            text += f'\ntotal_variables: {len(new_observations)}'
+            #text += _observations_to_str(new_observations)
+            text += kb.display()
+            #text += f'\ntotal_variables: {len(new_observations)}'
+            text += f'\nterminated = {terminated}'
             text += f'\nepisode_reward = {self.episode_reward:0.4f}'
+            text += f'\nepisode_reward_dict = {pprint.pformat(self.episode_reward_dict)}'
             text += f'\nmouse (x, y) = {self.mousex:0.2f}, {self.mousey:0.2f}'
             print(text)
 
@@ -120,449 +423,63 @@ class ZeldaWrapper(RetroWithRam):
             skipped_frames = 0
 
             while any([
-                self._gamestate_is_screen_scrolling(),
-                self._gamestate_is_drawing_text(),
-                self._gamestate_is_cave_enter(),
-                self._gamestate_is_inventory_scroll(),
-                self._gamestate_hearts() <= 0,
-                self._gamestate_is_openning_scene(),
+                _gamestate_is_screen_scrolling(self.ram),
+                _gamestate_is_drawing_text(self.ram),
+                _gamestate_is_cave_enter(self.ram),
+                _gamestate_is_inventory_scroll(self.ram),
+                _gamestate_hearts(self.ram) <= 0,
+                _gamestate_is_openning_scene(self.ram),
                 ]):
                 # normally we will not press any action to the environment;
                 # but if link has died, we need to press the "continue" button;
                 # to do this, we alternate between no action and pressing "start" every frame
                 skipped_frames += 1
                 skipaction = [False]*8
-                if self._gamestate_hearts() <= 0 and skipped_frames%2 == 0:
+                if _gamestate_hearts(self.ram) <= 0 and skipped_frames%2 == 0:
                     skipaction[3] = True
                 super().step(skipaction)
+                #self.ram = self.env.get_ram()
             self.env.render_mode = render_mode
 
         # return step results
-        return new_observations_array, reward, terminated, truncated, new_info
+        return observation, reward, terminated, truncated, info
 
-    def generate_info(self):
-        outputs = OrderedDict()
-        inputs = self.env.data.lookup_all()
+# The _gamestate functions modified from gym-zelda-1 repo;
+# that repo uses the nesgym library, which is a pure python nes emulator
+# and about 10x slower than the gymretro environment;
+def _gamestate_is_screen_scrolling(ram):
+    SCROLL_GAME_MODES = {4, 6, 7}
+    return ram[0x12] in SCROLL_GAME_MODES
 
-        outputs['mouse_x'] = self.mousex
-        outputs['mouse_y'] = self.mousey
+def _gamestate_is_drawing_text(ram):
+    return ram[0x0605] == 0x10
 
-        # the screen is divided into an 11x16 grid,
-        # and each tile is divided into 2x2 subtiles;
-        # therefore, the subtile grid is 22x32 (=0x2c0).
-        # the leftmost, rightmost, and bottommost subtiles do not get displayed,
-        # so only a 21x30 grid of subtiles is displayed
-        subtiles = self.env.unwrapped.get_ram()[0x530+0x800:0x530+0x2c0+0x800].reshape([32,22]).T
+def _gamestate_is_cave_enter(ram):
+    return ram[0x0606] == 0x08
 
-        # NOTE:
-        # accessing the memory through get_state() allows changing the state;
-        # the code below is usefull for modifying the grid in a running game;
-        # it does not update the pictures (which are drawn at the beginning of the screen),
-        # but does update how link/enemies behave on the tiles
-        #import code
-        #code.interact(local=locals())
-        # >>> tiles = self.env.unwrapped.em.get_state()[14657:14657+11*4*16]
-        # >>> newstate = b'\x00'*88; state = self.env.unwrapped.em.get_state(); state = state[:14657]+newstate+state[14657+len(newstate):]; self.env.unwrapped.em.set_state(state)
+def _gamestate_is_inventory_scroll(ram):
+    return 65 < ram[0xfc]
 
-        # compute tiling information
-        if False:
-            if self.use_full_subtiles:
-                tiles = subtiles
-            else:
-                tiles = subtiles[::2,::2]
+def _gamestate_is_openning_scene(ram):
+    return bool(ram[0x007c])
 
-            link_tile_x = (inputs[f'link_char_x']+8)//16
-            link_tile_y = (inputs[f'link_char_y']-56)//16
-            if not self.use_full_subtiles:
-                link_tile_y = (inputs[f'link_char_y']-48)//16
+def _gamestate_hearts(ram):
+    link_full_hearts = 0x0f & ram[0x066f]
+    link_partial_hearts = ram[0x0670] / 255
+    return link_full_hearts + link_partial_hearts
 
-            padded_tiles = np.pad(tiles, self.link_view_radius, constant_values=0)
-            link_view = padded_tiles[
-                    link_tile_y : link_tile_y + 2*self.link_view_radius+1,
-                    link_tile_x : link_tile_x + 2*self.link_view_radius+1,
-                    ]
+def _gamestate_all_enemies_dead(ram):
+    return all([ram[848+i] == 0 for i in range(6)])
 
-            if self.output_link_view:
-                for y in range(link_view.shape[0]):
-                    for x in range(link_view.shape[1]):
-                        outputs[f'link_char_view_{x:2d}_{y:2d}'] = link_view[y,x]
-
-        # link specific data
-        if inputs['link_heart_partial'] == 0:
-            outputs['link_char_health_simple'] = 0
+def _gamestate_all_enemies_health(ram):
+    healths = []
+    for i in range(6):
+        rawhealth = ram[1158+i]
+        if rawhealth > 0 and (rawhealth < 16 or rawhealth >= 128):
+            healths.append(0)
         else:
-            partial = 0.5
-            if inputs['link_heart_partial'] > 127:
-                partial = 0
-            outputs['link_char_health_simple'] = inputs['link_heart_full'] - math.floor(inputs['link_heart_full'] / 16) * 16 - partial + 1
-        outputs['link_char_x'] = inputs['link_char_x']
-        outputs['link_char_y'] = inputs['link_char_y']
-        
-        # add appropriate data from the inputs to the outputs
-        for k in inputs:
+            healths.append(rawhealth//16)
+    return sum(healths)
 
-            # add data that needs no special modifications
-            if any([v in k for v in ['state', 'drop', 'count', 'direction', 'type']]):
-                outputs[k] = inputs[k]
-           
-            # add 1-hot encoded directions
-            if 'direction' == k[-9:]:
-                outputs[k+'_east'] = int(inputs[k] == 1)
-                outputs[k+'_west'] = int(inputs[k] == 2)
-                outputs[k+'_south'] = int(inputs[k] == 4)
-                outputs[k+'_north'] = int(inputs[k] == 8)
-                outputs[k+'_other'] = int(inputs[k] > 8)
-
-            # process the monster health to a usable format
-            if 'health' == k[-6:]:
-                if inputs[k] > 0 and (inputs[k] < 16 or inputs[k] >= 128):
-                    health_simple = 0
-                    health_weird = 1
-                else:
-                    health_simple = inputs[k]//16
-                    health_weird = 0
-                outputs[k+'_simple'] = health_simple
-                outputs[k+'_weird'] = health_weird
-
-            # add relative positions
-            if 'link_char' not in k:
-                if k[-2:] == '_x':
-                    outputs[k + 'rel'] = inputs[k] - inputs['link_char_x']
-                if k[-2:] == '_y':
-                    outputs[k + 'rel'] = inputs[k] - inputs['link_char_y']
-
-            # add distance
-            if 'link_char' not in k:
-                if k[-2:] == '_x':
-                    base = k[:-2]
-                    xdist = abs(inputs[base + '_x'] - inputs['link_char_x'])
-                    ydist = abs(inputs[base + '_y'] - inputs['link_char_y'])
-                    outputs[base + '_dist'] = xdist + ydist
-
-            # add similarity positions
-            if False:
-                if 'link_char' not in k:
-                    if k[-2:] == '_x':
-                        outputs[k + 'sim'] = 10/(abs(inputs[k] - inputs['link_char_x']) + 10)
-                    if k[-2:] == '_y':
-                        outputs[k + 'sim'] = 10/(abs(inputs[k] - inputs['link_char_y']) + 10)
-
-            # add centered absolute positions
-            if False:
-                if k[-1] == 'x':
-                    outputs[k+'center'] = inputs[k] - 128
-                if k[-1] == 'y':
-                    outputs[k+'center'] = inputs[k] - 56 - 88
-
-        # clean variables for dead entities
-        def prefixnum_is_active(prefixnum):
-            health = outputs.get(prefixnum + '_health_simple', 0)
-            drop = outputs.get(prefixnum + '_drop', 0)
-            state = outputs.get(prefixnum + '_state', 0)
-            return health > 0 or drop > 0 or state > 0 # or 'projectile' in prefixnum
-        def reset_prefixnum(k, v):
-            if k in outputs:
-                outputs[k] = v
-
-        if self.clean_outputs:
-            prefixnums = set(['_'.join(k.split('_')[:2]) for k in outputs])
-            for prefixnum in prefixnums:
-                if not prefixnum_is_active(prefixnum):
-                    reset_prefixnum(prefixnum + '_x', 999)
-                    reset_prefixnum(prefixnum + '_y', 999)
-                    reset_prefixnum(prefixnum + '_xrel', 999)
-                    reset_prefixnum(prefixnum + '_yrel', 999)
-                    reset_prefixnum(prefixnum + '_xcenter', 999)
-                    reset_prefixnum(prefixnum + '_ycenter', 999)
-                    reset_prefixnum(prefixnum + '_dist', 999)
-                    reset_prefixnum(prefixnum + '_xsim', 0.0)
-                    reset_prefixnum(prefixnum + '_ysim', 0.0)
-                    reset_prefixnum(prefixnum + '_direction', 0)
-
-        # reorder the enemies/projectiles
-        if self.reorder_outputs:
-            def reorder_dictionary(outputs0, prefix):
-                def key(prefixnum):
-                    distance = abs(outputs0[prefixnum+'_xrel']) + abs(outputs0[prefixnum+'_yrel']) + 1000
-                    if prefixnum_is_active(prefixnum):
-                        penalty = 0
-                    else:
-                        penalty = 10000
-                    return distance + penalty
-                attrs = set([k[len(prefix)+2:] for k in outputs0 if k.startswith(prefix) and k[len(prefix)+2] == '_'])
-                prefixnums = list(set(k[:len(prefix)+2] for k in outputs0 if k.startswith(prefix) and k[len(prefix)+2] == '_'))
-                prefixnums.sort(key=key)
-                outputs1 = copy.copy(outputs0)
-                for i, prefixnum in enumerate(prefixnums):
-                    for attr in attrs:
-                        if prefixnum + attr in outputs0:
-                            outputs1[f'{prefix}_{i+1}'+attr] = outputs0[prefixnum + attr]
-                return outputs1
-            outputs = reorder_dictionary(outputs, prefix='projectile')
-            outputs = reorder_dictionary(outputs, prefix='enemy')
-
-        # normalize
-        if self.normalize_output:
-            for k in outputs:
-                if k.endswith('_x'):
-                    outputs[k] /= 240
-                elif k.endswith('_y'):
-                    outputs[k] -= 61
-                    outputs[k] /= (221-61)
-                elif '_x' in k or '_y' in k:
-                    if outputs[k] >= 128:
-                        outputs[k] = 128
-                    if outputs[k] <= -128:
-                        outputs[k] = -128
-                    outputs[k] /= 128
-                elif '_count' in k:
-                    outputs[k] /= 256
-
-        # create summary info
-        outputs['summary_enemies_totalhealth'] = sum([outputs[f'enemy_{i}_health_simple'] for i in range(1,7)])
-        outputs['summary_enemies_alive'] = sum([outputs[f'enemy_{i}_health_simple'] > 0 for i in range(1,7)])
-        outputs['summary_link_health'] = outputs['link_char_health_simple']
-        outputs['summary_link_rupees'] = inputs['link_items_rupees']
-        outputs['summary_link_bombs'] = inputs['link_items_bombs']
-        outputs['summary_link_keys'] = inputs['link_items_keys']
-        outputs['is_success'] = outputs['summary_enemies_alive'] == 0
-        outputs['summary_is_success'] = outputs['is_success']
-
-        # return the results
-        return outputs
-
-    def info_to_observations(self, info):
-        '''
-        Filter the info dictionary to remove information
-        that should not be available to the agent for training.
-        '''
-
-        # create the observations dict
-        observations = copy.copy(info)
-        observations = {k:v for k,v in observations.items() if any([keep in k for keep in self.keep_prefixes])}
-        observations = {k:v for k,v in observations.items() if any([keep in k for keep in self.keep_suffixes])}
-
-        # the first time building the dictionary, we save the keys
-        if self.observations_keys is None:
-            self.observations_keys = sorted(observations.keys())
-
-        return observations
-
-    # The _gamestate functions modified from gym-zelda-1 repo;
-    # that repo uses the nesgym library, which is a pure python nes emulator
-    # and about 10x slower than the gymretro environment;
-    def _gamestate_is_screen_scrolling(self):
-        SCROLL_GAME_MODES = {4, 6, 7}
-        return self.ram[0x12] in SCROLL_GAME_MODES
-
-    def _gamestate_is_drawing_text(self):
-        return self.ram[0x0605] == 0x10
-
-    def _gamestate_is_cave_enter(self):
-        return self.ram[0x0606] == 0x08
-
-    def _gamestate_is_inventory_scroll(self):
-        return 65 < self.ram[0xfc]
-    
-    def _gamestate_is_openning_scene(self):
-        return bool(self.ram[0x007c])
-
-    def _gamestate_hearts(self):
-        link_full_hearts = 0x0f & self.ram[0x066f]
-        link_partial_hearts = self.ram[0x0670] / 255
-        return link_full_hearts + link_partial_hearts
-
-def _get_attrs(observations, prefix):
-    attrs = set()
-    for k in observations:
-        if k.startswith(prefix):
-            attrs.add('_'.join(k.split('_')[2:]))
-    return attrs
-    #return set([k[len(prefix)+3:] for k in observations if k.startswith(prefix) and k[len(prefix)+2: len(prefix)+3] == '_'])
-
-
-def _get_prefixnums(observations):
-    return set(['_'.join(k.split('_')[:2]) for k in observations])
-
-
-def _get_prefixes(observations):
-    return set(['_'.join(k.split('_')[:1]) for k in observations])
-
-
-def _observations_to_str(outputs):
-    '''
-    '''
-    lines = []
-    prefixnums = _get_prefixnums(outputs)
-    prefixnums_width = max([len(x) for x in prefixnums])
-    prefixes = _get_prefixes(outputs)
-    attrs = []
-    for prefix in prefixes:
-        attrs.extend(_get_attrs(outputs, prefix))
-
-    def display_tiles(tiles):
-        ret = ''
-        for i in range(tiles.shape[0]):
-            for j in range(tiles.shape[1]):
-                if (j,i) == (link_tile_x, link_tile_y):
-                    ret += ' # '
-                else:
-                    if tiles[i,j] & 32 == 32:
-                        ret += '   '
-                    else:
-                        ret += f'{hex(tiles[i,j])[2:]:2} '
-            ret += '\n'
-        return ret
-    #lines.append(display_tiles(tiles))
-    #lines.append('====================')
-    #lines.append(display_tiles(link_view))
-    #lines.append('====================')
-
-    def makeline(name):
-        dispname = name[:7]
-        if name[-2] == '_':
-            dispname = name[:5] + name [-2:]
-        textout = f'{name:{prefixnums_width}} '
-        if 'x' in attrs:
-            x = outputs.get(f'{name}_x', '-')
-            y = outputs.get(f'{name}_y', '-')
-            if type(x) == float:
-                textout += f'x,y: {x:0.2f},{y:0.2f} '
-            else:
-                textout += f'x,y: {x:4},{y:4} '
-        if 'xcenter' in attrs:
-            xc = outputs.get(f'{name}_xcenter', '-')
-            yc = outputs.get(f'{name}_ycenter', '-')
-            if type(xc) == float:
-                textout += f'xc,yc: {xc:+0.2f},{yc:+0.2f} '
-            else:
-                textout += f'xc,yc: {xc:4},{yc:4} '
-        if 'dist' in attrs:
-            dist = outputs.get(f'{name}_dist', '-')
-            if type(dist) == float:
-                textout += f'dist: {dist:0.2f} '
-            else:
-                textout += f'dist: {dist:4} '
-        if 'xsim' in attrs:
-            xc = outputs.get(f'{name}_xsim')
-            yc = outputs.get(f'{name}_ysim')
-            if xc is not None:
-                textout += f'xsim,ysim: {xc:0.2f},{yc:0.2f} '
-            else:
-                textout += f'xsim,ysim:   - ,   - '
-        if 'xrel' in attrs:
-            xrel = outputs.get(f'{name}_xrel', ' - ')
-            yrel = outputs.get(f'{name}_yrel', ' - ')
-            if type(xrel) == float:
-                textout += f'xrel,yrel: {xrel:+0.2f},{yrel:+0.2f} '
-            else:
-                textout += f'xrel,yrel: {xrel:5},{yrel:5} '
-        d = outputs.get(f'{name}_direction', '-')
-        d1 = outputs.get(f'{name}_direction_north', '-')
-        d2 = outputs.get(f'{name}_direction_south', '-')
-        d3 = outputs.get(f'{name}_direction_east', '-')
-        d4 = outputs.get(f'{name}_direction_west', '-')
-        d5 = outputs.get(f'{name}_direction_other', '-')
-        a = outputs.get(f'{name}_state', '-')
-        drop = outputs.get(f'{name}_drop', '-')
-        h = outputs.get(f'{name}_health_simple', '-')
-        hw = outputs.get(f'{name}_health_weird', '-')
-        textout += f'dir:{d:3} {d1}{d2}{d3}{d4}{d5} health: {h:3} {hw:1} state: {a:3} drop: {drop:3}'
-        c = outputs.get(f'{name}_countdown', '-')
-        if type(c) == float:
-            textout += f' count: {c:0.2f}'
-        else:
-            textout += f' count: {c:4}'
-
-        t = outputs.get(f'{name}_type', '-')
-        textout += f' type: {t:3}'
-        '''
-        Enemy Type:
-        There are many different memory locations that seem to store the enemy type;
-        I'm not sure about what is different about them,
-        and the particular location I chose may be wrong in some subtle situations.
-        The values represent:
-        00= NOTHING
-        01= B. LION GUYS
-        02= R. LION GUYS
-        03= B. MOBLINS
-        04= R. MOBLINS
-        05= B. RATS
-        06= R. RATS
-        07= SLOW R. OCTOROCKS
-        08= FAST R. OCTOROCKS
-        09= SLOW B. OCTOROCKS
-        0A= FAST B. OCTOROCKS
-        0B= R. DARKNUTS
-        0C= B. DARKNUTS
-        0D= B. TECHTIKES
-        0E= R. TECHTIKES
-        0F= R. LEVERS
-        10= B. LEVERS
-        11= ZORAS
-        12= VAMPIERS
-        13= BIG SLIMES
-        14= LIL, SLIMES
-        15= LIL, SLIMES
-        16= POLS VOICES
-        17= LIKE LIKES
-        18= ????
-        19= ???
-        1A= PEAHATS
-        1B= B.BATS
-        1C= R. BATS
-        1D= B. BATS
-        1E= ????
-        1F= FALLING ROCKS
-        20= R. LEVERS
-        21= MUMMIES
-        22= ????
-        23= B. WIZROBES
-        24= R. WIZROBES
-        25= ????
-        26= ????
-        27= WALL MASTERS
-        28= ROPES (SNAKES)
-        29= ????
-        2A= STALFOSE
-        2B= BUBBLES
-        2C= B. BUBBLES
-        2D= R. BUBBLES
-        2E= ????
-        2F= FAIRY AT POND
-        30= ????
-        31= 3 DODONGOS
-        32= 1 DODONGO
-        33= B. GHOMA
-        34= R. GHOMA
-        35= RUPIE STASH
-        36= GRUMBLE
-        37= ZELDA
-        38= DIGDOGER?
-        39= DIGDOGER?
-        3A= 2 R. WORMS
-        3B= 2 B. WORMS
-        3C= MANHANDELA
-        3D= AQUAMENTIS
-        3E= GANNON
-        3F= FIRE
-        '''
-        return textout
-
-    lines.append('--------------------')
-    for prefixnum in sorted(prefixnums):
-        lines.append(makeline(prefixnum))
-    lines.append('--------------------')
-
-    return '\n'.join(lines)
-
-
-def _dictionary_to_array(d):
-    '''
-    Convert the dictionary into a numpy array.
-    We guarantee that the data will be put into the array in sorted order by key.
-    This is important so that the array will have a deterministic structure.
-    '''
-    kv = sorted([(k, v) for k, v in d.items()])
-    v = [v for k,v in kv]
-    return np.array(v, dtype=np.float64)
+def _gamestate_screen_change(ram):
+    return ram[18] == 5

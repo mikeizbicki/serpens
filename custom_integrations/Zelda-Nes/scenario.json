@@ -1,17 +1,6 @@
 {
-  "crop": [
-    0,
-    0,
-    0,
-    0
-  ],
   "done": {
-    "script": "lua:scenario_screenbattle_done"
   },
   "reward": {
-    "script": "lua:scenario_screenbattle_reward"
-  },
-  "scripts": [
-    "script.lua"
-  ]
+  }
 }

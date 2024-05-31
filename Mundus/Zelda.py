@@ -18,20 +18,33 @@ from gymnasium import spaces
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 
-class ObjectCNN(BaseFeaturesExtractor):
+class LSTMPool(torch.nn.LSTM):
+    def forward(self, x):
+        out = super().forward(x)
+        out = out[1][0]
+        out = out.reshape(out.shape[1], out.shape[0] * out.shape[2])
+        return out
+
+class MaxPool(torch.nn.Module):
+    def forward(self, x):
+        out = torch.max(x, 2)[0]
+        return out
+
+class MeanPool(torch.nn.Module):
+    def forward(self, x):
+        out = torch.mean(x, 2)
+        return out
+
+
+class ObjectCnn(BaseFeaturesExtractor):
     def __init__(
         self,
         observation_space: gymnasium.Space,
         features_dim: int = 64,
+        pooling: str = 'ave',
     ) -> None:
-        assert isinstance(observation_space, spaces.Box), (
-            "NatureCNN must be used with a gym.spaces.Box ",
-            f"observation space, not {observation_space}",
-        )
         super().__init__(observation_space, features_dim)
         n_input_channels = observation_space.shape[0]
-        print(f"observation_space={observation_space}")
-        asd
         self.cnn = nn.Sequential(
             nn.Conv1d(n_input_channels, features_dim, kernel_size=1),
             nn.ReLU(),
@@ -39,17 +52,33 @@ class ObjectCNN(BaseFeaturesExtractor):
             nn.ReLU(),
             nn.Conv1d(features_dim, features_dim, kernel_size=1),
             nn.ReLU(),
-            nn.Flatten(),
         )
+        
+        if pooling == 'lstm':
+            self.pool = LSTMPool(features_dim, features_dim, batch_first=True, bidirectional=True)
+        elif pooling == 'max':
+            self.pool = MaxPool()
+        elif pooling == 'ave':
+            self.pool = MeanPool()
+        else:
+            raise ValueError(f'pooling type "{pooling}" not supported')
 
         # Compute shape by doing one forward pass
         with torch.no_grad():
-            n_flatten = self.cnn(torch.as_tensor(observation_space.sample()[None]).float()).shape[1]
+            out = self.cnn(torch.as_tensor(observation_space.sample()[None]).float())
+            out = self.pool(out)
+            n_flatten = out.shape[1]
 
-        self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
+        self.linear = nn.Sequential(
+            nn.Linear(n_flatten, features_dim),
+            nn.ReLU()
+            )
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
-        return self.linear(self.cnn(observations))
+        ret = self.cnn(observations)
+        ret = self.pool(ret)
+        ret = self.linear(ret)
+        return ret
 
 
 class KnowledgeBase:
@@ -71,7 +100,7 @@ class KnowledgeBase:
                 stuff[-1].append(val[column])
         #return stuff
         stuff += [[0] * 6] * (20 - len(stuff))
-        return np.array(stuff, dtype=np.float16)
+        return np.array(stuff, dtype=np.float16).T
 
     def display(self):
         columns = sorted(self.columns)
@@ -335,7 +364,7 @@ class ZeldaWrapper(RetroWithRam):
         dtype = np.float16
         low = -1
         high = 1
-        shape = [20, 6]
+        shape = [6, 20]
         self.observation_space = gymnasium.spaces.Box(low, high, shape, dtype, seed=0)
         #shape = [6]
         #self.observation_space = gymnasium.spaces.Sequence(
@@ -368,13 +397,14 @@ class ZeldaWrapper(RetroWithRam):
         observation = kb.to_observation()
         terminated = any([
             _gamestate_all_enemies_dead(self.ram),
-            _gamestate_hearts(self.ram) <= 0,
+            _gamestate_link_dead(self.ram),
             _gamestate_is_screen_scrolling(self.ram),
             _gamestate_is_cave_enter(self.ram),
             ])
 
         info['is_success'] = _gamestate_all_enemies_dead(self.ram)
         info['summary_gamestate_hearts(self.ram)'] = _gamestate_hearts(self.ram)
+        info['summary_gamestate_link_dead(self.ram)'] = _gamestate_link_dead(self.ram)
         info['summary_gamestate_is_screen_scrolling(self.ram)'] = _gamestate_is_screen_scrolling(self.ram)
         info['summary_gamestate_is_cave_enter(self.ram)'] = _gamestate_is_cave_enter(self.ram)
         info['summary_gamestate_all_enemies_dead(self.ram)'] = _gamestate_all_enemies_dead(self.ram)
@@ -462,6 +492,9 @@ def _gamestate_is_inventory_scroll(ram):
 
 def _gamestate_is_openning_scene(ram):
     return bool(ram[0x007c])
+
+def _gamestate_link_dead(ram):
+    return _gamestate_hearts(ram) <= 0
 
 def _gamestate_hearts(ram):
     link_full_hearts = 0x0f & ram[0x066f]

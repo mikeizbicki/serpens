@@ -190,6 +190,7 @@ def main():
     debug.add_argument("--disable_video", action='store_true')
 
     hyperparameters = parser.add_argument_group('hyperparameters')
+    hyperparameters.add_argument('--policy', choices=['MlpPolicy', 'CnnPolicy', 'ObjectCnn'], default=['MlpPolicy'])
     hyperparameters.add_argument('--net_arch', type=int, nargs='*', default=[])
     hyperparameters.add_argument('--lr', type=float, default=3e-4)
     hyperparameters.add_argument('--gamma', type=float, default=0.99)
@@ -214,8 +215,8 @@ def main():
     starttime = datetime.datetime.now().isoformat()
 
     arch_string = '-'.join([str(i) for i in args.net_arch])
-    experiment_name = f'net_arch={arch_string},lr={args.lr},gamma={args.gamma},starttime={starttime}'
-    experiment_name = f'net_arch={arch_string},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps}'
+    experiment_name = f'policy={args.policy},net_arch={arch_string},lr={args.lr},gamma={args.gamma},starttime={starttime}'
+    experiment_name = f'policy={args.policy},net_arch={arch_string},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps}'
     logging.info(f'experiment_name: [{experiment_name}]')
 
     # create the environment
@@ -242,21 +243,24 @@ def main():
         #env = RandomStateReset(env, path='custom_integrations/'+args.game, globstr='overworld_07.state')
         return env
 
-    train_env = SubprocVecEnv([lambda: make_env(render_mode=args.render_mode)] * args.n_env)
-    train_env = VecMonitor(train_env)
-    #train_env = make_env(render_mode=args.render_mode)
+    if args.n_env > 1:
+        train_env = SubprocVecEnv([lambda: make_env(render_mode=args.render_mode)] * args.n_env)
+        train_env = VecMonitor(train_env)
+    else:
+        train_env = make_env(render_mode=args.render_mode)
     train_env.reset()
 
     policy_kwargs = {
-        #'features_extractor_class': ObjectCNN,
-        #'features_extractor_kwargs': {
-            #'features_dim': 128,
-            #},
         'net_arch': args.net_arch,
         }
+    if args.policy == 'ObjectCnn':
+        policy_kwargs['features_extractor_class'] = ObjectCnn
+    if 'Cnn' in args.policy:
+        policy = 'CnnPolicy'
+    else:
+        policy = 'MlpPolicy'
     model = stable_baselines3.PPO(
-        policy="MlpPolicy",
-        #policy="CnnPolicy",
+        policy=policy,
         env=train_env,
         learning_rate=args.lr,
         n_steps=args.n_steps,

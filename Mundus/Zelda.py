@@ -20,6 +20,7 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 class LSTMPool(torch.nn.LSTM):
     def forward(self, x):
+        x = x.reshape([x.shape[0], x.shape[2], x.shape[1]])
         out = super().forward(x)
         out = out[1][0]
         out = out.reshape(out.shape[1], out.shape[0] * out.shape[2])
@@ -41,7 +42,7 @@ class ObjectCnn(BaseFeaturesExtractor):
         self,
         observation_space: gymnasium.Space,
         features_dim: int = 64,
-        pooling: str = 'ave',
+        pooling: str = 'mean',
     ) -> None:
         super().__init__(observation_space, features_dim)
         n_input_channels = observation_space.shape[0]
@@ -58,7 +59,7 @@ class ObjectCnn(BaseFeaturesExtractor):
             self.pool = LSTMPool(features_dim, features_dim, batch_first=True, bidirectional=True)
         elif pooling == 'max':
             self.pool = MaxPool()
-        elif pooling == 'ave':
+        elif pooling == 'mean':
             self.pool = MeanPool()
         else:
             raise ValueError(f'pooling type "{pooling}" not supported')

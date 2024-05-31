@@ -182,15 +182,16 @@ def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--game", default="Zelda-Nes")
-    parser.add_argument("--render_mode", default='rgb_array')
     parser.add_argument("--log_tensorboard", default='log_tensorboard')
 
     debug = parser.add_argument_group('debug')
     debug.add_argument("--log_dir", default='log')
     debug.add_argument("--disable_video", action='store_true')
+    debug.add_argument("--render_mode", default='rgb_array')
 
     hyperparameters = parser.add_argument_group('hyperparameters')
     hyperparameters.add_argument('--policy', choices=['MlpPolicy', 'CnnPolicy', 'ObjectCnn'], default=['MlpPolicy'])
+    hyperparameters.add_argument('--pooling', choices=['lstm', 'mean', 'max'], default=['mean'])
     hyperparameters.add_argument('--net_arch', type=int, nargs='*', default=[])
     hyperparameters.add_argument('--lr', type=float, default=3e-4)
     hyperparameters.add_argument('--gamma', type=float, default=0.99)
@@ -215,8 +216,11 @@ def main():
     starttime = datetime.datetime.now().isoformat()
 
     arch_string = '-'.join([str(i) for i in args.net_arch])
-    experiment_name = f'policy={args.policy},net_arch={arch_string},lr={args.lr},gamma={args.gamma},starttime={starttime}'
-    experiment_name = f'policy={args.policy},net_arch={arch_string},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps}'
+    policy_params = ''
+    if args.policy == 'ObjectCnn':
+        policy_params = f',pooling={args.pooling}'
+
+    experiment_name = f'policy={args.policy}{policy_params},net_arch={arch_string},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps}'
     logging.info(f'experiment_name: [{experiment_name}]')
 
     # create the environment
@@ -235,19 +239,11 @@ def main():
                 )
         env = TimeLimit(env, max_episode_steps=30*60*5)
         env = StochasticFrameSkip(env, 4, 0.25)
-        #env = Monitor(env, info_keywords=['summary_enemies_alive'])
-        #env = ObserveVariables(env)
-        #env = FrameStack(env, 1)
-        #env = RandomStateReset(env, path='custom_integrations/'+args.game)
         env = RandomStateReset(env, path='custom_integrations/'+args.game, globstr='spiders_lowhealth_01*.state')
-        #env = RandomStateReset(env, path='custom_integrations/'+args.game, globstr='overworld_07.state')
         return env
 
-    if args.n_env > 1:
-        train_env = SubprocVecEnv([lambda: make_env(render_mode=args.render_mode)] * args.n_env)
-        train_env = VecMonitor(train_env)
-    else:
-        train_env = make_env(render_mode=args.render_mode)
+    train_env = SubprocVecEnv([lambda: make_env(render_mode=args.render_mode)] * args.n_env)
+    train_env = VecMonitor(train_env)
     train_env.reset()
 
     policy_kwargs = {
@@ -255,6 +251,9 @@ def main():
         }
     if args.policy == 'ObjectCnn':
         policy_kwargs['features_extractor_class'] = ObjectCnn
+        policy_kwargs['features_extractor_kwargs'] = {
+            'pooling': args.pooling,
+            }
     if 'Cnn' in args.policy:
         policy = 'CnnPolicy'
     else:

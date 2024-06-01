@@ -236,6 +236,7 @@ def main():
         env = ZeldaWrapper(
                 env,
                 skip_boring_frames=False,
+                scenario='follow_enemy',
                 )
         env = TimeLimit(env, max_episode_steps=30*60*5)
         env = StochasticFrameSkip(env, 4, 0.25)

@@ -72,16 +72,20 @@ class Interactive(gymnasium.Wrapper):
         # FIXME:
         # this is a janky setup to set the mouse coordinates in the Zelda environment;
         # it assumes that this Wrapper is called directly on the Zelda
-        self.env.mousex = 0
-        self.env.mousey = 0
         def on_mouse_motion(x, y, dx, dy):
-            self.env.mousex = x / self.viewer.window.width
-            self.env.mousey = ((self.viewer.window.height - y) / self.viewer.window.height * 240 - 60) / (240 - 60)
+            self.env.mouse = {}
+            self.env.mouse['x'] = int(x / self.viewer.window.width * 240)
+            self.env.mouse['y'] = int((self.viewer.window.height - y) / self.viewer.window.height * 224)
+            
             # NOTE:
             # the values above are hardcoded for zelda;
             # 240 is the y resolution,
             # and 60 is the height of the black bar
         self.viewer.window.push_handlers(on_mouse_motion)
+
+        def on_mouse_leave(x, y):
+            self.env.mouse = None
+        self.viewer.window.push_handlers(on_mouse_leave)
 
     def reset(self, **kwargs):
         self.frames_since_log = 0
@@ -96,7 +100,6 @@ class Interactive(gymnasium.Wrapper):
         return self.maxfps0 * 2**(self.maxfps_multiplier)
         
     def step(self, action):
-        #print(f"self.mousex, self.mousey={self.mousex, self.mousey}")
         
         # register any pygame events
         for event in pygame.event.get():
@@ -319,7 +322,7 @@ def main():
     emulator_settings = parser.add_argument_group('emulator settings')
     emulator_settings.add_argument('--no_render_skipped_frames', action='store_true')
     emulator_settings.add_argument('--allframes', action='store_true')
-    emulator_settings.add_argument('--debug', action='store_true')
+    emulator_settings.add_argument('--no_alternate_screen', action='store_true')
     emulator_settings.add_argument('--noaudio', action='store_true')
     emulator_settings.add_argument('--doresets', action='store_true')
 
@@ -346,14 +349,13 @@ def main():
     if 'ZeldaOld' in args.game:
         env = ZeldaWrapperOld(
                 env,
-                stdout_debug=not args.debug,
                 no_render_skipped_frames=args.no_render_skipped_frames,
                 skip_boring_frames=not args.allframes,
                 )
     elif 'Zelda' in args.game:
         env = ZeldaWrapper(
                 env,
-                stdout_debug=not args.debug,
+                stdout_debug=True,
                 no_render_skipped_frames=args.no_render_skipped_frames,
                 skip_boring_frames=not args.allframes,
                 )
@@ -383,7 +385,16 @@ def main():
         # set the default action
         action = env.action_space.sample() * 0
 
+        # switch the terminal to the alternate screen
+        if not args.no_alternate_screen:
+            print('\u001B[?1049h')
+
         while True:
+            # clear the screen
+            if not args.no_alternate_screen:
+                print('\x1b[2J', end='')
+
+            # step the environment
             observation, reward, terminated, truncated, info = env.step(action)
             if args.doresets and (terminated or truncated):
                 env.reset()
@@ -420,6 +431,10 @@ def main():
 
     # clean all resources
     env.close()
+
+    # switch the terminal away from the alternate screen
+    if not args.no_alternate_screen:
+        print('\u001B[?1049l')
 
 
 if __name__ == "__main__":

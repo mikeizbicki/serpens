@@ -165,6 +165,16 @@ class Interactive(gymnasium.Wrapper):
                 logging.debug(f"self.get_maxfps()={self.get_maxfps()}")
 
             if name == 'SPACE':
+                def save_state(statename):
+                    filename = f'custom_integrations/Zelda-Nes/{statename}.state'
+                    import gzip
+                    with gzip.open(filename, 'wb') as f:
+                        f.write(self.env.em.get_state())
+                def load_state(statename):
+                    filename = f'custom_integrations/Zelda-Nes/{statename}.state'
+                    import gzip
+                    with gzip.open(filename, 'rb') as f:
+                        self.env.em.set_state(f.read())
                 import code
                 code.interact(local=locals())
                 self.action_override = prev_action_override

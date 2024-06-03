@@ -175,7 +175,7 @@ class TensorboardCallback(BaseCallback):
                 for key in keys:
                     self.logger.record_mean('summary/'+key, self.locals['infos'][i][key])
                 keys = [key for key in self.locals['infos'][i].keys() if key.startswith('reward_')]
-                self.logger.record('summary/num_episodes', sum(self.num_episodes))
+                self.logger.record('episode/num_episodes', sum(self.num_episodes))
                 for key in keys:
                     self.logger.record_mean('reward/'+key, self.locals['infos'][i][key])
         return True

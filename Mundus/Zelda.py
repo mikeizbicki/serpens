@@ -89,14 +89,17 @@ class KnowledgeBase:
         self.max_objects = max_objects
 
     def __setitem__(self, name, val):
-        self.items[name] = val
-        for k, v in val.items():
-            self.columns.add(k)
-            # NOTE: we convert all integer values away from numpy types to python int
-            # because the numpy types are unsigned and small;
-            # this can result in hard-to-debug integer overflow problems
-            if not isinstance(v, (np.floating, float)):
-                val[k] = int(v)
+        if len(self.items) >= self.max_objects:
+            logging.warning('len(self.items) >= self.max_objects')
+        else:
+            self.items[name] = val
+            for k, v in val.items():
+                self.columns.add(k)
+                # NOTE: we convert all integer values away from numpy types to python int
+                # because the numpy types are unsigned and small;
+                # this can result in hard-to-debug integer overflow problems
+                if not isinstance(v, (np.floating, float)):
+                    val[k] = int(v)
 
     def to_observation(self):
         columns = sorted(self.columns)
@@ -214,6 +217,7 @@ class ZeldaWrapper(RetroWithRam):
                 ]),
             'reward': {
                 'link_l1dist': 0,
+                'button_push': 0,
                 },
             }
 
@@ -230,7 +234,7 @@ class ZeldaWrapper(RetroWithRam):
         self.scenarios['follow'] = copy.deepcopy(self.scenarios['attack'])
         #self.scenarios['follow']['reward'] = defaultdict(lambda: 0)
         self.scenarios['follow']['reward']['link_l1dist'] = 1
-        self.scenarios['follow']['reward']['button_push'] = 1
+        #self.scenarios['follow']['reward']['button_push'] = 1
 
         def _step_follow_enemy(self, kb):
             enemies = []
@@ -270,6 +274,7 @@ class ZeldaWrapper(RetroWithRam):
 
 
     def reset(self, **kwargs):
+        self.episode_summary_dict = {}
         self.episode_reward_dict = {}
         self.episode_reward = 0
         obs, info = super().reset(**kwargs)
@@ -296,14 +301,16 @@ class ZeldaWrapper(RetroWithRam):
         reward_dict = {}
         reward = 0
         for k, v in summary_dict.items():
-            info['summary_' + k] = v
             reward_k = summary_dict[k] * self.scenario['reward'].get(k, 1)
-            info['reward_' + k] = reward_k
             reward += reward_k
             reward_dict[k] = reward_k
 
         self.episode_reward += reward
+        self.episode_summary_dict = {k: self.episode_summary_dict.get(k, 0) + summary_dict.get(k, 0) for k in set(self.episode_summary_dict) | set(summary_dict)}
         self.episode_reward_dict = {k: self.episode_reward_dict.get(k, 0) + reward_dict.get(k, 0) for k in set(self.episode_reward_dict) | set(reward_dict)}
+        for k in summary_dict.keys():
+            info['summary_' + k] = self.episode_summary_dict[k]
+            info['reward_' + k] = self.episode_reward_dict[k]
 
         # render the environment
         if self.render_kb:

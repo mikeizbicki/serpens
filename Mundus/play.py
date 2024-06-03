@@ -358,17 +358,18 @@ def main():
                 stdout_debug=True,
                 no_render_skipped_frames=args.no_render_skipped_frames,
                 skip_boring_frames=not args.allframes,
+                scenario='follow',
                 )
 
 
     # load models
-    #logging.info('loading models')
-    #custom_objects = {
-        #'observation_space': env.observation_space,
-        #'action_space': env.action_space,
-        #}
-    #from stable_baselines3 import PPO
-    #model = PPO.load('models/simple_attack.zip', custom_objects=custom_objects)
+    logging.info('loading models')
+    custom_objects = {
+        'observation_space': env.observation_space,
+        'action_space': env.action_space,
+        }
+    from stable_baselines3 import PPO
+    model = PPO.load('models/follow_attack_max.zip', custom_objects=custom_objects)
 
     logging.info('creating environment wrappers')
     env = Interactive(env)
@@ -400,25 +401,12 @@ def main():
                 env.reset()
 
             # select the next action;
-            # ensure that the model does not press start/select
-            if False:
-                action = env.action_space.sample() * 0
-                enemy_1_xrel = observation[env.observations_keys.index('enemy_1_xrel')] 
-                enemy_1_yrel = observation[env.observations_keys.index('enemy_1_yrel')] 
-                if enemy_1_yrel < -0.10:
-                    action[4] = 1
-                elif enemy_1_yrel > 0.10:
-                    action[5] = 1
-                elif enemy_1_xrel < -0.10:
-                    action[6] = 1
-                elif enemy_1_xrel > 0.10:
-                    action[7] = 1
-                else:
-                    action[8] = 1
-            
-            #action, _states = model.predict(observation, deterministic=True)
-            #action[2] = 0
-            #action[3] = 0
+            if model is not None:
+                action, _states = model.predict(observation, deterministic=True)
+                
+                # ensure that the model does not press start/select
+                action[2] = 0
+                action[3] = 0
 
             #import code
             #code.interact(local=locals())

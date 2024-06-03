@@ -275,7 +275,9 @@ def main():
         policy_kwargs=policy_kwargs,
         seed=args.seed,
     )
+    reset_num_timesteps = True
     if args.warmstart:
+        reset_num_timesteps = False
         warmstart = stable_baselines3.PPO.load(args.warmstart)
         model.policy = warmstart.policy
         model.num_timesteps = warmstart.num_timesteps
@@ -285,7 +287,7 @@ def main():
         total_timesteps=100_000_000,
         log_interval=1,
         tb_log_name=experiment_name,
-        reset_num_timesteps=False,
+        reset_num_timesteps=reset_num_timesteps,
         callback = [
             SaveOnBestTrainingRewardCallback(),
             HParamCallback(),

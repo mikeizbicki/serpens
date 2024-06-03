@@ -218,6 +218,9 @@ class ZeldaWrapper(RetroWithRam):
             }
 
         self.scenarios['suicide'] = copy.deepcopy(self.scenarios['attack'])
+        self.scenarios['suicide']['is_success'] = lambda ram: any([
+                _gamestate_link_killed(self.ram),
+                ])
         self.scenarios['suicide']['reward'] = {
             'link_killed': -2,
             'link_hit': -1,
@@ -652,7 +655,7 @@ class ZeldaWrapper(RetroWithRam):
             link_x = self.ram[112]
             link_y = self.ram[132]
             l1dist = abs(self.mouse['x'] - link_x) + abs(self.mouse['y'] - link_y)
-            score = -max(0, l1dist-safe_radius) / 1000 / 60
+            score = -max(0, l1dist-safe_radius) / 10000
             return score
 
     def _rewardfunc_button_push(self):

@@ -173,8 +173,11 @@ class TensorboardCallback(BaseCallback):
                 # record all of the "summary_*" keys within the info dict
                 keys = [key for key in self.locals['infos'][i].keys() if key.startswith('summary_')]
                 for key in keys:
-                    self.logger.record_mean('episode/'+key, self.locals['infos'][i][key])
-                self.logger.record('episode/num_episodes', sum(self.num_episodes))
+                    self.logger.record_mean('summary/'+key, self.locals['infos'][i][key])
+                keys = [key for key in self.locals['infos'][i].keys() if key.startswith('reward_')]
+                self.logger.record('summary/num_episodes', sum(self.num_episodes))
+                for key in keys:
+                    self.logger.record_mean('reward/'+key, self.locals['infos'][i][key])
         return True
 
 
@@ -192,6 +195,7 @@ def main():
     hyperparameters = parser.add_argument_group('hyperparameters')
     hyperparameters.add_argument('--policy', choices=['MlpPolicy', 'CnnPolicy', 'ObjectCnn'], default=['MlpPolicy'])
     hyperparameters.add_argument('--pooling', choices=['lstm', 'mean', 'max'], default='mean')
+    hyperparameters.add_argument('--scenario', default='attack')
     hyperparameters.add_argument('--net_arch', type=int, nargs='*', default=[])
     hyperparameters.add_argument('--lr', type=float, default=3e-4)
     hyperparameters.add_argument('--gamma', type=float, default=0.99)
@@ -220,7 +224,7 @@ def main():
     if args.policy == 'ObjectCnn':
         policy_params = f',pooling={args.pooling}'
 
-    experiment_name = f'policy={args.policy}{policy_params},net_arch={arch_string},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps}'
+    experiment_name = f'scenario={args.scenario},policy={args.policy}{policy_params},net_arch={arch_string},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps}'
     logging.info(f'experiment_name: [{experiment_name}]')
 
     # create the environment
@@ -236,7 +240,7 @@ def main():
         env = ZeldaWrapper(
                 env,
                 skip_boring_frames=False,
-                scenario='follow_enemy',
+                scenario=args.scenario,
                 )
         env = TimeLimit(env, max_episode_steps=30*60*5)
         env = StochasticFrameSkip(env, 4, 0.25)

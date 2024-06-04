@@ -20,10 +20,10 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 class LSTMPool(torch.nn.LSTM):
     def forward(self, x):
-        x = x.reshape([x.shape[0], x.shape[2], x.shape[1]])
+        x = x.transpose(1,2)
         out = super().forward(x)
         out = out[1][0]
-        out = out.reshape(out.shape[1], out.shape[0] * out.shape[2])
+        out = torch.concat([out[0, :, :], out[1, :, :]], dim=1)
         return out
 
 class MaxPool(torch.nn.Module):
@@ -44,9 +44,14 @@ class ObjectCnn(BaseFeaturesExtractor):
         pooling: str = 'mean',
     ) -> None:
         super().__init__(observation_space, features_dim)
-        n_input_channels = observation_space.shape[0]
+
+        self.embeddings = nn.Embedding(
+            num_embeddings = 512,
+            embedding_dim = features_dim - 2,
+            )
+
         self.cnn = nn.Sequential(
-            nn.Conv1d(n_input_channels, features_dim, kernel_size=1),
+            nn.Conv1d(features_dim, features_dim, kernel_size=1),
             nn.ReLU(),
             nn.Conv1d(features_dim, features_dim, kernel_size=1),
             nn.ReLU(),
@@ -65,7 +70,9 @@ class ObjectCnn(BaseFeaturesExtractor):
 
         # Compute shape by doing one forward pass
         with torch.no_grad():
-            out = self.cnn(torch.as_tensor(observation_space.sample()[None]).float())
+            out = torch.as_tensor(observation_space.sample()[None]).float()
+            out = self._embed_observations(out)
+            out = self.cnn(out)
             out = self.pool(out)
             n_flatten = out.shape[1]
 
@@ -74,8 +81,16 @@ class ObjectCnn(BaseFeaturesExtractor):
             nn.ReLU()
             )
 
+    def _embed_observations(self, observations):
+        coords = observations[:,0:2, :]
+        idxs = observations[:,2, :].int()
+        embeddings = self.embeddings(idxs).transpose(1,2)
+        observations_embedded = torch.concat([coords, embeddings], dim=1)
+        return observations_embedded
+
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
-        ret = self.cnn(observations)
+        ret = self._embed_observations(observations)
+        ret = self.cnn(ret)
         ret = self.pool(ret)
         ret = self.linear(ret)
         return ret
@@ -104,9 +119,18 @@ class KnowledgeBase:
         columns = sorted(self.columns)
         stuff = []
         for item, val in self.items.items():
-            stuff.append([])
-            for column in columns:
-                stuff[-1].append(val[column])
+            idx = val['type'] + val['direction'] + val['state']
+            if val['type'] < 0:
+                idx += 256
+            idx %= 512
+            observation = [
+                val['relx'],
+                val['rely'],
+                idx,
+                ]
+            #stuff.append([])
+            #for column in columns:
+                #stuff[-1].append(val[column])
         # FIXME:
         # currently we pad the observation space
         stuff += [[0] * len(self.columns)] * (self.max_objects - len(stuff))
@@ -118,6 +142,14 @@ class KnowledgeBase:
         high = 1
         observation = self.to_observation()
         shape = observation.shape
+        #print(f"shape={shape}")
+        #asd
+        #return gymnasium.spaces.Sequence(
+            #gymnasium.spaces.Dict({
+                #'coord': gymnasium.spaces.Box(low, high, [2], dtype),
+                #'idx': gymnasium.spaces.Discrete(256),
+                #})
+            #)
         return gymnasium.spaces.Box(low, high, shape, dtype, seed=0)
 
     def display(self):

@@ -198,6 +198,7 @@ def main():
     hyperparameters.add_argument('--scenario', default='attack')
     hyperparameters.add_argument('--state', default='spiders_lowhealth_01*.state')
     hyperparameters.add_argument('--net_arch', type=int, nargs='*', default=[])
+    hyperparameters.add_argument('--features_dim', type=int, default=64)
     hyperparameters.add_argument('--lr', type=float, default=3e-4)
     hyperparameters.add_argument('--gamma', type=float, default=0.99)
     hyperparameters.add_argument('--n_env', type=int, default=3)
@@ -225,7 +226,7 @@ def main():
     if args.policy == 'ObjectCnn':
         policy_params = f',pooling={args.pooling}'
 
-    experiment_name = f'scenario={args.scenario},state={args.state},policy={args.policy}{policy_params},net_arch={arch_string},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps}'
+    experiment_name = f'scenario={args.scenario},state={args.state},policy={args.policy}{policy_params},net_arch={arch_string},{args.features_dim},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps}'
     logging.info(f'experiment_name: [{experiment_name}]')
 
     # create the environment
@@ -259,6 +260,7 @@ def main():
         policy_kwargs['features_extractor_class'] = ObjectCnn
         policy_kwargs['features_extractor_kwargs'] = {
             'pooling': args.pooling,
+            'features_dim': args.features_dim,
             }
     if 'Cnn' in args.policy:
         policy = 'CnnPolicy'

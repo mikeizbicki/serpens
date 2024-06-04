@@ -303,8 +303,9 @@ class ZeldaWrapper(RetroWithRam):
                 _gamestate_is_screen_scrolling(self.ram),
                 _gamestate_is_cave_enter(self.ram),
                 ])
-        self.scenarios['follow_random']['is_success'] = lambda ram: any([
-                _gamestate_all_enemies_dead(self.ram),
+        self.scenarios['follow_random']['is_success'] = lambda ram: not any([
+                _gamestate_is_screen_scrolling(self.ram),
+                _gamestate_is_cave_enter(self.ram),
                 ])
         self.scenarios['follow_random']['step'] = _step_follow_random
 
@@ -586,7 +587,7 @@ class ZeldaWrapper(RetroWithRam):
         # >>> tiles = self.env.unwrapped.em.get_state()[14657:14657+11*4*16]
         # >>> newstate = b'\x00'*88; state = self.env.unwrapped.em.get_state(); state = state[:14657]+newstate+state[14657+len(newstate):]; self.env.unwrapped.em.set_state(state)
 
-        include_background = True
+        include_background = False
         use_full_subtiles = False
         view_radius = 2
         #ignore_tile_set = set([0x26, 0x24, 0x76])
@@ -705,11 +706,11 @@ class ZeldaWrapper(RetroWithRam):
             link_x = self.ram[112]
             link_y = self.ram[132]
             l1dist = abs(self.mouse['x'] - link_x) + abs(self.mouse['y'] - link_y)
-            score = -max(0, l1dist-safe_radius) / 10000
+            score = -max(0, l1dist-safe_radius) / 1000 / 60
             return score
 
     def _rewardfunc_button_push(self):
-        return -min(1, abs(self.ram[0xfa] - self.ram2[0xfa])) / 1000
+        return -min(1, abs(int(self.ram[0xfa]) - int(self.ram2[0xfa]))) / 1000
 
     def _rewardfunc_add_bomb(self):
         return max(0, self.ram[1624] - self.ram2[1624])

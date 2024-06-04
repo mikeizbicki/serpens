@@ -36,7 +36,6 @@ class MeanPool(torch.nn.Module):
         out = torch.mean(x, 2)
         return out
 
-
 class ObjectCnn(BaseFeaturesExtractor):
     def __init__(
         self,
@@ -161,6 +160,8 @@ class RetroWithRam(gymnasium.Wrapper):
         self.ram = self.env.get_ram()
         return obs, info
 
+# non-hex numbers are for underworld
+ignore_tile_set = [0x26, 0x24, 0x76, 126, 104, 116]
 
 class ZeldaWrapper(RetroWithRam):
     '''
@@ -260,11 +261,51 @@ class ZeldaWrapper(RetroWithRam):
         self.scenarios['repel_enemy']['reward']['link_l1dist'] = -1
 
         def _step_follow_random(self, kb):
-            if random.random() <= 1 / (60 * 5):
-                x = random.randrange(0, 255) - 8
-                y = random.randrange(60, 240) - 8
-                self.mouse = {'x': x, 'y': y}
+            if self.stepcount%60 == 0:
+                if self.mouse is None or random.random() < 0.2:
+                    mode = 'passable_tile'
+                else:
+                    mode = 'neighbor'
+                subtiles = self.ram[0x530+0x800:0x530+0x2c0+0x800].reshape([32,22])
+                tiles = subtiles[::2,::2]
+                if mode == 'neighbor':
+                    curx = round(self.mouse['x'] / 16)
+                    cury = round((self.mouse['y'] - 56 - 8 + 3) / 16)
+                    indexes = []
+                    if curx > 2:
+                        indexes.append([curx-1, cury])
+                    if curx < 14:
+                        indexes.append([curx+1, cury])
+                    if cury > 2:
+                        indexes.append([curx, cury-1])
+                    if cury < 9:
+                        indexes.append([curx, cury+1])
+                    newindex = random.choice(indexes)
+                    x = newindex[0] * 16 
+                    y = newindex[1] * 16 + 56 + 8 - 3
+                    self.mouse = {'x': x, 'y': y}
+                elif mode == 'passable_tile':
+                    indexes = np.argwhere(np.isin(tiles, ignore_tile_set))
+                    if len(indexes) > 0:
+                        newindex = random.choice(indexes)
+                        x = newindex[0] * 16 
+                        y = newindex[1] * 16 + 56 + 8 - 3
+                        self.mouse = {'x': x, 'y': y}
+                elif mode == 'randomxy':
+                    x = random.randrange(0, 255) - 8
+                    y = random.randrange(60, 240) - 8
+                    self.mouse = {'x': x, 'y': y}
+                else:
+                    raise ValueError('should not happen')
         self.scenarios['follow_random'] = copy.deepcopy(self.scenarios['follow'])
+        self.scenarios['follow_random']['terminated'] = lambda ram: any([
+                _gamestate_link_killed(self.ram),
+                _gamestate_is_screen_scrolling(self.ram),
+                _gamestate_is_cave_enter(self.ram),
+                ])
+        self.scenarios['follow_random']['is_success'] = lambda ram: any([
+                _gamestate_all_enemies_dead(self.ram),
+                ])
         self.scenarios['follow_random']['step'] = _step_follow_random
 
         self.scenarios['repel_random'] = copy.deepcopy(self.scenarios['follow_random'])
@@ -277,10 +318,12 @@ class ZeldaWrapper(RetroWithRam):
         self.episode_summary_dict = {}
         self.episode_reward_dict = {}
         self.episode_reward = 0
+        self.stepcount = 0
         obs, info = super().reset(**kwargs)
         return self.observation_space.sample(), info
 
     def step(self, action):
+        self.stepcount += 1
 
         # step the emulator
         render_mode = self.env.render_mode
@@ -546,7 +589,7 @@ class ZeldaWrapper(RetroWithRam):
         include_background = True
         use_full_subtiles = False
         view_radius = 2
-        ignore_tile_set = set([0x26, 0x24, 0x76])
+        #ignore_tile_set = set([0x26, 0x24, 0x76])
         if include_background:
             if use_full_subtiles:
                 tiles = subtiles
@@ -658,7 +701,7 @@ class ZeldaWrapper(RetroWithRam):
         if self.mouse is None:
             return 0
         else:
-            safe_radius = 0
+            safe_radius = 8
             link_x = self.ram[112]
             link_y = self.ram[132]
             l1dist = abs(self.mouse['x'] - link_x) + abs(self.mouse['y'] - link_y)

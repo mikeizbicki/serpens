@@ -327,7 +327,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--game", default="Zelda-Nes")
     #parser.add_argument("--game", default="GauntletII-Nes")
-    parser.add_argument("--state", default=retro.State.DEFAULT)
+    parser.add_argument('--scenario', default='attack')
+    parser.add_argument('--state', default='spiders_lowhealth_01*.state')
 
     emulator_settings = parser.add_argument_group('emulator settings')
     emulator_settings.add_argument('--no_render_skipped_frames', action='store_true')
@@ -368,7 +369,7 @@ def main():
                 stdout_debug=True,
                 no_render_skipped_frames=args.no_render_skipped_frames,
                 skip_boring_frames=not args.allframes,
-                scenario='follow',
+                scenario=args.scenario,
                 )
 
 
@@ -386,9 +387,10 @@ def main():
     if not args.noaudio:
         env = PlayAudio(env)
     #env = StochasticFrameSkip(env, 4, 0.25)
-    env = RandomStateReset(env, path='custom_integrations/'+args.game, globstr='spiders_lowhealth_01*.state')
+    env = RandomStateReset(env, path='custom_integrations/'+args.game, globstr=args.state)
     #env = Whisper(env)
     #env = ConsoleWrapper(env)
+    env.reset()
     env.reset()
 
     # main game loop

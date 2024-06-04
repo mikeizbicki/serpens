@@ -193,9 +193,10 @@ def main():
     debug.add_argument("--render_mode", default='rgb_array')
 
     hyperparameters = parser.add_argument_group('hyperparameters')
-    hyperparameters.add_argument('--policy', choices=['MlpPolicy', 'CnnPolicy', 'ObjectCnn'], default=['MlpPolicy'])
+    hyperparameters.add_argument('--policy', choices=['MlpPolicy', 'CnnPolicy', 'ObjectCnn'], default=['ObjectCnn'])
     hyperparameters.add_argument('--pooling', choices=['lstm', 'mean', 'max'], default='mean')
     hyperparameters.add_argument('--scenario', default='attack')
+    hyperparameters.add_argument('--state', default='spiders_lowhealth_01*.state')
     hyperparameters.add_argument('--net_arch', type=int, nargs='*', default=[])
     hyperparameters.add_argument('--lr', type=float, default=3e-4)
     hyperparameters.add_argument('--gamma', type=float, default=0.99)
@@ -224,7 +225,7 @@ def main():
     if args.policy == 'ObjectCnn':
         policy_params = f',pooling={args.pooling}'
 
-    experiment_name = f'scenario={args.scenario},policy={args.policy}{policy_params},net_arch={arch_string},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps}'
+    experiment_name = f'scenario={args.scenario},state={args.state},policy={args.policy}{policy_params},net_arch={arch_string},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps}'
     logging.info(f'experiment_name: [{experiment_name}]')
 
     # create the environment
@@ -244,7 +245,7 @@ def main():
                 )
         env = TimeLimit(env, max_episode_steps=30*60*5)
         env = StochasticFrameSkip(env, 4, 0.25)
-        env = RandomStateReset(env, path='custom_integrations/'+args.game, globstr='spiders_lowhealth_01*.state')
+        env = RandomStateReset(env, path='custom_integrations/'+args.game, globstr=args.state)
         return env
 
     train_env = SubprocVecEnv([lambda: make_env(render_mode=args.render_mode)] * args.n_env)

@@ -191,6 +191,7 @@ def main():
     debug.add_argument("--log_dir", default='log')
     debug.add_argument("--disable_video", action='store_true')
     debug.add_argument("--render_mode", default='rgb_array')
+    debug.add_argument("--comment")
 
     hyperparameters = parser.add_argument_group('hyperparameters')
     hyperparameters.add_argument('--policy', choices=['MlpPolicy', 'CnnPolicy', 'ObjectCnn'], default=['ObjectCnn'])
@@ -226,7 +227,10 @@ def main():
     if args.policy == 'ObjectCnn':
         policy_params = f',pooling={args.pooling}'
 
-    experiment_name = f'scenario={args.scenario},state={args.state},policy={args.policy}{policy_params},net_arch={arch_string},{args.features_dim},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps}'
+    experiment_name = ''
+    if args.comment is not None:
+        experiment_name = args.comment + '--'
+    experiment_name += f'scenario={args.scenario},state={args.state},policy={args.policy}{policy_params},net_arch={arch_string},{args.features_dim},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps}'
     logging.info(f'experiment_name: [{experiment_name}]')
 
     # create the environment

@@ -1,7 +1,5 @@
 import copy
 import math
-import retro
-import gymnasium
 import pyglet
 import time
 import numpy as np
@@ -13,181 +11,10 @@ from collections import OrderedDict, defaultdict
 import pprint
 
 import torch
-import torch.nn as nn
+import retro
+import gymnasium
 from gymnasium import spaces
-from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
-
-
-class LSTMPool(torch.nn.LSTM):
-    def forward(self, x):
-        x = x.transpose(1,2)
-        out = super().forward(x)
-        out = out[1][0]
-        out = torch.concat([out[0, :, :], out[1, :, :]], dim=1)
-        return out
-
-class MaxPool(torch.nn.Module):
-    def forward(self, x):
-        out = torch.max(x, 2)[0]
-        return out
-
-class MeanPool(torch.nn.Module):
-    def forward(self, x):
-        out = torch.mean(x, 2)
-        return out
-
-class ObjectCnn(BaseFeaturesExtractor):
-    def __init__(
-        self,
-        observation_space: gymnasium.Space,
-        features_dim: int = 64,
-        embedding_dim: int = 16,
-        pooling: str = 'mean',
-    ) -> None:
-        super().__init__(observation_space, features_dim)
-
-        self.num_float = observation_space.num_float
-        self.discrete_sizes = observation_space.discrete_sizes
-        self.embeddings = []
-        for size in self.discrete_sizes:
-            self.embeddings.append(nn.Embedding(
-                num_embeddings = size,
-                embedding_dim = embedding_dim,
-                ))
-
-        n_features = len(self.discrete_sizes)*embedding_dim + self.num_float
-
-        self.cnn = nn.Sequential(
-            nn.Conv1d(n_features, features_dim, kernel_size=1),
-            nn.ReLU(),
-            nn.Conv1d(features_dim, features_dim, kernel_size=1),
-            nn.ReLU(),
-            nn.Conv1d(features_dim, features_dim, kernel_size=1),
-            nn.ReLU(),
-        )
-        
-        if pooling == 'lstm':
-            self.pool = LSTMPool(features_dim, features_dim, batch_first=True, bidirectional=True)
-        elif pooling == 'max':
-            self.pool = MaxPool()
-        elif pooling == 'mean':
-            self.pool = MeanPool()
-        else:
-            raise ValueError(f'pooling type "{pooling}" not supported')
-
-        # Compute shape by doing one forward pass
-        with torch.no_grad():
-            out = torch.as_tensor(observation_space.sample()[None]).float()
-            out = self._embed_observations(out)
-            out = self.cnn(out)
-            out = self.pool(out)
-            n_flatten = out.shape[1]
-
-        self.linear = nn.Sequential(
-            nn.Linear(n_flatten, features_dim),
-            nn.ReLU()
-            )
-
-    def _embed_observations(self, observations):
-        floats = observations[:,0:self.num_float, :]
-        embeds = []
-        for i, embedding in enumerate(self.embeddings):
-            idxs = observations[:, self.num_float+i, :].int()
-            embeddings = embedding(idxs).transpose(1,2)
-            embeds.append(embeddings)
-        ret = torch.concat([floats] + embeds, dim=1)
-        return ret
-
-    def forward(self, observations: torch.Tensor) -> torch.Tensor:
-        ret = self._embed_observations(observations)
-        ret = self.cnn(ret)
-        ret = self.pool(ret)
-        ret = self.linear(ret)
-        return ret
-
-
-class KnowledgeBase:
-    def __init__(self, max_objects = 20):
-        self.items = defaultdict(lambda: {})
-        self.columns = set()
-        self.max_objects = max_objects
-
-    def __setitem__(self, name, val):
-        if len(self.items) >= self.max_objects:
-            logging.warning('len(self.items) >= self.max_objects')
-        else:
-            self.items[name] = val
-            for k, v in val.items():
-                self.columns.add(k)
-                # NOTE: we convert all integer values away from numpy types to python int
-                # because the numpy types are unsigned and small;
-                # this can result in hard-to-debug integer overflow problems
-                if not isinstance(v, (np.floating, float)):
-                    val[k] = int(v)
-
-    def to_observation(self):
-        columns = sorted(self.columns)
-        stuff = []
-        for item, val in self.items.items():
-            #idx = val['type'] + val['direction'] + val['state']
-            #if val['type'] < 0:
-                #idx += 256
-            #idx %= 512
-            #observation = [
-                #val['relx'],
-                #val['rely'],
-                #idx,
-                #]
-            observation = [
-                val['relx'],
-                val['rely'],
-                val['x'],
-                val['y'],
-                val['health'],
-                val['type']%256,
-                val['direction']%256,
-                val['state']%256,
-                ]
-            stuff.append(observation)
-        # FIXME:
-        # currently we pad the observation space
-        stuff += [[0] * len(stuff[0])] * (self.max_objects - len(stuff))
-        return np.array(stuff, dtype=np.float16).T
-
-    def get_observation_space(self):
-        dtype = np.float16
-        low = -1
-        high = 1
-        observation = self.to_observation()
-        shape = observation.shape
-        space = gymnasium.spaces.Box(low, high, shape, dtype, seed=0)
-        #space.num_float = 2
-        #space.discrete_sizes = [512]
-        space.num_float = 5
-        space.discrete_sizes = [256] * 3
-        return space
-
-    def display(self):
-        columns = sorted(self.columns)
-        columns_lens = [max(len(column), 5) for column in columns]
-        item_len = 12 #max([len(item) for item in self.items])
-        ret = ''
-        ret += ' '*item_len
-        for column, column_len in zip(columns, columns_lens):
-            ret += f' {column:>{column_len}}'
-        ret += '\n'
-        for item,val in self.items.items():
-            ret += f'{item:>{item_len}}'
-            for column, column_len in zip(columns, columns_lens):
-                s = '-'
-                if column in val:
-                    s = val[column]
-                if isinstance(s, (np.floating, float)):
-                    ret += f' {s:>+0.{column_len-3}f}'
-                else:
-                    ret += f' {s:>{column_len}}'
-            ret += '\n'
-        return ret
+from Mundus.Object import *
 
 
 class RetroWithRam(gymnasium.Wrapper):
@@ -547,7 +374,10 @@ class ZeldaWrapper(RetroWithRam):
         3E= GANNON
         3F= FIRE
         '''
-        kb = KnowledgeBase()
+        kb = KnowledgeBase(keys={
+                'discrete': ['type', 'direction', 'state'],
+                'continuous': ['relx', 'rely', 'x', 'y', 'health'],
+                })
         ram = self.ram
 
         if self.mouse is not None:

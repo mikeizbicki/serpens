@@ -10,6 +10,7 @@ from stable_baselines3.common.vec_env import *
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.logger import HParam, Video
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.policies import *
 from stable_baselines3.common.results_plotter import load_results, ts2xy, plot_results
 from Mundus.Wrappers import *
 from Mundus.Zelda import *
@@ -267,7 +268,7 @@ def main():
             'features_dim': args.features_dim,
             }
     if 'Cnn' in args.policy:
-        policy = 'CnnPolicy'
+        policy = ActorCriticCnnPolicy
     else:
         policy = 'MlpPolicy'
     model = stable_baselines3.PPO(

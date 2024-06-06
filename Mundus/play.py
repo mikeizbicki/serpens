@@ -165,6 +165,24 @@ class Interactive(gymnasium.Wrapper):
                 logging.debug(f"self.get_maxfps()={self.get_maxfps()}")
 
             if name == 'SPACE':
+                def set_ram(d):
+                    arr = []
+                    state = self.env.em.get_state()
+                    prev_i = 0
+                    for k, v in sorted(d.items()):
+                        arr.append(state[prev_i:93+k])
+                        arr.append(v.to_bytes(1, 'big'))
+                        prev_i = k + 93 + 1
+                    arr.append(state[prev_i:-1])
+                    state = b''.join(arr)
+                    self.env.em.set_state(state)
+                def set_ram(k, v):
+                    newstate = v.to_bytes(1, 'big')
+                    state = self.env.em.get_state()
+                    state = state[:k+93] + newstate + state[k+93+len(newstate):]
+                    self.env.em.set_state(state)
+                    # >>> newstate = b'\x10'; state = self.env.unwrapped.em.get_state(); state = state[:112+93]+newstate+state[112+93+len(newstate):]; self.env.unwrapped.em.set_state(state)
+
                 def save_state(statename):
                     filename = f'custom_integrations/Zelda-Nes/{statename}.state'
                     import gzip
@@ -380,7 +398,8 @@ def main():
         'action_space': env.action_space,
         }
     from stable_baselines3 import PPO
-    model = PPO.load('models/follow_attack_max.zip', custom_objects=custom_objects)
+    #model = None
+    model = PPO.load('models/simple_attack.zip', custom_objects=custom_objects)
 
     logging.info('creating environment wrappers')
     env = Interactive(env)

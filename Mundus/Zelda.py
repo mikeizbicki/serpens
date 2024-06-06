@@ -41,17 +41,24 @@ class ObjectCnn(BaseFeaturesExtractor):
         self,
         observation_space: gymnasium.Space,
         features_dim: int = 64,
+        embedding_dim: int = 16,
         pooling: str = 'mean',
     ) -> None:
         super().__init__(observation_space, features_dim)
 
-        self.embeddings = nn.Embedding(
-            num_embeddings = 512,
-            embedding_dim = features_dim - 2,
-            )
+        self.num_float = observation_space.num_float
+        self.discrete_sizes = observation_space.discrete_sizes
+        self.embeddings = []
+        for size in self.discrete_sizes:
+            self.embeddings.append(nn.Embedding(
+                num_embeddings = size,
+                embedding_dim = embedding_dim,
+                ))
+
+        n_features = len(self.discrete_sizes)*embedding_dim + self.num_float
 
         self.cnn = nn.Sequential(
-            nn.Conv1d(features_dim, features_dim, kernel_size=1),
+            nn.Conv1d(n_features, features_dim, kernel_size=1),
             nn.ReLU(),
             nn.Conv1d(features_dim, features_dim, kernel_size=1),
             nn.ReLU(),
@@ -82,11 +89,14 @@ class ObjectCnn(BaseFeaturesExtractor):
             )
 
     def _embed_observations(self, observations):
-        coords = observations[:,0:2, :]
-        idxs = observations[:,2, :].int()
-        embeddings = self.embeddings(idxs).transpose(1,2)
-        observations_embedded = torch.concat([coords, embeddings], dim=1)
-        return observations_embedded
+        floats = observations[:,0:self.num_float, :]
+        embeds = []
+        for i, embedding in enumerate(self.embeddings):
+            idxs = observations[:, self.num_float+i, :].int()
+            embeddings = embedding(idxs).transpose(1,2)
+            embeds.append(embeddings)
+        ret = torch.concat([floats] + embeds, dim=1)
+        return ret
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
         ret = self._embed_observations(observations)
@@ -119,21 +129,29 @@ class KnowledgeBase:
         columns = sorted(self.columns)
         stuff = []
         for item, val in self.items.items():
-            idx = val['type'] + val['direction'] + val['state']
-            if val['type'] < 0:
-                idx += 256
-            idx %= 512
+            #idx = val['type'] + val['direction'] + val['state']
+            #if val['type'] < 0:
+                #idx += 256
+            #idx %= 512
+            #observation = [
+                #val['relx'],
+                #val['rely'],
+                #idx,
+                #]
             observation = [
                 val['relx'],
                 val['rely'],
-                idx,
+                val['x'],
+                val['y'],
+                val['health'],
+                val['type']%256,
+                val['direction']%256,
+                val['state']%256,
                 ]
-            #stuff.append([])
-            #for column in columns:
-                #stuff[-1].append(val[column])
+            stuff.append(observation)
         # FIXME:
         # currently we pad the observation space
-        stuff += [[0] * len(self.columns)] * (self.max_objects - len(stuff))
+        stuff += [[0] * len(stuff[0])] * (self.max_objects - len(stuff))
         return np.array(stuff, dtype=np.float16).T
 
     def get_observation_space(self):
@@ -142,15 +160,12 @@ class KnowledgeBase:
         high = 1
         observation = self.to_observation()
         shape = observation.shape
-        #print(f"shape={shape}")
-        #asd
-        #return gymnasium.spaces.Sequence(
-            #gymnasium.spaces.Dict({
-                #'coord': gymnasium.spaces.Box(low, high, [2], dtype),
-                #'idx': gymnasium.spaces.Discrete(256),
-                #})
-            #)
-        return gymnasium.spaces.Box(low, high, shape, dtype, seed=0)
+        space = gymnasium.spaces.Box(low, high, shape, dtype, seed=0)
+        #space.num_float = 2
+        #space.discrete_sizes = [512]
+        space.num_float = 5
+        space.discrete_sizes = [256] * 3
+        return space
 
     def display(self):
         columns = sorted(self.columns)
@@ -182,8 +197,18 @@ class RetroWithRam(gymnasium.Wrapper):
     to prevent multiple calls.
     '''
     def step(self, action):
+        class IntegerRam():
+            def __init__(self, ram):
+                self.ram = ram
+            def __getitem__(self, key):
+                if isinstance(key, slice):
+                    return self.ram[key]
+                elif isinstance(key, int):
+                    return int(self.ram[key])
+                else:
+                    raise ValueError(f'IntegerRam; type={type(key)}, value={key} ')
         self.ram2 = self.ram
-        self.ram = self.env.get_ram()
+        self.ram = IntegerRam(self.env.get_ram())
         return super().step(action)
 
     def reset(self, **kwargs):
@@ -742,7 +767,7 @@ class ZeldaWrapper(RetroWithRam):
             return score
 
     def _rewardfunc_button_push(self):
-        return -min(1, abs(int(self.ram[0xfa]) - int(self.ram2[0xfa]))) / 1000
+        return -min(1, abs(self.ram[0xfa] - self.ram2[0xfa])) / 1000
 
     def _rewardfunc_add_bomb(self):
         return max(0, self.ram[1624] - self.ram2[1624])

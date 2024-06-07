@@ -35,7 +35,7 @@ class ObjectCnn(BaseFeaturesExtractor):
     ) -> None:
         super().__init__(observation_space, features_dim)
 
-        self.num_float = observation_space['continuous'].shape[1]
+        self.num_continuous = observation_space['continuous'].shape[1]
         self.num_discrete = observation_space['discrete'].shape[1]
         self.discrete_max = np.max(observation_space['discrete'].high)
         self.embeddings = nn.ModuleList()
@@ -45,7 +45,7 @@ class ObjectCnn(BaseFeaturesExtractor):
                 embedding_dim = embedding_dim,
                 ))
 
-        n_features = self.num_discrete*embedding_dim + self.num_float
+        n_features = self.num_discrete*embedding_dim + self.num_continuous
 
         self.cnn = nn.Sequential(
             nn.Conv1d(n_features, features_dim, kernel_size=1),

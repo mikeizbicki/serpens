@@ -262,7 +262,8 @@ def main():
         'net_arch': args.net_arch,
         }
     if args.policy == 'ObjectCnn':
-        policy_kwargs['features_extractor_class'] = ObjectCnn
+        #policy_kwargs['features_extractor_class'] = ObjectCnn
+        policy_kwargs['features_extractor_class'] = RewardExtractor
         policy_kwargs['features_extractor_kwargs'] = {
             'pooling': args.pooling,
             'features_dim': args.features_dim,

@@ -13,8 +13,49 @@ import pprint
 import torch
 import retro
 import gymnasium
+from stable_baselines3.common.type_aliases import TensorDict
 from gymnasium import spaces
 from Mundus.Object import *
+
+
+class RewardExtractor(BaseFeaturesExtractor):
+    def __init__(
+        self,
+        observation_space: spaces.Dict,
+        **kwargs,
+    ) -> None:
+        # NOTE:
+        # (this trick is copied from the SB3 MultiPolicy implementation.)
+        # we do not know features_dim here before going over all the items,
+        # so put something there temoporarily;
+        # update features_dim later
+        super().__init__(observation_space, features_dim=1)
+
+        object_space = spaces.Dict({
+            'discrete': observation_space['objects_discrete'],
+            'continuous': observation_space['objects_continuous'],
+            })
+        extractors = {
+            'objects': ObjectCnn(object_space, **kwargs),
+            'rewards': nn.Flatten(),
+            }
+        self.extractors = nn.ModuleDict(extractors)
+
+        # Update the features dim manually
+        from stable_baselines3.common.preprocessing import get_flattened_obs_dim
+        dim_objects = 64 # FIXME
+        dim_reward = get_flattened_obs_dim(observation_space['rewards'])
+        self._features_dim = dim_objects + dim_reward
+
+    def forward(self, observations: TensorDict) -> torch.Tensor:
+        encoded_tensor_list = [
+                self.extractors['objects']({
+                    'discrete': observations['objects_discrete'],
+                    'continuous': observations['objects_continuous'],
+                    }),
+                self.extractors['rewards'](observations['rewards']),
+            ]
+        return torch.cat(encoded_tensor_list, dim=1)
 
 
 class RetroWithRam(gymnasium.Wrapper):
@@ -23,6 +64,11 @@ class RetroWithRam(gymnasium.Wrapper):
     The only purpose of this wrapper is to store the result of .get_ram() in an attribute
     to prevent multiple calls.
     '''
+    def __init__(self, env):
+        super().__init__(env)
+        self.ram = None
+        self.ram2 = None
+
     def step(self, action):
         class IntegerRam():
             def __init__(self, ram):
@@ -85,7 +131,12 @@ class ZeldaWrapper(RetroWithRam):
         # create a new observation space
         self.ram = self.env.get_ram()
         kb = self.generate_knowledge_base()
-        self.observation_space = kb.get_observation_space()
+        kb_obs = kb.get_observation_space()
+        self.observation_space = spaces.Dict({
+            'objects_discrete': kb_obs['discrete'],
+            'objects_continuous': kb_obs['continuous'],
+            'rewards': spaces.Box(-1, 1, [len(self.get_rewards().keys())], np.float16),
+            })
         logging.info(f'self.observation_space.shape={self.observation_space.shape}')
 
         # define the scenarios
@@ -218,7 +269,7 @@ class ZeldaWrapper(RetroWithRam):
 
         # compute the scenario information
         kb = self.generate_knowledge_base()
-        observation = kb.to_observation()
+        kb_obs = kb.to_observation()
 
         terminated = self.scenario['terminated'](self.ram)
         info['is_success'] = self.scenario['is_success'](self.ram)
@@ -239,6 +290,12 @@ class ZeldaWrapper(RetroWithRam):
         for k in summary_dict.keys():
             info['summary_' + k] = self.episode_summary_dict[k]
             info['reward_' + k] = self.episode_reward_dict[k]
+
+        observation = {
+            'objects_discrete': kb_obs['discrete'],
+            'objects_continuous': kb_obs['continuous'],
+            'rewards': [v for k, v in sorted(summary_dict.items())]
+            }
 
         # render the environment
         if self.render_kb:

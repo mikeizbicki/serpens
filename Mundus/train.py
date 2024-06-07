@@ -1,6 +1,7 @@
 import retro
 import time
 import os
+from collections import Counter
 from  gymnasium.wrappers import *
 import stable_baselines3
 from stable_baselines3 import TD3
@@ -131,6 +132,7 @@ class TensorboardCallback(BaseCallback):
 
         # these variables are internally created/updated by ._on_step()
         self.num_episodes = None
+        self.num_scenarios = Counter()
         if self.record_every is None:
             self.screens = None
         else:
@@ -172,13 +174,38 @@ class TensorboardCallback(BaseCallback):
                         self.screens = []
 
                 # record all of the "summary_*" keys within the info dict
-                keys = [key for key in self.locals['infos'][i].keys() if key.startswith('summary_')]
-                for key in keys:
-                    self.logger.record_mean('summary/'+key, self.locals['infos'][i][key])
-                keys = [key for key in self.locals['infos'][i].keys() if key.startswith('reward_')]
+                def record_prefix(prefix):
+                    keys = [key for key in self.locals['infos'][i].keys() if key.startswith(prefix)]
+                    prefixmod = prefix.strip('_')
+                    for key in keys:
+                        keymod = key[len(prefix):]
+                        self.logger.record_mean(prefixmod+'/'+keymod, self.locals['infos'][i][key], exclude=('stdout',))
+
+                record_prefix('summary_')
+                record_prefix('reward_')
+                record_prefix('scenario_success_')
+                #record_prefix('scenario_count_')
+
+                prefix = 'scenario_count_'
+                keys = [key for key in self.locals['infos'][i].keys() if key.startswith(prefix)]
                 self.logger.record('episode/num_episodes', sum(self.num_episodes))
+                prefixmod = prefix.strip('_')
                 for key in keys:
-                    self.logger.record_mean('reward/'+key, self.locals['infos'][i][key])
+                    keymod = key[len(prefix):]
+                    self.num_scenarios[keymod] += 1
+                    self.logger.record(prefixmod+'/'+keymod, self.num_scenarios[keymod], exclude=('stdout',))
+
+                #keys = [key for key in self.locals['infos'][i].keys() if key.startswith('summary_')]
+                #for key in keys:
+                    #self.logger.record_mean('summary/'+key, self.locals['infos'][i][key])
+                #keys = [key for key in self.locals['infos'][i].keys() if key.startswith('reward_')]
+                #self.logger.record('episode/num_episodes', sum(self.num_episodes))
+                #for key in keys:
+                    #self.logger.record_mean('reward/'+key, self.locals['infos'][i][key])
+#
+                #scenario_keys = [key for key in self.locals['infos'][i].keys() if key.startswith('scenario_success_')]
+                #for key in scenario_keys:
+                    #self.logger.record_mean('scenario_success/'+key, self.locals['infos'][i][key])
         return True
 
 
@@ -197,7 +224,8 @@ def main():
     hyperparameters = parser.add_argument_group('hyperparameters')
     hyperparameters.add_argument('--policy', choices=['MlpPolicy', 'CnnPolicy', 'ObjectCnn'], default=['ObjectCnn'])
     hyperparameters.add_argument('--pooling', choices=['lstm', 'mean', 'max'], default='mean')
-    hyperparameters.add_argument('--scenario', default='attack')
+    #hyperparameters.add_argument('--scenario', default='attack')
+    hyperparameters.add_argument('--scenario', default=None)
     hyperparameters.add_argument('--state', default='spiders_lowhealth_01*.state')
     hyperparameters.add_argument('--net_arch', type=int, nargs='*', default=[])
     hyperparameters.add_argument('--features_dim', type=int, default=64)

@@ -398,8 +398,8 @@ def main():
         'action_space': env.action_space,
         }
     from stable_baselines3 import PPO
-    model = None
-    #model = PPO.load('models/simple_attack.zip', custom_objects=custom_objects)
+    #model = None
+    model = PPO.load('models/simple_attack.zip', custom_objects=custom_objects)
 
     logging.info('creating environment wrappers')
     env = Interactive(env)

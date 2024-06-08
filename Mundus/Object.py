@@ -30,14 +30,14 @@ class ObjectCnn(BaseFeaturesExtractor):
         self,
         observation_space: gymnasium.Space,
         features_dim: int = 64,
-        embedding_dim: int = 16,
+        embedding_dim: int = 64,
         pooling: str = 'mean',
     ) -> None:
         super().__init__(observation_space, features_dim)
 
-        self.num_continuous = observation_space['continuous'].shape[1]
-        self.num_discrete = observation_space['discrete'].shape[1]
-        self.discrete_max = np.max(observation_space['discrete'].high)
+        self.num_continuous = observation_space['objects_continuous'].shape[1]
+        self.num_discrete = observation_space['objects_discrete'].shape[1]
+        self.discrete_max = np.max(observation_space['objects_discrete'].high)
         self.embeddings = nn.ModuleList()
         for size in range(self.num_discrete):
             self.embeddings.append(nn.Embedding(
@@ -83,10 +83,10 @@ class ObjectCnn(BaseFeaturesExtractor):
     def _embed_observations(self, observations):
         embeds = []
         for i, embedding in enumerate(self.embeddings):
-            idxs = observations['discrete'][:, :, i].int()
+            idxs = observations['objects_discrete'][:, :, i].int()
             embeddings = embedding(idxs)
             embeds.append(embeddings)
-        ret = torch.concat([observations['continuous']] + embeds, dim=2)
+        ret = torch.concat([observations['objects_continuous']] + embeds, dim=2)
         ret = ret.transpose(1,2)
         return ret
 
@@ -125,30 +125,30 @@ class KnowledgeBase:
         observations = []
         for item, val in self.items.items():
             observation = {
-                'discrete': [val[k]%self.max_discrete for k in self.keys['discrete']],
-                'continuous': [val[k] for k in self.keys['continuous']],
+                'objects_discrete': [val[k]%self.max_discrete for k in self.keys['objects_discrete']],
+                'objects_continuous': [val[k] for k in self.keys['objects_continuous']],
                 }
             observations.append(observation)
         # FIXME:
         # currently we pad the observation space because SB3
         # doesn't like variable sized observations
         pad = {
-            'discrete': [0] * len(self.keys['discrete']),
-            'continuous': [0] * len(self.keys['continuous']),
+            'objects_discrete': [0] * len(self.keys['objects_discrete']),
+            'objects_continuous': [0] * len(self.keys['objects_continuous']),
             }
         observations += [pad] * (self.max_objects - len(observations))
 
         ret = {
-            'continuous': np.array([x['continuous'] for x in observations], dtype=self.dtype_continuous),
-            'discrete': np.array([x['discrete'] for x in observations], dtype=self.dtype_discrete),
+            'objects_continuous': np.array([x['objects_continuous'] for x in observations], dtype=self.dtype_continuous),
+            'objects_discrete': np.array([x['objects_discrete'] for x in observations], dtype=self.dtype_discrete),
             }
         return ret
 
     def get_observation_space(self):
         observation = self.to_observation()
         space = gymnasium.spaces.Dict({
-            'continuous': gymnasium.spaces.Box(-1, 1, observation['continuous'].shape, self.dtype_continuous),
-            'discrete': gymnasium.spaces.Box(0, 255, observation['discrete'].shape, self.dtype_discrete)
+            'objects_continuous': gymnasium.spaces.Box(-1, 1, observation['objects_continuous'].shape, self.dtype_continuous),
+            'objects_discrete': gymnasium.spaces.Box(0, 255, observation['objects_discrete'].shape, self.dtype_discrete)
             })
         return space
 

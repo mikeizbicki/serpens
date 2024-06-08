@@ -32,8 +32,8 @@ class RewardExtractor(BaseFeaturesExtractor):
         super().__init__(observation_space, features_dim=1)
 
         object_space = spaces.Dict({
-            'discrete': observation_space['objects_discrete'],
-            'continuous': observation_space['objects_continuous'],
+            'objects_discrete': observation_space['objects_discrete'],
+            'objects_continuous': observation_space['objects_continuous'],
             })
         extractors = {
             'objects': ObjectCnn(object_space, **kwargs),
@@ -50,8 +50,8 @@ class RewardExtractor(BaseFeaturesExtractor):
     def forward(self, observations: TensorDict) -> torch.Tensor:
         encoded_tensor_list = [
                 self.extractors['objects']({
-                    'discrete': observations['objects_discrete'],
-                    'continuous': observations['objects_continuous'],
+                    'objects_discrete': observations['objects_discrete'],
+                    'objects_continuous': observations['objects_continuous'],
                     }),
                 self.extractors['rewards'](observations['rewards']),
             ]
@@ -135,8 +135,8 @@ class ZeldaWrapper(RetroWithRam):
         kb = self.generate_knowledge_base()
         kb_obs = kb.get_observation_space()
         self.observation_space = spaces.Dict({
-            'objects_discrete': kb_obs['discrete'],
-            'objects_continuous': kb_obs['continuous'],
+            'objects_discrete': kb_obs['objects_discrete'],
+            'objects_continuous': kb_obs['objects_continuous'],
             'rewards': spaces.Box(-1, 1, [len(self.get_rewards().keys())], np.float16),
             })
         logging.info(f'self.observation_space.shape={self.observation_space.shape}')
@@ -172,16 +172,22 @@ class ZeldaWrapper(RetroWithRam):
         self.scenarios['noattack']['is_success'] = lambda ram: any([
             not _gamestate_link_killed(self.ram),
             ])
-        self.scenarios['noattack']['reward'] = {
+        self.scenarios['noattack']['reward'] |= {
             'enemy_hit': -1,
             'enemy_killed': -1,
+            'enemy_alldead': -1,
+            'add_bomb': -1,
+            'add_clock': -1,
+            'add_heart': -1,
+            'add_keys': -1,
+            'add_ruppees': -1,
             }
 
         self.scenarios['screen_cave'] = copy.deepcopy(self.scenarios['noattack'])
         self.scenarios['screen_cave']['is_success'] = lambda ram:any([
             self._rewardfunc_screen_cave(),
             ])
-        self.scenarios['screen_cave']['reward'] = {
+        self.scenarios['screen_cave']['reward'] |= {
             'screen_cave': -1,
             }
 
@@ -189,7 +195,7 @@ class ZeldaWrapper(RetroWithRam):
         self.scenarios['scroll']['is_success'] = lambda ram:any([
             self._rewardfunc_screen_scrolling(),
             ])
-        self.scenarios['scroll']['reward'] = {
+        self.scenarios['scroll']['reward'] |= {
             'screen_scrolling': -1,
             'screen_scrolling_north': -1,
             'screen_scrolling_south': -1,
@@ -201,35 +207,47 @@ class ZeldaWrapper(RetroWithRam):
         self.scenarios['screen_scrolling_north']['is_success'] = lambda ram:any([
             self._rewardfunc_screen_scrolling_north(),
             ])
-        self.scenarios['screen_scrolling_north']['reward'] = {
+        self.scenarios['screen_scrolling_north']['reward'] |= {
             'screen_scrolling': 0,
             'screen_scrolling_north': -1,
+            'screen_scrolling_south': 1,
+            'screen_scrolling_east': 1,
+            'screen_scrolling_west': 1,
             }
 
         self.scenarios['screen_scrolling_south'] = copy.deepcopy(self.scenarios['noattack'])
         self.scenarios['screen_scrolling_south']['is_success'] = lambda ram:any([
             self._rewardfunc_screen_scrolling_south(),
             ])
-        self.scenarios['screen_scrolling_south']['reward'] = {
+        self.scenarios['screen_scrolling_south']['reward'] |= {
             'screen_scrolling': 0,
+            'screen_scrolling_north': 1,
             'screen_scrolling_south': -1,
+            'screen_scrolling_east': 1,
+            'screen_scrolling_west': 1,
             }
 
         self.scenarios['screen_scrolling_east'] = copy.deepcopy(self.scenarios['noattack'])
         self.scenarios['screen_scrolling_east']['is_success'] = lambda ram:any([
             self._rewardfunc_screen_scrolling_east(),
             ])
-        self.scenarios['screen_scrolling_east']['reward'] = {
+        self.scenarios['screen_scrolling_east']['reward'] |= {
             'screen_scrolling': 0,
+            'screen_scrolling_north': 1,
+            'screen_scrolling_south': 1,
             'screen_scrolling_east': -1,
+            'screen_scrolling_west': 1,
             }
 
         self.scenarios['screen_scrolling_west'] = copy.deepcopy(self.scenarios['noattack'])
         self.scenarios['screen_scrolling_west']['is_success'] = lambda ram:any([
             self._rewardfunc_screen_scrolling_west(),
             ])
-        self.scenarios['screen_scrolling_west']['reward'] = {
+        self.scenarios['screen_scrolling_west']['reward'] |= {
             'screen_scrolling': 0,
+            'screen_scrolling_north': 1,
+            'screen_scrolling_south': 1,
+            'screen_scrolling_east': 1,
             'screen_scrolling_west': -1,
             }
 
@@ -246,13 +264,33 @@ class ZeldaWrapper(RetroWithRam):
         self.scenarios['danger']['is_success'] = lambda ram: any([
             not _gamestate_link_killed(self.ram),
             ])
-        self.scenarios['suicide']['reward'] = {
+        self.scenarios['suicide']['reward'] |= {
             'link_killed': 4,
             'link_hit': -1,
             }
 
         self.scenarios['follow'] = copy.deepcopy(self.scenarios['attack'])
-        self.scenarios['follow']['reward']['link_l1dist'] = 1
+        self.scenarios['follow']['terminated'] = lambda ram: any([
+            self._rewardfunc_link_onmouse(),
+            _gamestate_link_killed(self.ram),
+            _gamestate_is_screen_scrolling(self.ram),
+            _gamestate_is_cave_enter(self.ram),
+            ])
+        self.scenarios['follow']['success'] = lambda ram: any([
+            self._rewardfunc_link_onmouse(),
+            ])
+        self.scenarios['follow']['reward'] |= {
+            'link_onmouse': 1,
+            'link_l1dist' : 1,
+            'enemy_hit': 0,
+            'enemy_killed': 0,
+            'enemy_alldead': 0,
+            'add_bomb': 0,
+            'add_clock': 0,
+            'add_heart': 0,
+            'add_keys': 0,
+            'add_ruppees': 0,
+            }
 
         def _step_follow_enemy(self, kb):
             enemies = []
@@ -278,7 +316,8 @@ class ZeldaWrapper(RetroWithRam):
         self.scenarios['repel_enemy']['reward']['link_l1dist'] = -1
 
         def _step_follow_random(self, kb):
-            if self.stepcount%60 == 0:
+            #if self.stepcount%300 == 0:
+            if random.random() < 1/300:
                 if self.mouse is None or random.random() < 0.2:
                     mode = 'passable_tile'
                 else:
@@ -315,15 +354,16 @@ class ZeldaWrapper(RetroWithRam):
                 else:
                     raise ValueError('should not happen')
         self.scenarios['follow_random'] = copy.deepcopy(self.scenarios['follow'])
-        self.scenarios['follow_random']['terminated'] = lambda ram: any([
-                _gamestate_link_killed(self.ram),
-                _gamestate_is_screen_scrolling(self.ram),
-                _gamestate_is_cave_enter(self.ram),
-                ])
-        self.scenarios['follow_random']['is_success'] = lambda ram: not any([
-                _gamestate_is_screen_scrolling(self.ram),
-                _gamestate_is_cave_enter(self.ram),
-                ])
+        #self.scenarios['follow_random']['terminated'] = lambda ram: any([
+                #_gamestate_link_killed(self.ram),
+                #_gamestate_is_screen_scrolling(self.ram),
+                #_gamestate_is_cave_enter(self.ram),
+                #])
+        #self.scenarios['follow_random']['is_success'] = lambda ram: not any([
+                #_gamestate_link_killed(self.ram),
+                #_gamestate_is_screen_scrolling(self.ram),
+                #_gamestate_is_cave_enter(self.ram),
+                #])
         self.scenarios['follow_random']['step'] = _step_follow_random
 
         self.scenarios['repel_random'] = copy.deepcopy(self.scenarios['follow_random'])
@@ -379,8 +419,8 @@ class ZeldaWrapper(RetroWithRam):
         info['scenario_count_' + self.episode_scenario] = 1
 
         observation = {
-            'objects_discrete': kb_obs['discrete'],
-            'objects_continuous': kb_obs['continuous'],
+            'objects_discrete': kb_obs['objects_discrete'],
+            'objects_continuous': kb_obs['objects_continuous'],
             'rewards': [v for k, v in sorted(summary_dict.items())]
             }
 
@@ -519,9 +559,9 @@ class ZeldaWrapper(RetroWithRam):
         3F= FIRE
         '''
         kb = KnowledgeBase(keys={
-                'discrete': ['type', 'direction', 'state'],
-                'continuous': ['relx', 'rely', 'x', 'y', 'health'],
-                })
+            'objects_discrete': ['type', 'direction', 'state'],
+            'objects_continuous': ['relx', 'rely', 'x', 'y', 'health'],
+            })
         ram = self.ram
 
         if self.mouse is not None:
@@ -740,6 +780,14 @@ class ZeldaWrapper(RetroWithRam):
 
     def _rewardfunc_enemy_killed(self):
         return max(0, _gamestate_total_enemies(self.ram2) - _gamestate_total_enemies(self.ram))
+
+    def _rewardfunc_link_onmouse(self):
+        link_x = self.ram[112]
+        link_y = self.ram[132]
+        if self.mouse is None:
+            return False
+        else:
+            return self.mouse['x'] == link_x and self.mouse['y'] == link_y
 
     def _rewardfunc_link_l1dist(self):
         if self.mouse is None:

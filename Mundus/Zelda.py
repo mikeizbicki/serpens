@@ -155,7 +155,7 @@ class ZeldaWrapper(RetroWithRam):
                 ]),
             'reward': {
                 'link_l1dist': 0,
-                'button_push': 0,
+                'button_push': 1,
                 },
             }
 
@@ -749,7 +749,7 @@ class ZeldaWrapper(RetroWithRam):
         return ret
 
     def _rewardfunc_link_killed(self):
-        return _gamestate_hearts(self.ram) == 0 and _gamestate_hearts(self.ram2) != 0
+        return - int(_gamestate_hearts(self.ram) == 0 and _gamestate_hearts(self.ram2) != 0)
 
     def _rewardfunc_link_hit(self):
         return -1 * round(2*max(0, _gamestate_hearts(self.ram2) - _gamestate_hearts(self.ram)))

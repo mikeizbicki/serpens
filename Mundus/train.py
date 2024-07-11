@@ -220,6 +220,7 @@ def main():
     debug.add_argument("--disable_video", action='store_true')
     debug.add_argument("--render_mode", default='rgb_array')
     debug.add_argument("--comment")
+    debug.add_argument("--total_timesteps", default=1_000_000_000_000, type=int)
 
     hyperparameters = parser.add_argument_group('hyperparameters')
     hyperparameters.add_argument('--policy', choices=['MlpPolicy', 'CnnPolicy', 'ObjectCnn'], default=['ObjectCnn'])
@@ -233,6 +234,7 @@ def main():
     hyperparameters.add_argument('--gamma', type=float, default=0.99)
     hyperparameters.add_argument('--n_env', type=int, default=3)
     hyperparameters.add_argument('--n_steps', type=int, default=128)
+    hyperparameters.add_argument('--batch_size', type=int, default=32)
     hyperparameters.add_argument('--seed', type=int, default=None)
     hyperparameters.add_argument('--warmstart', default=None)
 
@@ -259,7 +261,7 @@ def main():
     experiment_name = ''
     if args.comment is not None:
         experiment_name = args.comment + '--'
-    experiment_name += f'scenario={args.scenario},state={args.state},policy={args.policy}{policy_params},net_arch={arch_string},{args.features_dim},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps}'
+    experiment_name += f'scenario={args.scenario},state={args.state},policy={args.policy}{policy_params},net_arch={arch_string},{args.features_dim},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps},batch_size={args.batch_size}'
     logging.info(f'experiment_name: [{experiment_name}]')
 
     # create the environment
@@ -310,7 +312,7 @@ def main():
         env=train_env,
         learning_rate=args.lr,
         n_steps=args.n_steps,
-        batch_size=32,
+        batch_size=args.batch_size,
         n_epochs=4,
         gamma=args.gamma,
         gae_lambda=0.95,
@@ -330,13 +332,13 @@ def main():
         #import code
         #code.interact(local=locals())
     model.learn(
-        total_timesteps=100_000_000,
+        total_timesteps=args.total_timesteps,
         log_interval=1,
         tb_log_name=experiment_name,
         reset_num_timesteps=reset_num_timesteps,
         callback = [
             SaveOnBestTrainingRewardCallback(),
-            HParamCallback(),
+            #HParamCallback(),
             TensorboardCallback(record_every=None if args.disable_video or args.render_mode=='human' else 1),
             ],
     )

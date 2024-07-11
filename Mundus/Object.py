@@ -37,7 +37,7 @@ class ObjectCnn(BaseFeaturesExtractor):
 
         self.num_continuous = observation_space['objects_continuous'].shape[1]
         self.num_discrete = observation_space['objects_discrete'].shape[1]
-        self.discrete_max = np.max(observation_space['objects_discrete'].high)
+        self.discrete_max = int(np.max(observation_space['objects_discrete'].high))
         self.embeddings = nn.ModuleList()
         for size in range(self.num_discrete):
             self.embeddings.append(nn.Embedding(
@@ -69,7 +69,7 @@ class ObjectCnn(BaseFeaturesExtractor):
         with torch.no_grad():
             out = observation_space.sample()
             for k in out:
-                out[k] = torch.as_tensor(out[k])[None]
+                out[k] = torch.as_tensor(out[k], dtype=torch.float16)[None]
             out = self._embed_observations(out)
             out = self.cnn(out)
             out = self.pool(out)

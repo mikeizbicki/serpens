@@ -194,6 +194,7 @@ class Interactive(gymnasium.Wrapper):
                     import gzip
                     with gzip.open(filename, 'rb') as f:
                         self.unwrapped.em.set_state(f.read())
+                import readline
                 import code
                 code.interact(local=locals())
                 self.action_override = prev_action_override
@@ -339,7 +340,7 @@ def main():
             }
         model = PPO.load(args.model, custom_objects=custom_objects)
 
-    logging.info('creating environment wrappers')
+    logging.info('apply environment wrappers')
     env = Interactive(env)
     if not args.noaudio:
         env = PlayAudio(env)
@@ -350,7 +351,7 @@ def main():
     env.reset()
     env.reset()
 
-    # main game loop
+    logging.info('begin main loop')
     try:
         # set the default action
         action = env.action_space.sample() * 0

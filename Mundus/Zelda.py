@@ -91,59 +91,6 @@ class RetroWithRam(gymnasium.Wrapper):
         return obs, info
 
 
-# FIXME:
-# This class was taken from another open source project;
-# it reduces the action space to speed up training;
-# I need to incorporate this trick and lookup the cite
-class ZeldaActionSpace(gymnasium.ActionWrapper):
-    """A wrapper that shrinks the action space down to what's actually used in the game."""
-    def __init__(self, env, kind):
-        super().__init__(env)
-
-        # movement is always allowed
-        self.actions = [['LEFT'], ['RIGHT'], ['UP'], ['DOWN'],
-                        ['LEFT', 'A'], ['RIGHT', 'A'], ['UP', 'A'], ['DOWN', 'A'],
-                        ['LEFT', 'B'], ['RIGHT', 'B'], ['UP', 'B'], ['DOWN', 'B'],
-                        ['UP', 'LEFT', 'B'], ['UP', 'RIGHT', 'B'], ['DOWN', 'LEFT', 'B'], ['DOWN', 'RIGHT', 'B']
-                        ]
-
-        num_action_space = 4
-        if kind != 'move-only':
-            num_action_space += 4
-
-        if kind in ('directional-item', 'diagonal-item', 'all'):
-            num_action_space += 4
-
-        if kind in ('diagonal-item', 'all'):
-            num_action_space += 4
-
-        assert isinstance(env.action_space, gym.spaces.MultiBinary)
-
-        self.button_count = env.action_space.n
-        self.buttons = env.unwrapped.buttons
-
-        self._decode_discrete_action = []
-        for action in self.actions:
-            arr = np.array([False] * self.button_count)
-
-            for button in action:
-                arr[self.buttons.index(button)] = True
-
-            self._decode_discrete_action.append(arr)
-
-        self.action_space = gym.spaces.Discrete(num_action_space)
-
-    def action(self, action):
-        if isinstance(action, list) and len(action) and isinstance(action[0], str):
-            arr = np.array([False] * self.button_count)
-            for button in action:
-                arr[self.buttons.index(button)] = True
-
-            return arr
-
-        return self._decode_discrete_action[action].copy()
-
-
 # non-hex numbers are for underworld
 ignore_tile_set = [0x26, 0x24, 0x76, 126, 104, 116]
 
@@ -165,6 +112,7 @@ class ZeldaWrapper(RetroWithRam):
             skip_boring_frames=True,
             render_kb=True,
             scenario='attack',
+            seed=None,
             ):
 
         # bookkeeping
@@ -182,7 +130,8 @@ class ZeldaWrapper(RetroWithRam):
         self.render_kb = render_kb
         self.mouse = None
         self.scenario = scenario
-
+        self.seed = seed
+        self.random = random.Random(self.seed)
 
         # create a new observation space
         self.ram = self.env.get_ram()
@@ -433,6 +382,8 @@ class ZeldaWrapper(RetroWithRam):
             self.episode_scenario = random.choice(sorted(self.scenarios.keys()))
         self.stepcount = 0
         obs, info = super().reset(**kwargs)
+        # FIXME: randomly initializing link's position should be behind a flag
+        self._random_link_position()
         return self.observation_space.sample(), info
 
     def step(self, action):
@@ -540,7 +491,36 @@ class ZeldaWrapper(RetroWithRam):
         # return step results
         return observation, reward, terminated, truncated, info
 
-    def generate_knowledge_base(self):
+    def _set_mem(self, assignment_dict):
+        '''
+        Change the values of memory.
+        The input `assignment_dict` has keys as memory addresses and values as integers between 0-255.
+        '''
+        offset = 93
+        i0 = 0
+        chunks = []
+        state = self.env.em.get_state()
+        for k, v in sorted(assignment_dict.items()):
+            assert v >= 0 and v <= 255
+            i = k + offset
+            chunks.append(state[i0:i] + bytes([v]))
+            i0 = i + 1
+        chunks.append(state[i0:])
+        state1 = b''.join(chunks)
+        self.env.em.set_state(state1)
+
+        # NOTE:
+        # if the state update is malformed for some reason,
+        # then the state won't update;
+        # this simple assert checks that the state update actually happened;
+        # it might be too slow for an inner loop or interfere with a long training run;
+        # so it should probably be put behind a flag
+        if True:
+            state = self.env.em.get_state()
+            for k, v in assignment_dict.items():
+                assert state[k+offset] == v
+
+    def generate_knowledge_base(self, include_background=False):
         '''
         Enemy Type:
         There are many different memory locations that seem to store the enemy type;
@@ -694,28 +674,12 @@ class ZeldaWrapper(RetroWithRam):
             if item['state'] != 0:
                 kb[f'projectile_{i}'] = item
 
-        # We add the tile information last.
-        # the screen is divided into an 11x16 grid,
-        # and each tile is divided into 2x2 subtiles;
-        # therefore, the subtile grid is 22x32 (=0x2c0).
-        # the leftmost, rightmost, and bottommost subtiles do not get displayed,
-        # so only a 21x30 grid of subtiles is displayed
-        subtiles = ram[0x530+0x800:0x530+0x2c0+0x800].reshape([32,22])
-
-        # NOTE:
-        # accessing the memory through get_state() allows changing the state;
-        # the code below is usefull for modifying the grid in a running game;
-        # it does not update the pictures (which are drawn at the beginning of the screen),
-        # but does update how link/enemies behave on the tiles
-        #import code
-        #code.interact(local=locals())
-        # >>> tiles = self.env.unwrapped.em.get_state()[14657:14657+11*4*16]
-        # >>> newstate = b'\x00'*88; state = self.env.unwrapped.em.get_state(); state = state[:14657]+newstate+state[14657+len(newstate):]; self.env.unwrapped.em.set_state(state)
-
-        include_background = False
+        # add tile information last
+        # FIXME:
+        # this code isn't currently being run, and not sure how buggy it is
+        subtiles = self._get_subtiles()
         use_full_subtiles = False
         view_radius = 2
-        #ignore_tile_set = set([0x26, 0x24, 0x76])
         if include_background:
             if use_full_subtiles:
                 tiles = subtiles
@@ -734,7 +698,7 @@ class ZeldaWrapper(RetroWithRam):
             mapstr = ''
             for y in range(tiles.shape[1]):
                 for x in range(tiles.shape[0]):
-                    if abs(x - link_tile_x) + abs(y - link_tile_y) <= view_radius:
+                    if abs(int(x) - int(link_tile_x)) + abs(int(y) - int(link_tile_y)) <= view_radius:
                         item = {}
                         item['x'] = x*tile_size 
                         item['y'] = y*tile_size + 61
@@ -784,6 +748,35 @@ class ZeldaWrapper(RetroWithRam):
             # because he does not go "partially off the edge" on the top screen
 
         return kb
+
+    def _get_subtiles(self):
+        # The screen is divided into an 11x16 grid,
+        # and each tile is divided into 2x2 subtiles;
+        # therefore, the subtile grid is 22x32 (=0x2c0).
+        # the leftmost, rightmost, and bottommost subtiles do not get displayed,
+        # so only a 21x30 grid of subtiles is displayed
+        subtiles = self.ram[0x530+0x800:0x530+0x2c0+0x800].reshape([32,22])
+        # NOTE:
+        # accessing the memory through get_state() allows changing the state;
+        # the code below is usefull for modifying the grid in a running game;
+        # it does not update the pictures (which are drawn at the beginning of the screen),
+        # but does update how link/enemies behave on the tiles
+        #import code
+        #code.interact(local=locals())
+        # >>> tiles = self.env.unwrapped.em.get_state()[14657:14657+11*4*16]
+        # >>> newstate = b'\x00'*88; state = self.env.unwrapped.em.get_state(); state = state[:14657]+newstate+state[14657+len(newstate):]; self.env.unwrapped.em.set_state(state)
+
+        return subtiles
+    
+    def _random_link_position(self):
+        subtiles = self._get_subtiles()
+        valid_positions = []
+        for x in range(32):
+            for y in range(22):
+                if subtiles[x, y] in ignore_tile_set:
+                    valid_positions.append([x*8, y*8+60])
+        position = self.random.choice(valid_positions)
+        self._set_mem({112: position[0], 132: position[1]})
 
 
     ########################################
@@ -934,3 +927,57 @@ def _gamestate_total_enemies(ram):
 
 def _gamestate_screen_change(ram):
     return ram[18] == 5
+
+
+################################################################################
+# FIXME:
+# This class was taken from another open source project;
+# it reduces the action space to speed up training;
+# I need to incorporate this trick and lookup the cite
+class ZeldaActionSpace(gymnasium.ActionWrapper):
+    """A wrapper that shrinks the action space down to what's actually used in the game."""
+    def __init__(self, env, kind):
+        super().__init__(env)
+
+        # movement is always allowed
+        self.actions = [['LEFT'], ['RIGHT'], ['UP'], ['DOWN'],
+                        ['LEFT', 'A'], ['RIGHT', 'A'], ['UP', 'A'], ['DOWN', 'A'],
+                        ['LEFT', 'B'], ['RIGHT', 'B'], ['UP', 'B'], ['DOWN', 'B'],
+                        ['UP', 'LEFT', 'B'], ['UP', 'RIGHT', 'B'], ['DOWN', 'LEFT', 'B'], ['DOWN', 'RIGHT', 'B']
+                        ]
+
+        num_action_space = 4
+        if kind != 'move-only':
+            num_action_space += 4
+
+        if kind in ('directional-item', 'diagonal-item', 'all'):
+            num_action_space += 4
+
+        if kind in ('diagonal-item', 'all'):
+            num_action_space += 4
+
+        assert isinstance(env.action_space, gym.spaces.MultiBinary)
+
+        self.button_count = env.action_space.n
+        self.buttons = env.unwrapped.buttons
+
+        self._decode_discrete_action = []
+        for action in self.actions:
+            arr = np.array([False] * self.button_count)
+
+            for button in action:
+                arr[self.buttons.index(button)] = True
+
+            self._decode_discrete_action.append(arr)
+
+        self.action_space = gym.spaces.Discrete(num_action_space)
+
+    def action(self, action):
+        if isinstance(action, list) and len(action) and isinstance(action[0], str):
+            arr = np.array([False] * self.button_count)
+            for button in action:
+                arr[self.buttons.index(button)] = True
+
+            return arr
+
+        return self._decode_discrete_action[action].copy()

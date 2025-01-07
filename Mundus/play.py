@@ -5,9 +5,10 @@ import os
 import logging
 import sys
 import pprint
+from queue import Queue
 
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pyglet
-import pyaudio
 import pygame
 import gymnasium
 from  gymnasium.wrappers import *
@@ -266,79 +267,6 @@ class Interactive(gymnasium.Wrapper):
         return [inputs[b] for b in self.env.buttons]
 
 
-class PlayAudio(gymnasium.Wrapper):
-    def __init__(self, env, ignore_ALSA_warnings=True):
-        super().__init__(env)
-        self.chunks = []
-        self.frame_index = 0
-    
-        def buffer_size():
-            return sum([len(chunk) for chunk in self.chunks]) - self.frame_index
-
-        # ALSA prints a lot of debugging information to stderr by default;
-        # this is annoying, and the following code disables these messages;
-        # see: <https://stackoverflow.com/a/13453192/1241368>
-        if ignore_ALSA_warnings:
-            from ctypes import CFUNCTYPE, cdll, c_char_p, c_int
-            ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p)
-            def py_error_handler(filename, line, function, err, fmt):
-                return
-            c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
-            asound = cdll.LoadLibrary('libasound.so')
-            asound.snd_lib_error_set_handler(c_error_handler)
-
-        # create the audio stream
-        def playing_callback(in_data, frame_count, time_info, status):
-            frame_count *= 2
-            if len(self.chunks) == 0:
-                data = np.array([0]*frame_count).astype('int16')
-            else:
-                chunk0 = self.chunks[0]
-                chunk0_len = self.chunks[0].shape[0]
-                data = chunk0[self.frame_index:self.frame_index + frame_count]
-                self.frame_index += frame_count
-                if len(data) < frame_count:
-                    self.chunks = self.chunks[1:]
-                    self.frame_index = 0
-                    frame_count_diff = frame_count - len(data)
-                    if len(self.chunks) == 0:
-                        data = np.concatenate([data, [0]*frame_count_diff])
-                    else:
-                        data = np.concatenate([data, self.chunks[0][:frame_count_diff]])
-                        self.frame_index = frame_count_diff
-            return (data, pyaudio.paContinue)
-
-        self.p = pyaudio.PyAudio()
-        try:
-            self.stream = self.p.open(
-                    format=pyaudio.paInt16,
-                    channels=2,
-                    rate=int(env.em.get_audio_rate()),
-                    output=True,
-                    stream_callback=playing_callback,
-                    )
-        except OSError:
-            self.stream = None
-
-        # FIXME:
-        # commenting this line out will remove the underrun warnings;
-        # but the error handler defined above will then have problems
-        asound.snd_lib_error_set_handler(None)
-
-    def step(self, actions):
-        data = self.env.em.get_audio().flatten().astype('int16')
-        self.chunks.append(data)
-        if len(self.chunks) > 10:
-            logging.warning('audiobuffer overflowing, truncating self.chunks')
-            self.chunks = self.chunks[-1:]
-        return super().step(actions)
-
-    def close(self):
-        self.stream.close()
-        self.p.terminate()
-        super().close()
-    
-
 def main():
     # parse command line args
     import argparse
@@ -384,7 +312,7 @@ def main():
     elif 'Zelda' in args.game:
         env = ZeldaWrapper(
                 env,
-                stdout_debug=True,
+                stdout_debug=not args.no_alternate_screen,
                 no_render_skipped_frames=args.no_render_skipped_frames,
                 skip_boring_frames=not args.allframes,
                 scenario=args.scenario,

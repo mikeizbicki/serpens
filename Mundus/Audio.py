@@ -6,7 +6,77 @@ import fcntl
 import re
 import time
 
+import numpy as np
+import pyaudio
 import gymnasium
+import simpleaudio as sa
+
+
+class PlayAudio(gymnasium.Wrapper):
+    '''
+    FIXME:
+    The playback of this audio is not smooth due to the blocking interface.
+    I've tried a bunch of other blocking interfaces, and this one is the best.
+    The non-blocking interface (below) has lag issues.
+    '''
+    def __init__(self, env):
+        super().__init__(env)
+
+    def step(self, actions):
+        data = self.env.em.get_audio().astype('int16')
+        sa.play_buffer(data, 2, 2, 32000)
+        return super().step(actions)
+
+
+class PlayAudio2(gymnasium.Wrapper):
+    '''
+    FIXME:
+    The playback of this audio is smooth, but it's delayed 1-2 seconds for some reason.
+    '''
+    def __init__(self, env, ignore_ALSA_warnings=True):
+        super().__init__(env)
+        self.PlayAudio_buffer = np.zeros([0,2], dtype='int16')
+    
+        # create the audio stream
+        def playing_callback(in_data, frame_count, time_info, status):
+            if self.PlayAudio_buffer.shape[0] >= frame_count:
+                data = self.PlayAudio_buffer[:frame_count, :]
+                self.PlayAudio_buffer = self.PlayAudio_buffer[frame_count:, :]
+                data = data.flatten()
+                #logging.info(f"self.PlayAudio_buffer.shape={self.PlayAudio_buffer.shape}")
+                return (data.tobytes(), pyaudio.paContinue)
+            else:
+                logging.warning('PlayAudio: buffer underrun')
+                return (b'\x00' * frame_count * 4, pyaudio.paContinue)  # 4 bytes per frame (2 channels * 2 bytes per sample)
+
+        logging.info(f"env.em.get_audio_rate()={env.em.get_audio_rate()}")
+        self.p = pyaudio.PyAudio()
+        self.stream = self.p.open(
+                format=pyaudio.paInt16,
+                channels=2,
+                rate=32000, #int(env.em.get_audio_rate()),
+                output=True,
+                stream_callback=playing_callback,
+                frames_per_buffer=128,
+                start=False,
+                )
+        #self.stream._stream.suggestedLatency = 0.1  # Try to achieve 100ms latency
+        self.stream.start_stream()
+
+    def step(self, actions):
+        data = self.env.em.get_audio().astype('int16')
+        self.PlayAudio_buffer = np.concatenate([self.PlayAudio_buffer, data])
+        if len(self.PlayAudio_buffer) > 32000:
+            self.PlayAudio_buffer = np.zeros([0,2], dtype='int16')
+            #logging.info(f"len(self.PlayAudio_buffer)={len(self.PlayAudio_buffer)}")
+        return super().step(actions)
+
+    def close(self):
+        self.stream.close()
+        self.p.terminate()
+        super().close()
+
+################################################################################
 
 
 class WhisperProcess():

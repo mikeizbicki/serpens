@@ -392,6 +392,7 @@ class ZeldaWrapper(RetroWithRam):
         obs, info = super().reset(**kwargs)
         # FIXME: randomly initializing link's position should be behind a flag
         self._random_link_position()
+        self._random_enemy_position()
         return self.observation_space.sample(), info
 
     def step(self, action):
@@ -528,7 +529,7 @@ class ZeldaWrapper(RetroWithRam):
             for k, v in assignment_dict.items():
                 assert state[k+offset] == v
 
-    def generate_knowledge_base(self, include_background=False):
+    def generate_knowledge_base(self, include_background=True):
         '''
         Enemy Type:
         There are many different memory locations that seem to store the enemy type;
@@ -783,6 +784,32 @@ class ZeldaWrapper(RetroWithRam):
                     valid_positions.append([x*8, y*8+60])
         position = self.random.choice(valid_positions)
         self._set_mem({112: position[0], 132: position[1]})
+
+    def _random_enemy_position(self):
+        subtiles = self._get_subtiles()
+        valid_positions = []
+        for x in range(32):
+            for y in range(22):
+                if subtiles[x, y] in ignore_tile_set:
+                    valid_positions.append([x*8, y*8+60])
+        positions = random.sample(valid_positions, 6)
+
+        update_dict = {}
+        for i in range(6):
+            update_dict.update(
+                    { 113+i: positions[0+i][0]              # x
+                    , 133+i: positions[0+i][1]              # y
+                    # FIXME:
+                    # the following sets the direction, but fails sometimes for spiders?
+                    #, 153+i: self.random.choice([1,2,4,8])  # dir
+                    # FIXME:
+                    # the following lines "should" set the state and type of monsters;
+                    # but there's a problem with rendering them;
+                    # not sure if the monsters actually behave correctly or not.
+                    #, 848+i: i+6
+                    })
+
+        self._set_mem(update_dict)
 
 
     ########################################

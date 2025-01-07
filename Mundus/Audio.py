@@ -23,7 +23,7 @@ class PlayAudio(gymnasium.Wrapper):
         super().__init__(env)
 
     def step(self, actions):
-        data = self.env.em.get_audio().astype('int16')
+        data = self.unwrapped.em.get_audio().astype('int16')
         sa.play_buffer(data, 2, 2, 32000)
         return super().step(actions)
 

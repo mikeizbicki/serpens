@@ -59,7 +59,7 @@ class Interactive(gymnasium.Wrapper):
         self.joysticks = {}
 
         # NOTE:
-        # self.render() is needed to create the self.viewer object;
+        # self.render() is needed to create the self.unwrapped.viewer object;
         # we need this to interact with the pyglet window
         # and register the handlers
         self.render() 
@@ -67,26 +67,26 @@ class Interactive(gymnasium.Wrapper):
         # setup the key handler
         self._key_previous_states = {}
         self._key_handler = pyglet.window.key.KeyStateHandler()
-        self.viewer.window.push_handlers(self._key_handler)
+        self.unwrapped.viewer.window.push_handlers(self._key_handler)
 
         # setup the mouse handler
         # FIXME:
         # this is a janky setup to set the mouse coordinates in the Zelda environment;
         # it assumes that this Wrapper is called directly on the Zelda
         def on_mouse_motion(x, y, dx, dy):
-            self.env.mouse = {}
-            self.env.mouse['x'] = int(x / self.viewer.window.width * 240)
-            self.env.mouse['y'] = int((self.viewer.window.height - y) / self.viewer.window.height * 224)
+            self.unwrapped.mouse = {}
+            self.unwrapped.mouse['x'] = int(x / self.unwrapped.viewer.window.width * 240)
+            self.unwrapped.mouse['y'] = int((self.unwrapped.viewer.window.height - y) / self.unwrapped.viewer.window.height * 224)
             
             # NOTE:
             # the values above are hardcoded for zelda;
             # 240 is the y resolution,
             # and 60 is the height of the black bar
-        self.viewer.window.push_handlers(on_mouse_motion)
+        self.unwrapped.viewer.window.push_handlers(on_mouse_motion)
 
         def on_mouse_leave(x, y):
-            self.env.mouse = None
-        self.viewer.window.push_handlers(on_mouse_leave)
+            self.unwrapped.mouse = None
+        self.unwrapped.viewer.window.push_handlers(on_mouse_leave)
 
     def reset(self, **kwargs):
         self.frames_since_log = 0
@@ -168,7 +168,7 @@ class Interactive(gymnasium.Wrapper):
             if name == 'SPACE':
                 def set_ram(d):
                     arr = []
-                    state = self.env.em.get_state()
+                    state = self.unwrapped.em.get_state()
                     prev_i = 0
                     for k, v in sorted(d.items()):
                         arr.append(state[prev_i:93+k])
@@ -176,28 +176,28 @@ class Interactive(gymnasium.Wrapper):
                         prev_i = k + 93 + 1
                     arr.append(state[prev_i:-1])
                     state = b''.join(arr)
-                    self.env.em.set_state(state)
+                    self.unwrapped.em.set_state(state)
                 def set_ram(k, v):
                     newstate = v.to_bytes(1, 'big')
-                    state = self.env.em.get_state()
+                    state = self.unwrapped.em.get_state()
                     state = state[:k+93] + newstate + state[k+93+len(newstate):]
-                    self.env.em.set_state(state)
-                    # >>> newstate = b'\x10'; state = self.env.unwrapped.em.get_state(); state = state[:112+93]+newstate+state[112+93+len(newstate):]; self.env.unwrapped.em.set_state(state)
+                    self.unwrapped.em.set_state(state)
+                    # >>> newstate = b'\x10'; state = self.unwrapped.unwrapped.em.get_state(); state = state[:112+93]+newstate+state[112+93+len(newstate):]; self.unwrapped.unwrapped.em.set_state(state)
 
                 def save_state(statename):
                     filename = f'custom_integrations/Zelda-Nes/{statename}.state'
                     import gzip
                     with gzip.open(filename, 'wb') as f:
-                        f.write(self.env.em.get_state())
+                        f.write(self.unwrapped.em.get_state())
                 def load_state(statename):
                     filename = f'custom_integrations/Zelda-Nes/{statename}.state'
                     import gzip
                     with gzip.open(filename, 'rb') as f:
-                        self.env.em.set_state(f.read())
+                        self.unwrapped.em.set_state(f.read())
                 import code
                 code.interact(local=locals())
                 self.action_override = prev_action_override
-                #newstate = b'\x00'*88; state = self.env.unwrapped.em.get_state(); state = state[:14657]+newstate+state[14657+len(newstate):]; self.env.unwrapped.em.set_state(state)
+                #newstate = b'\x00'*88; state = self.unwrapped.unwrapped.em.get_state(); state = state[:14657]+newstate+state[14657+len(newstate):]; self.unwrapped.unwrapped.em.set_state(state)
 
         for name in keys_pressed:
             if name == 'MINUS':
@@ -262,9 +262,9 @@ class Interactive(gymnasium.Wrapper):
             "START": "ENTER" in keys,
             "PAUSE": "ENTER" in keys,
         }
-        pushed_buttons = [b for b in self.env.buttons if inputs[b]]
+        pushed_buttons = [b for b in self.unwrapped.buttons if inputs[b]]
         #print(f"pushed_buttons={pushed_buttons}")
-        return [inputs[b] for b in self.env.buttons]
+        return [inputs[b] for b in self.unwrapped.buttons]
 
 
 def main():
@@ -287,12 +287,17 @@ def main():
 
     # set logging level
     import logging
-    logging.basicConfig()
-    #logging.getLogger().setLevel(logging.DEBUG)
-    logging.getLogger().setLevel(logging.INFO)
+    logging.basicConfig(
+        filename='.log',
+        level=logging.DEBUG,
+        format='%(asctime)s.%(msecs)03d - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
 
-    #import warnings
-    #warnings.filterwarnings("ignore")
+    # convert warnings to errors
+    import warnings
+    warnings.filterwarnings('always', append=True)
+    warnings.simplefilter('error')
 
     # create the environment
     logging.info('creating environment')
@@ -321,13 +326,20 @@ def main():
 
     # load models
     logging.info('loading models')
-    custom_objects = {
-        'observation_space': env.observation_space,
-        'action_space': env.action_space,
-        }
-    from stable_baselines3 import PPO
-    #model = None
-    model = PPO.load('models/simple_attack.zip', custom_objects=custom_objects)
+
+    # NOTE:
+    # loading the models can cause a large number of warnings;
+    # this with block prevents those warnings from being displayed
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+
+        #model = None
+        custom_objects = {
+            'observation_space': env.observation_space,
+            'action_space': env.action_space,
+            }
+        from stable_baselines3 import PPO
+        model = PPO.load('models/simple_attack.zip', custom_objects=custom_objects)
 
     logging.info('creating environment wrappers')
     env = Interactive(env)

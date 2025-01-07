@@ -117,5 +117,5 @@ class RandomStateReset(gymnasium.Wrapper):
         states = [os.path.basename(filepath).split('.')[0] for filepath in glob.glob(self.path + '/' + self.globstr)]
         newstate = random.choice(states)
         logging.info(f"newstate={newstate}")
-        self.env.load_state(newstate, inttype=retro.data.Integrations.ALL)
+        self.unwrapped.load_state(newstate, inttype=retro.data.Integrations.ALL)
         return results

@@ -274,7 +274,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--game", default="Zelda-Nes")
     #parser.add_argument("--game", default="GauntletII-Nes")
-    parser.add_argument('--scenario', default='attack')
+    parser.add_argument('--task', default='attack')
     parser.add_argument('--state', default='spiders_lowhealth_01*.state')
     parser.add_argument('--model', default='models/simple_attack.zip')
     parser.add_argument('--logfile', default='.play.log')
@@ -323,7 +323,7 @@ def main():
                 stdout_debug=not args.no_alternate_screen,
                 no_render_skipped_frames=args.no_render_skipped_frames,
                 skip_boring_frames=not args.allframes,
-                scenario=args.scenario,
+                task=args.task,
                 )
 
     # NOTE:

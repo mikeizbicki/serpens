@@ -275,6 +275,8 @@ def main():
     #parser.add_argument("--game", default="GauntletII-Nes")
     parser.add_argument('--scenario', default='attack')
     parser.add_argument('--state', default='spiders_lowhealth_01*.state')
+    parser.add_argument('--model', default='models/simple_attack.zip')
+    parser.add_argument('--logfile', default='.play.log')
 
     emulator_settings = parser.add_argument_group('emulator settings')
     emulator_settings.add_argument('--no_render_skipped_frames', action='store_true')
@@ -288,7 +290,7 @@ def main():
     # set logging level
     import logging
     logging.basicConfig(
-        filename='.log',
+        filename=args.logfile,
         level=logging.DEBUG,
         format='%(asctime)s.%(msecs)03d - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
@@ -323,23 +325,19 @@ def main():
                 scenario=args.scenario,
                 )
 
-
-    # load models
-    logging.info('loading models')
-
     # NOTE:
     # loading the models can cause a large number of warnings;
     # this with block prevents those warnings from being displayed
+    logging.info('loading models')
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
 
-        #model = None
+        from stable_baselines3 import PPO
         custom_objects = {
             'observation_space': env.observation_space,
             'action_space': env.action_space,
             }
-        from stable_baselines3 import PPO
-        model = PPO.load('models/simple_attack.zip', custom_objects=custom_objects)
+        model = PPO.load(args.model, custom_objects=custom_objects)
 
     logging.info('creating environment wrappers')
     env = Interactive(env)

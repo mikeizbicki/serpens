@@ -74,9 +74,9 @@ class Interactive(gymnasium.Wrapper):
         # this is a janky setup to set the mouse coordinates in the Zelda environment;
         # it assumes that this Wrapper is called directly on the Zelda
         def on_mouse_motion(x, y, dx, dy):
-            self.unwrapped.mouse = {}
-            self.unwrapped.mouse['x'] = int(x / self.unwrapped.viewer.window.width * 240)
-            self.unwrapped.mouse['y'] = int((self.unwrapped.viewer.window.height - y) / self.unwrapped.viewer.window.height * 224)
+            self.env.mouse = {}
+            self.env.mouse['x'] = int(x / self.unwrapped.viewer.window.width * 240)
+            self.env.mouse['y'] = int((self.unwrapped.viewer.window.height - y) / self.unwrapped.viewer.window.height * 224)
             
             # NOTE:
             # the values above are hardcoded for zelda;

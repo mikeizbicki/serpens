@@ -132,7 +132,7 @@ class TensorboardCallback(BaseCallback):
 
         # these variables are internally created/updated by ._on_step()
         self.num_episodes = None
-        self.num_scenarios = Counter()
+        self.num_tasks = Counter()
         if self.record_every is None:
             self.screens = None
         else:
@@ -183,17 +183,17 @@ class TensorboardCallback(BaseCallback):
 
                 record_prefix('summary_')
                 record_prefix('reward_')
-                record_prefix('scenario_success_')
-                #record_prefix('scenario_count_')
+                record_prefix('task_success_')
+                #record_prefix('task_count_')
 
-                prefix = 'scenario_count_'
+                prefix = 'task_count_'
                 keys = [key for key in self.locals['infos'][i].keys() if key.startswith(prefix)]
                 self.logger.record('episode/num_episodes', sum(self.num_episodes))
                 prefixmod = prefix.strip('_')
                 for key in keys:
                     keymod = key[len(prefix):]
-                    self.num_scenarios[keymod] += 1
-                    self.logger.record(prefixmod+'/'+keymod, self.num_scenarios[keymod], exclude=('stdout',))
+                    self.num_tasks[keymod] += 1
+                    self.logger.record(prefixmod+'/'+keymod, self.num_tasks[keymod], exclude=('stdout',))
 
                 #keys = [key for key in self.locals['infos'][i].keys() if key.startswith('summary_')]
                 #for key in keys:
@@ -203,9 +203,9 @@ class TensorboardCallback(BaseCallback):
                 #for key in keys:
                     #self.logger.record_mean('reward/'+key, self.locals['infos'][i][key])
 #
-                #scenario_keys = [key for key in self.locals['infos'][i].keys() if key.startswith('scenario_success_')]
-                #for key in scenario_keys:
-                    #self.logger.record_mean('scenario_success/'+key, self.locals['infos'][i][key])
+                #task_keys = [key for key in self.locals['infos'][i].keys() if key.startswith('task_success_')]
+                #for key in task_keys:
+                    #self.logger.record_mean('task_success/'+key, self.locals['infos'][i][key])
         return True
 
 
@@ -225,8 +225,9 @@ def main():
     hyperparameters = parser.add_argument_group('hyperparameters')
     hyperparameters.add_argument('--policy', choices=['MlpPolicy', 'CnnPolicy', 'ObjectCnn'], default=['ObjectCnn'])
     hyperparameters.add_argument('--pooling', choices=['lstm', 'mean', 'max'], default='mean')
-    #hyperparameters.add_argument('--scenario', default='attack')
-    hyperparameters.add_argument('--scenario', default=None)
+    #hyperparameters.add_argument('--task', default='attack')
+    hyperparameters.add_argument('--alg', choices=['ppo', 'dqn'], default='ppo')
+    hyperparameters.add_argument('--task', default=None)
     hyperparameters.add_argument('--state', default='spiders_lowhealth_01*.state')
     hyperparameters.add_argument('--net_arch', type=int, nargs='*', default=[])
     hyperparameters.add_argument('--features_dim', type=int, default=64)
@@ -261,7 +262,7 @@ def main():
     experiment_name = ''
     if args.comment is not None:
         experiment_name = args.comment + '--'
-    experiment_name += f'scenario={args.scenario},state={args.state},policy={args.policy}{policy_params},net_arch={arch_string},{args.features_dim},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps},batch_size={args.batch_size}'
+    experiment_name += f'task={args.task},state={args.state},policy={args.policy}{policy_params},net_arch={arch_string},{args.features_dim},alg={args.alg},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps},batch_size={args.batch_size}'
     logging.info(f'experiment_name: [{experiment_name}]')
 
     # create the environment
@@ -273,11 +274,12 @@ def main():
                 inttype=retro.data.Integrations.ALL,
                 state='overworld_07',
                 render_mode=render_mode,
+                use_restricted_actions=retro.Actions.DISCRETE,
                 )
         env = ZeldaWrapper(
                 env,
                 skip_boring_frames=False,
-                scenario=args.scenario,
+                task=args.task,
                 )
         env = TimeLimit(env, max_episode_steps=30*60*5)
         env = StochasticFrameSkip(env, 4, 0.25)
@@ -307,22 +309,37 @@ def main():
         policy = ActorCriticCnnPolicy
     else:
         policy = 'MlpPolicy'
-    model = stable_baselines3.PPO(
-        policy=policy,
-        env=train_env,
-        learning_rate=args.lr,
-        n_steps=args.n_steps,
-        batch_size=args.batch_size,
-        n_epochs=4,
-        gamma=args.gamma,
-        gae_lambda=0.95,
-        clip_range=0.1,
-        ent_coef=0.01,
-        verbose=1,
-        tensorboard_log=args.log_dir,
-        policy_kwargs=policy_kwargs,
-        seed=args.seed,
-    )
+
+    if args.alg == 'ppo':
+        model = stable_baselines3.PPO(
+            policy=policy,
+            env=train_env,
+            learning_rate=args.lr,
+            n_steps=args.n_steps,
+            batch_size=args.batch_size,
+            n_epochs=4,
+            gamma=args.gamma,
+            gae_lambda=0.95,
+            clip_range=0.1,
+            ent_coef=0.01,
+            verbose=1,
+            tensorboard_log=args.log_dir,
+            policy_kwargs=policy_kwargs,
+            seed=args.seed,
+        )
+    elif args.alg == 'dqn':
+        model = stable_baselines3.DQN(
+            policy=policy,
+            env=train_env,
+            learning_rate=args.lr,
+            batch_size=args.batch_size,
+            gamma=args.gamma,
+            verbose=1,
+            tensorboard_log=args.log_dir,
+            policy_kwargs=policy_kwargs,
+            seed=args.seed,
+        )
+
     reset_num_timesteps = True
     if args.warmstart:
         reset_num_timesteps = False
@@ -331,6 +348,7 @@ def main():
         model.num_timesteps = warmstart.num_timesteps
         #import code
         #code.interact(local=locals())
+
     model.learn(
         total_timesteps=args.total_timesteps,
         log_interval=1,

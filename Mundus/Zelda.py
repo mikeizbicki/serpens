@@ -781,7 +781,7 @@ class ZeldaWrapper(RetroWithRam):
         for x in range(32):
             for y in range(22):
                 if subtiles[x, y] in ignore_tile_set:
-                    valid_positions.append([x*8, y*8+60])
+                    valid_positions.append([x*8-8, y*8+56])
         position = self.random.choice(valid_positions)
         self._set_mem({112: position[0], 132: position[1]})
 
@@ -791,7 +791,7 @@ class ZeldaWrapper(RetroWithRam):
         for x in range(32):
             for y in range(22):
                 if subtiles[x, y] in ignore_tile_set:
-                    valid_positions.append([x*8, y*8+60])
+                    valid_positions.append([x*tile_size-8, y*tile_size+64-tile_size])
         positions = random.sample(valid_positions, 6)
 
         update_dict = {}

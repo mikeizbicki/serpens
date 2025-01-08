@@ -107,6 +107,7 @@ class KnowledgeBase:
         self.dtype_continuous = np.float16
         self.keys = keys
         self.max_discrete = 256
+        self.info = {}
 
     def __setitem__(self, name, val):
         if len(self.items) >= self.max_objects:

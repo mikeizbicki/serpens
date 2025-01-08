@@ -110,13 +110,7 @@ class ZeldaWrapper(RetroWithRam):
             self,
             env,
             stdout_debug=False,
-            use_full_subtiles=False,
-            link_view_radius=2,
-            center_xy=True,
-            output_link_view=False,
-            normalize_output=True,
-            reorder_outputs=True,
-            clean_outputs=True,
+            use_subtiles=False,
             no_render_skipped_frames=True,
             skip_boring_frames=True,
             render_kb=True,
@@ -127,13 +121,7 @@ class ZeldaWrapper(RetroWithRam):
         # bookkeeping
         super().__init__(env)
         self.stdout_debug = stdout_debug
-        self.use_full_subtiles = use_full_subtiles
-        self.link_view_radius = link_view_radius
-        self.center_xy = center_xy
-        self.output_link_view = output_link_view
-        self.normalize_output = normalize_output
-        self.reorder_outputs = reorder_outputs
-        self.clean_outputs = clean_outputs
+        self.use_subtiles = use_subtiles
         self.no_render_skipped_frames=no_render_skipped_frames
         self.skip_boring_frames = skip_boring_frames 
         self.render_kb = render_kb
@@ -465,9 +453,11 @@ class ZeldaWrapper(RetroWithRam):
         if self.stdout_debug:
             text = ''
             text += kb.display()
-            text += f'\nterminated = {terminated}'
+            #text += kb.info['mapstr']
+            text += f'\n{format_dict_pretty(self.episode_summary_dict)}'
+            text += f'\n'
             text += f'\nepisode_reward = {self.episode_reward:0.4f}'
-            text += f'\nepisode_reward_dict = {pprint.pformat(self.episode_reward_dict)}'
+            text += f'\nterminated = {terminated}'
             print(text)
 
         # skip the boring frames
@@ -685,21 +675,22 @@ class ZeldaWrapper(RetroWithRam):
 
         # add tile information last
         subtiles = self._get_subtiles()
-        use_full_subtiles = False
         view_radius = 2
         if include_background:
-            if use_full_subtiles:
+            if self.use_subtiles:
                 tiles = subtiles
                 tile_size = 8
             else:
                 tiles = subtiles[::2,::2]
                 tile_size = 16
+            kb.info['tiles'] = tiles
+            kb.info['tile_size'] = tile_size
 
             link_x = ram[112]
             link_y = ram[132]
             link_tile_x = (link_x+8)//tile_size
             link_tile_y = (link_y-56)//tile_size
-            if not use_full_subtiles:
+            if not self.use_subtiles:
                 link_tile_y = (link_y-48)//tile_size
 
             mapstr = ''
@@ -726,7 +717,7 @@ class ZeldaWrapper(RetroWithRam):
                         else:
                             mapstr += prefix + f'{hex(tiles[x, y])[2:]:2}'
                 mapstr += '\n'
-            #print(f"{mapstr}")
+            kb.info['mapstr'] = mapstr
 
         # normalize and center all item positions
         kb.columns.add('relx')
@@ -791,7 +782,7 @@ class ZeldaWrapper(RetroWithRam):
         for x in range(32):
             for y in range(22):
                 if subtiles[x, y] in ignore_tile_set:
-                    valid_positions.append([x*tile_size-8, y*tile_size+64-tile_size])
+                    valid_positions.append([x*8-8, y*8+64-8])
         positions = random.sample(valid_positions, 6)
 
         update_dict = {}
@@ -1014,3 +1005,71 @@ class ZeldaActionSpace(gymnasium.ActionWrapper):
             return arr
 
         return self._decode_discrete_action[action].copy()
+
+
+
+
+import shutil
+from typing import Dict, Any
+
+def format_dict_pretty(d: Dict[str, Any], min_spacing: int = 2) -> str:
+    """
+    Format dictionary key-value pairs in aligned columns that fit the terminal width.
+    Keys are sorted alphabetically and arranged in columns from top to bottom.
+    Floating point values are limited to 4 decimal places.
+
+    Args:
+        d: Dictionary to format
+        min_spacing: Minimum number of spaces between columns
+
+    Returns:
+        Formatted string representation of the dictionary
+    """
+
+    # Get terminal width
+    terminal_width = shutil.get_terminal_size().columns
+
+    # Convert all items to strings, handling floats specially
+    items = []
+    for k, v in d.items():
+        key_str = str(k)
+        if isinstance(v, float):
+            val_str = f"{v:.4f}" #.rstrip('0').rstrip('.')
+        else:
+            val_str = str(v)
+        items.append((key_str, val_str))
+
+    # Sort items by key
+    items.sort(key=lambda x: x[0])
+
+    # Find the maximum lengths
+    max_key_len = max(len(k) for k, v in items)
+    max_val_len = max(len(v) for k, v in items)
+
+    # Calculate the width needed for each pair
+    pair_width = max_key_len + max_val_len + 4  # 4 accounts for ': ' and minimum spacing
+
+    # Calculate how many pairs can fit in one row
+    pairs_per_row = max(1, terminal_width // pair_width)
+
+    # Calculate number of rows needed
+    num_rows = (len(items) + pairs_per_row - 1) // pairs_per_row
+
+    # Reorder items to go down columns instead of across rows
+    column_ordered_items = []
+    for row in range(num_rows):
+        for col in range(pairs_per_row):
+            idx = row + col * num_rows
+            if idx < len(items):
+                column_ordered_items.append(items[idx])
+
+    # Build the output string
+    result = []
+    for i in range(0, len(column_ordered_items), pairs_per_row):
+        row_items = column_ordered_items[i:i + pairs_per_row]
+        format_str = ""
+        for _ in row_items:
+            format_str += f"{{:<{max_key_len}}}: {{:<{max_val_len}}}{' ' * min_spacing}"
+        result.append(format_str.format(*[item for pair in row_items for item in pair]))
+
+    return "\n".join(result)

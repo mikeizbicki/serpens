@@ -17,7 +17,6 @@ import retro
 from Mundus.Audio import *
 from Mundus.Wrappers import *
 from Mundus.Zelda import *
-from Mundus.ZeldaOld import ZeldaWrapperOld
 
 
 # pyglet doesn't seem to have a map built-in for converting keycodes to names;
@@ -311,13 +310,7 @@ def main():
             inttype=retro.data.Integrations.ALL,
             use_restricted_actions=retro.Actions.ALL,
             )
-    if 'ZeldaOld' in args.game:
-        env = ZeldaWrapperOld(
-                env,
-                no_render_skipped_frames=args.no_render_skipped_frames,
-                skip_boring_frames=not args.allframes,
-                )
-    elif 'Zelda' in args.game:
+    if 'Zelda' in args.game:
         env = ZeldaWrapper(
                 env,
                 stdout_debug=not args.no_alternate_screen,

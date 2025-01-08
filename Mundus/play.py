@@ -152,7 +152,7 @@ class Interactive(gymnasium.Wrapper):
                     keys_pressed_this_frame.extend(keynames)
             self._key_previous_states[keycode] = pressed
 
-        # handle meta-actions
+        # handle meta-actions that affect the emulator environment
         manual_reward = 0
         lang_input = None
         for name in keys_pressed_this_frame:
@@ -165,39 +165,13 @@ class Interactive(gymnasium.Wrapper):
                 logging.debug(f"self.get_maxfps()={self.get_maxfps()}")
 
             if name == 'SPACE':
-                def set_ram(d):
-                    arr = []
-                    state = self.unwrapped.em.get_state()
-                    prev_i = 0
-                    for k, v in sorted(d.items()):
-                        arr.append(state[prev_i:93+k])
-                        arr.append(v.to_bytes(1, 'big'))
-                        prev_i = k + 93 + 1
-                    arr.append(state[prev_i:-1])
-                    state = b''.join(arr)
-                    self.unwrapped.em.set_state(state)
-                def set_ram(k, v):
-                    newstate = v.to_bytes(1, 'big')
-                    state = self.unwrapped.em.get_state()
-                    state = state[:k+93] + newstate + state[k+93+len(newstate):]
-                    self.unwrapped.em.set_state(state)
-                    # >>> newstate = b'\x10'; state = self.unwrapped.unwrapped.em.get_state(); state = state[:112+93]+newstate+state[112+93+len(newstate):]; self.unwrapped.unwrapped.em.set_state(state)
-
-                def save_state(statename):
-                    filename = f'custom_integrations/Zelda-Nes/{statename}.state'
-                    import gzip
-                    with gzip.open(filename, 'wb') as f:
-                        f.write(self.unwrapped.em.get_state())
-                def load_state(statename):
-                    filename = f'custom_integrations/Zelda-Nes/{statename}.state'
-                    import gzip
-                    with gzip.open(filename, 'rb') as f:
-                        self.unwrapped.em.set_state(f.read())
+                # NOTE:
+                # See the "MARK: debug code" section of ZeldaWrapper
+                # for useful functions to run once in the repl.
                 import readline
                 import code
                 code.interact(local=locals())
                 self.action_override = prev_action_override
-                #newstate = b'\x00'*88; state = self.unwrapped.unwrapped.em.get_state(); state = state[:14657]+newstate+state[14657+len(newstate):]; self.unwrapped.unwrapped.em.set_state(state)
 
         for name in keys_pressed:
             if name == 'MINUS':

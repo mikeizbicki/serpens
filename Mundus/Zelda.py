@@ -100,12 +100,11 @@ class RetroWithRam(gymnasium.Wrapper):
         return obs, info
 
 
-# non-hex numbers are for underworld
-ignore_tile_set = [0x26, 0x24, 0x76, 126, 104, 116]
-
 class ZeldaWrapper(RetroWithRam):
     '''
+    Wrapper for extracting useful info from the RAM of original NES Zelda.
     '''
+
     def __init__(
             self,
             env,
@@ -340,7 +339,7 @@ class ZeldaWrapper(RetroWithRam):
                     y = newindex[1] * 16 + 56 + 8 - 3
                     self.mouse = {'x': x, 'y': y}
                 elif mode == 'passable_tile':
-                    indexes = np.argwhere(np.isin(tiles, ignore_tile_set))
+                    indexes = np.argwhere(np.isin(tiles, self.ignore_tile_set))
                     if len(indexes) > 0:
                         newindex = random.choice(indexes)
                         x = newindex[0] * 16 
@@ -379,8 +378,8 @@ class ZeldaWrapper(RetroWithRam):
         self.stepcount = 0
         obs, info = super().reset(**kwargs)
         # FIXME: randomly initializing link's position should be behind a flag
-        self._random_link_position()
-        self._random_enemy_position()
+        self._set_random_link_position()
+        self._set_random_enemy_positions()
         return self.observation_space.sample(), info
 
     def step(self, action):
@@ -489,35 +488,6 @@ class ZeldaWrapper(RetroWithRam):
 
         # return step results
         return observation, reward, terminated, truncated, info
-
-    def _set_mem(self, assignment_dict):
-        '''
-        Change the values of memory.
-        The input `assignment_dict` has keys as memory addresses and values as integers between 0-255.
-        '''
-        offset = 93
-        i0 = 0
-        chunks = []
-        state = self.env.em.get_state()
-        for k, v in sorted(assignment_dict.items()):
-            assert v >= 0 and v <= 255
-            i = k + offset
-            chunks.append(state[i0:i] + bytes([v]))
-            i0 = i + 1
-        chunks.append(state[i0:])
-        state1 = b''.join(chunks)
-        self.env.em.set_state(state1)
-
-        # NOTE:
-        # if the state update is malformed for some reason,
-        # then the state won't update;
-        # this simple assert checks that the state update actually happened;
-        # it might be too slow for an inner loop or interfere with a long training run;
-        # so it should probably be put behind a flag
-        if True:
-            state = self.env.em.get_state()
-            for k, v in assignment_dict.items():
-                assert state[k+offset] == v
 
     def generate_knowledge_base(self, include_background=True):
         '''
@@ -704,7 +674,7 @@ class ZeldaWrapper(RetroWithRam):
                         item['state'] = tiles[x, y]
                         item['direction'] = 0
                         item['health'] = 0
-                        if tiles[x, y] not in ignore_tile_set:
+                        if tiles[x, y] not in self.ignore_tile_set:
                             kb[f'tile_{x:0>2d}_{y:0>2d}'] = item
                         prefix = '*'
                     else:
@@ -712,7 +682,7 @@ class ZeldaWrapper(RetroWithRam):
                     if (x, y) == (link_tile_x, link_tile_y):
                         mapstr += prefix + '# '
                     else:
-                        if tiles[x, y] in ignore_tile_set:
+                        if tiles[x, y] in self.ignore_tile_set:
                             mapstr += prefix + '  '
                         else:
                             mapstr += prefix + f'{hex(tiles[x, y])[2:]:2}'
@@ -747,6 +717,18 @@ class ZeldaWrapper(RetroWithRam):
 
         return kb
 
+    # FIXME:
+    # Zelda has two tilemaps, one for the overworld and one for the underworld.
+    # Each tile is represented as a single byte.
+    # The overworld and underworld have different sets of passable tiles,
+    # and only a small set of passable tiles is listed below.
+    # These should be expanded to the full set,
+    # and the code should be adjusted to be aware of if it's in over/underworld.
+    # The lists below is a small list where the passable tiles seem compatible in both situations and capture most of the information.
+    passable_tiles_overworld = [0x24, 0x26, 0x76]
+    passable_tiles_underworld = [0x68, 0x74, 0x7e]
+    ignore_tile_set = passable_tiles_overworld + passable_tiles_underworld
+
     def _get_subtiles(self):
         # The screen is divided into an 11x16 grid,
         # and each tile is divided into 2x2 subtiles;
@@ -766,22 +748,79 @@ class ZeldaWrapper(RetroWithRam):
 
         return subtiles
     
-    def _random_link_position(self):
+    ########################################
+    # MARK: debug code
+    ########################################
+
+    def save_state(statename):
+        '''
+        Create a file that stores the emulator's state.
+        The file is gzip compressed so that it is compatible with being loaded directly in gym-retro.
+        '''
+        filename = f'custom_integrations/Zelda-Nes/{statename}.state'
+        import gzip
+        with gzip.open(filename, 'wb') as f:
+            f.write(self.unwrapped.em.get_state())
+
+    def load_state(statename):
+        '''
+        Load a state file.
+        This is useful for debuging purposes to load in the middle of a game run.
+        '''
+        filename = f'custom_integrations/Zelda-Nes/{statename}.state'
+        import gzip
+        with gzip.open(filename, 'rb') as f:
+            self.unwrapped.em.set_state(f.read())
+
+    ########################################
+    # MARK: change game state
+    ########################################
+
+    def _set_mem(self, assignment_dict):
+        '''
+        Change the values of memory.
+        The input `assignment_dict` has keys as memory addresses and values as integers between 0-255.
+        '''
+        offset = 93
+        i0 = 0
+        chunks = []
+        state = self.env.em.get_state()
+        for k, v in sorted(assignment_dict.items()):
+            assert v >= 0 and v <= 255
+            i = k + offset
+            chunks.append(state[i0:i] + bytes([v]))
+            i0 = i + 1
+        chunks.append(state[i0:])
+        state1 = b''.join(chunks)
+        self.env.em.set_state(state1)
+
+        # NOTE:
+        # if the state update is malformed for some reason,
+        # then the state won't update;
+        # this simple assert checks that the state update actually happened;
+        # it might be too slow for an inner loop or interfere with a long training run;
+        # so it should probably be put behind a flag
+        if True:
+            state = self.env.em.get_state()
+            for k, v in assignment_dict.items():
+                assert state[k+offset] == v
+
+    def _set_random_link_position(self):
         subtiles = self._get_subtiles()
         valid_positions = []
         for x in range(32):
             for y in range(22):
-                if subtiles[x, y] in ignore_tile_set:
+                if subtiles[x, y] in self.ignore_tile_set:
                     valid_positions.append([x*8-8, y*8+56])
         position = self.random.choice(valid_positions)
         self._set_mem({112: position[0], 132: position[1]})
 
-    def _random_enemy_position(self):
+    def _set_random_enemy_positions(self):
         subtiles = self._get_subtiles()
         valid_positions = []
         for x in range(32):
             for y in range(22):
-                if subtiles[x, y] in ignore_tile_set:
+                if subtiles[x, y] in self.ignore_tile_set:
                     valid_positions.append([x*8-8, y*8+64-8])
         positions = random.sample(valid_positions, 6)
 
@@ -801,7 +840,6 @@ class ZeldaWrapper(RetroWithRam):
                     })
 
         self._set_mem(update_dict)
-
 
     ########################################
     # MARK: reward functions
@@ -1007,7 +1045,9 @@ class ZeldaActionSpace(gymnasium.ActionWrapper):
         return self._decode_discrete_action[action].copy()
 
 
-
+################################################################################
+# MARK: utils
+################################################################################
 
 import shutil
 from typing import Dict, Any

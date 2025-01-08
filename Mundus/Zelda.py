@@ -18,6 +18,38 @@ from gymnasium import spaces
 from Mundus.Object import *
 
 
+def make_zelda_env(
+        actions=retro.Actions.ALL,
+        render_mode='human',
+        **kwargs):
+    '''
+    Create a Zelda environment.
+
+    NOTE:
+    I've arranged everything into a single function here
+    to avoid inconsistencies between the train/play code that were happening.
+    This style doesn't follow the standard for stable-retro,
+    and could probably be improved.
+    '''
+    custom_path = os.path.join(os.getcwd(), 'custom_integrations')
+    retro.data.Integrations.add_custom_path(custom_path)
+    env = retro.make(
+            game='Zelda-Nes',
+            inttype=retro.data.Integrations.ALL,
+            state='overworld_07',
+            render_mode=render_mode,
+
+            # FIXME:
+            # We should think a bit more carefully about this choice.
+            # There are tradeoffs for generalization efficiency and the InteractiveWrapper.
+            #use_restricted_actions=retro.Actions.ALL,
+            #use_restricted_actions=retro.Actions.DISCRETE,
+            use_restricted_actions=actions,
+            )
+    env = ZeldaWrapper(env, **kwargs)
+    return env
+
+
 class RewardExtractor(BaseFeaturesExtractor):
     def __init__(
         self,
@@ -473,17 +505,25 @@ class ZeldaWrapper(RetroWithRam):
                 _gamestate_is_drawing_text(self.ram),
                 _gamestate_is_cave_enter(self.ram),
                 _gamestate_is_inventory_scroll(self.ram),
-                _gamestate_hearts(self.ram) <= 0,
+                #_gamestate_hearts(self.ram) <= 0,
                 _gamestate_is_openning_scene(self.ram),
                 ]):
-                # NOTE: normally we will not press any action to the environment;
+                skipped_frames += 1
+                super().step(action)
+                # FIXME:
+                # the code above does not work for skipping when link has died;
+                # the code below does, but was designed for action_space Actions.ALL;
+                # it hardcodes the button presses and so fails in other action spaces;
+                '''
+                # NOTE:
                 # but if link has died, we need to press the "continue" button;
                 # to do this, we alternate between no action and pressing "start" every frame
-                skipped_frames += 1
-                skipaction = [False]*8
+                # if link has not died, we will not press any action to the environment
+                skipaction = [False]*self.env.action_space.n
                 if _gamestate_hearts(self.ram) <= 0 and skipped_frames%2 == 0:
                     skipaction[3] = True
                 super().step(skipaction)
+                '''
             self.env.render_mode = render_mode
 
         # return step results
@@ -811,7 +851,7 @@ class ZeldaWrapper(RetroWithRam):
         for x in range(32):
             for y in range(22):
                 if subtiles[x, y] in self.ignore_tile_set:
-                    valid_positions.append([x*8-8, y*8+56])
+                    valid_positions.append([x*8, y*8+60])
         position = self.random.choice(valid_positions)
         self._set_mem({112: position[0], 132: position[1]})
 
@@ -821,7 +861,7 @@ class ZeldaWrapper(RetroWithRam):
         for x in range(32):
             for y in range(22):
                 if subtiles[x, y] in self.ignore_tile_set:
-                    valid_positions.append([x*8-8, y*8+64-8])
+                    valid_positions.append([x*8, y*8+60])
         positions = random.sample(valid_positions, 6)
 
         update_dict = {}

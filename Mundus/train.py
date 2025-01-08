@@ -212,8 +212,6 @@ class TensorboardCallback(BaseCallback):
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--game", default="Zelda-Nes")
-    parser.add_argument("--log_tensorboard", default='log_tensorboard')
 
     debug = parser.add_argument_group('debug')
     debug.add_argument("--log_dir", default='log')
@@ -223,11 +221,11 @@ def main():
     debug.add_argument("--total_timesteps", default=1_000_000_000_000, type=int)
 
     hyperparameters = parser.add_argument_group('hyperparameters')
-    hyperparameters.add_argument('--policy', choices=['MlpPolicy', 'CnnPolicy', 'ObjectCnn'], default=['ObjectCnn'])
+    hyperparameters.add_argument('--policy', choices=['MlpPolicy', 'CnnPolicy', 'ObjectCnn'], default='ObjectCnn')
     hyperparameters.add_argument('--pooling', choices=['lstm', 'mean', 'max'], default='mean')
-    #hyperparameters.add_argument('--task', default='attack')
     hyperparameters.add_argument('--alg', choices=['ppo', 'dqn'], default='ppo')
-    hyperparameters.add_argument('--task', default=None)
+    hyperparameters.add_argument('--task', default='attack')
+    #hyperparameters.add_argument('--task', default=None)
     hyperparameters.add_argument('--state', default='spiders_lowhealth_01*.state')
     hyperparameters.add_argument('--net_arch', type=int, nargs='*', default=[])
     hyperparameters.add_argument('--features_dim', type=int, default=64)
@@ -236,21 +234,17 @@ def main():
     hyperparameters.add_argument('--n_env', type=int, default=3)
     hyperparameters.add_argument('--n_steps', type=int, default=128)
     hyperparameters.add_argument('--batch_size', type=int, default=32)
-    hyperparameters.add_argument('--seed', type=int, default=None)
+    hyperparameters.add_argument('--seed', type=int, default=0)
     hyperparameters.add_argument('--warmstart', default=None)
 
     args = parser.parse_args()
-
-    # set seed
-    if args.seed is None:
-        args.seed = int(time.time()*10_000_000) % 2**32
 
     # set logging level
     import logging
     logging.basicConfig()
     logging.getLogger().setLevel(logging.INFO)
 
-    # experiment name
+    # set experiment name
     import datetime
     starttime = datetime.datetime.now().isoformat()
 
@@ -262,31 +256,27 @@ def main():
     experiment_name = ''
     if args.comment is not None:
         experiment_name = args.comment + '--'
-    experiment_name += f'task={args.task},state={args.state},policy={args.policy}{policy_params},net_arch={arch_string},{args.features_dim},alg={args.alg},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps},batch_size={args.batch_size}'
+    experiment_name += f'task={args.task},state={args.state},policy={args.policy}{policy_params},net_arch={arch_string},{args.features_dim},alg={args.alg},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps},batch_size={args.batch_size},seed={args.seed}'
     logging.info(f'experiment_name: [{experiment_name}]')
 
     # create the environment
-    def make_env(render_mode):
-        custom_path = os.path.join(os.getcwd(), 'custom_integrations')
-        retro.data.Integrations.add_custom_path(custom_path)
-        env = retro.make(
-                game=args.game,
-                inttype=retro.data.Integrations.ALL,
-                state='overworld_07',
-                render_mode=render_mode,
-                use_restricted_actions=retro.Actions.DISCRETE,
-                )
-        env = ZeldaWrapper(
-                env,
-                skip_boring_frames=False,
+    def make_env(seed):
+        env = make_zelda_env(
+                #actions=retro.Actions.ALL,
+                #actions=retro.Actions.DISCRETE,
+                actions=retro.Actions.FILTERED,
+                #actions=retro.Actions.MULTI_DISCRETE,
+                render_mode=args.render_mode,
+                skip_boring_frames=True,
                 task=args.task,
+                seed=seed,
                 )
         env = TimeLimit(env, max_episode_steps=30*60*5)
-        env = StochasticFrameSkip(env, 4, 0.25)
-        env = RandomStateReset(env, path='custom_integrations/'+args.game, globstr=args.state)
+        env = StochasticFrameSkip(env, 4, 0.25, seed=seed)
+        env = RandomStateReset(env, path='custom_integrations/Zelda-Nes', globstr=args.state, seed=seed)
         return env
 
-    train_env = SubprocVecEnv([lambda: make_env(render_mode=args.render_mode)] * args.n_env)
+    train_env = SubprocVecEnv([lambda: make_env(seed*1234567890) for seed in range(args.n_env)])
     train_env = VecMonitor(train_env)
     train_env.reset()
 

@@ -33,12 +33,12 @@ class StochasticFrameSkip(gymnasium.Wrapper):
     '''
     Taken from <https://stable-retro.farama.org/>.
     '''
-    def __init__(self, env, n, stickprob):
+    def __init__(self, env, n, stickprob, seed=None):
         gymnasium.Wrapper.__init__(self, env)
         self.n = n
         self.stickprob = stickprob
         self.curac = None
-        self.rng = np.random.RandomState()
+        self.rng = np.random.RandomState(seed=seed)
         self.supports_want_render = False #hasattr(env, "supports_want_render")
 
     def reset(self, **kwargs):
@@ -106,8 +106,9 @@ class RandomStateReset(gymnasium.Wrapper):
     This is useful when all the predefined states have some bias on what good behavior is,
     and starting at random states can smooth over that bias.
     '''
-    def __init__(self, env, path, globstr=None):
+    def __init__(self, env, path, globstr=None, seed=None):
         super().__init__(env)
+        self.random = random.Random(seed)
         self.path = path
         if globstr:
             self.globstr = globstr
@@ -115,7 +116,7 @@ class RandomStateReset(gymnasium.Wrapper):
     def reset(self, **kwargs):
         results = super().reset(**kwargs)
         states = [os.path.basename(filepath).split('.')[0] for filepath in glob.glob(self.path + '/' + self.globstr)]
-        newstate = random.choice(states)
+        newstate = self.random.choice(states)
         logging.info(f"newstate={newstate}")
         self.unwrapped.load_state(newstate, inttype=retro.data.Integrations.ALL)
         return results

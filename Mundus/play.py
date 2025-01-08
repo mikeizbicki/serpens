@@ -245,8 +245,6 @@ def main():
     # parse command line args
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--game", default="Zelda-Nes")
-    #parser.add_argument("--game", default="GauntletII-Nes")
     parser.add_argument('--task', default='attack')
     parser.add_argument('--state', default='spiders_lowhealth_01*.state')
     parser.add_argument('--model', default='models/simple_attack.zip')
@@ -277,29 +275,28 @@ def main():
 
     # create the environment
     logging.info('creating environment')
-    custom_path = os.path.join(os.getcwd(), 'custom_integrations')
-    retro.data.Integrations.add_custom_path(custom_path)
-    env = retro.make(
-            game=args.game,
-            inttype=retro.data.Integrations.ALL,
-            use_restricted_actions=retro.Actions.ALL,
+    env = make_zelda_env(
+            actions=retro.Actions.ALL,
+            #actions=retro.Actions.DISCRETE,
+            stdout_debug=not args.no_alternate_screen,
+            no_render_skipped_frames=args.no_render_skipped_frames,
+            skip_boring_frames=not args.allframes,
+            task=args.task,
             )
-    if 'Zelda' in args.game:
-        env = ZeldaWrapper(
-                env,
-                stdout_debug=not args.no_alternate_screen,
-                no_render_skipped_frames=args.no_render_skipped_frames,
-                skip_boring_frames=not args.allframes,
-                task=args.task,
-                )
+    env = Interactive(env)
+    if not args.noaudio:
+        env = PlayAudio(env)
+    #env = StochasticFrameSkip(env, 4, 0.25)
+    env = RandomStateReset(env, path='custom_integrations/Zelda-Nes', globstr=args.state)
+    #env = Whisper(env)
+    #env = ConsoleWrapper(env)
 
     # NOTE:
     # loading the models can cause a large number of warnings;
     # this with block prevents those warnings from being displayed
-    logging.info('loading models')
+    logging.info('loading model')
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-
         from stable_baselines3 import PPO
         custom_objects = {
             'observation_space': env.observation_space,
@@ -307,18 +304,9 @@ def main():
             }
         model = PPO.load(args.model, custom_objects=custom_objects)
 
-    logging.info('apply environment wrappers')
-    env = Interactive(env)
-    if not args.noaudio:
-        env = PlayAudio(env)
-    #env = StochasticFrameSkip(env, 4, 0.25)
-    env = RandomStateReset(env, path='custom_integrations/'+args.game, globstr=args.state)
-    #env = Whisper(env)
-    #env = ConsoleWrapper(env)
-    env.reset()
-    env.reset()
-
     logging.info('begin main loop')
+    env.reset()
+    env.reset()
     try:
         # set the default action
         action = env.action_space.sample() * 0

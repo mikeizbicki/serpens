@@ -249,6 +249,7 @@ def main():
     parser.add_argument('--state', default='spiders_lowhealth_01*.state')
     parser.add_argument('--model', default='models/simple_attack.zip')
     parser.add_argument('--logfile', default='.play.log')
+    parser.add_argument('--action_space', default='DISCRETE')
 
     emulator_settings = parser.add_argument_group('emulator settings')
     emulator_settings.add_argument('--no_render_skipped_frames', action='store_true')
@@ -276,8 +277,9 @@ def main():
     # create the environment
     logging.info('creating environment')
     env = make_zelda_env(
-            actions=retro.Actions.ALL,
-            #actions=retro.Actions.DISCRETE,
+            # FIXME:
+            # the action_space should be loaded automatically from the model
+            action_space=args.action_space,
             stdout_debug=not args.no_alternate_screen,
             no_render_skipped_frames=args.no_render_skipped_frames,
             skip_boring_frames=not args.allframes,

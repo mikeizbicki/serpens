@@ -19,7 +19,7 @@ from Mundus.Object import *
 
 
 def make_zelda_env(
-        actions=retro.Actions.ALL,
+        action_space='all',
         render_mode='human',
         **kwargs):
     '''
@@ -31,22 +31,37 @@ def make_zelda_env(
     This style doesn't follow the standard for stable-retro,
     and could probably be improved.
     '''
+
+    # set the folder where retro.make() looks for ROMs
     custom_path = os.path.join(os.getcwd(), 'custom_integrations')
     retro.data.Integrations.add_custom_path(custom_path)
+
+    if action_space == 'DISCRETE':
+        use_restricted_actions = retro.Actions.DISCRETE
+    elif action_space == 'MULTI_DISCRETE':
+        use_restricted_actions = retro.Actions.MULTI_DISCRETE
+    elif action_space == 'MULTI_DISCRETE':
+        use_restricted_actions = retro.Actions.MULTI_DISCRETE
+    else:
+        use_restricted_actions = retro.Actions.ALL
+
+    # create the environment
     env = retro.make(
             game='Zelda-Nes',
             inttype=retro.data.Integrations.ALL,
             state='overworld_07',
             render_mode=render_mode,
-
-            # FIXME:
-            # We should think a bit more carefully about this choice.
-            # There are tradeoffs for generalization efficiency and the InteractiveWrapper.
-            #use_restricted_actions=retro.Actions.ALL,
-            #use_restricted_actions=retro.Actions.DISCRETE,
-            use_restricted_actions=actions,
+            use_restricted_actions=use_restricted_actions,
             )
     env = ZeldaWrapper(env, **kwargs)
+
+    # apply zelda-specific action space
+    if 'zelda-' in action_space:
+        kind = action_space.split('-')[1]
+        env = ZeldaActionSpace(env, kind)
+
+    logging.debug(f"env.action_space={env.action_space}")
+    logging.debug(f"env.action_space.n={getattr(env.action_space, 'n', None)}")
     return env
 
 
@@ -1047,17 +1062,16 @@ class ZeldaActionSpace(gymnasium.ActionWrapper):
                         ['UP', 'LEFT', 'B'], ['UP', 'RIGHT', 'B'], ['DOWN', 'LEFT', 'B'], ['DOWN', 'RIGHT', 'B']
                         ]
 
-        num_action_space = 4
-        if kind != 'move-only':
-            num_action_space += 4
+        if kind == 'move':
+            num_action_space = 4
+        elif kind == 'moveA':
+            num_action_space = 8
+        elif kind == 'moveAB':
+            num_action_space = 12
+        else:
+            num_action_space = 16
 
-        if kind in ('directional-item', 'diagonal-item', 'all'):
-            num_action_space += 4
-
-        if kind in ('diagonal-item', 'all'):
-            num_action_space += 4
-
-        assert isinstance(env.action_space, gym.spaces.MultiBinary)
+        assert isinstance(env.action_space, gymnasium.spaces.MultiBinary)
 
         self.button_count = env.action_space.n
         self.buttons = env.unwrapped.buttons
@@ -1071,7 +1085,7 @@ class ZeldaActionSpace(gymnasium.ActionWrapper):
 
             self._decode_discrete_action.append(arr)
 
-        self.action_space = gym.spaces.Discrete(num_action_space)
+        self.action_space = gymnasium.spaces.Discrete(num_action_space)
 
     def action(self, action):
         if isinstance(action, list) and len(action) and isinstance(action[0], str):

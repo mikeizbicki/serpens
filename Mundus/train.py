@@ -236,6 +236,7 @@ def main():
     hyperparameters.add_argument('--batch_size', type=int, default=32)
     hyperparameters.add_argument('--seed', type=int, default=0)
     hyperparameters.add_argument('--warmstart', default=None)
+    hyperparameters.add_argument('--action_space', default='DISCRETE')
 
     args = parser.parse_args()
 
@@ -256,16 +257,13 @@ def main():
     experiment_name = ''
     if args.comment is not None:
         experiment_name = args.comment + '--'
-    experiment_name += f'task={args.task},state={args.state},policy={args.policy}{policy_params},net_arch={arch_string},{args.features_dim},alg={args.alg},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps},batch_size={args.batch_size},seed={args.seed}'
-    logging.info(f'experiment_name: [{experiment_name}]')
+    experiment_name += f'task={args.task},action_space={args.action_space},state={args.state},policy={args.policy}{policy_params},net_arch={arch_string},{args.features_dim},alg={args.alg},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps},batch_size={args.batch_size},seed={args.seed}'
+    logging.info(f'experiment_name: "{experiment_name}"')
 
     # create the environment
     def make_env(seed):
         env = make_zelda_env(
-                #actions=retro.Actions.ALL,
-                #actions=retro.Actions.DISCRETE,
-                actions=retro.Actions.FILTERED,
-                #actions=retro.Actions.MULTI_DISCRETE,
+                action_space=args.action_space,
                 render_mode=args.render_mode,
                 skip_boring_frames=True,
                 task=args.task,

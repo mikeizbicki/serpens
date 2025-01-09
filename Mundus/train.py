@@ -276,7 +276,11 @@ def main():
         env = RandomStateReset(env, path='custom_integrations/Zelda-Nes', globstr=args.state, seed=seed)
         return env
 
-    train_env = SubprocVecEnv([lambda: make_env(seed*1234567890) for seed in range(args.n_env)])
+    # NOTE:
+    # we use a simple LCG to generate non-sequential seeds for each environment;
+    # this ensures that changing args.seed=0 to args.seed=1 doesn't result in many
+    # environments with duplicate seeds
+    train_env = SubprocVecEnv([lambda: make_env((seed*134775813+1)%(2**31)) for seed in range(args.n_env)])
     train_env = VecMonitor(train_env)
     train_env.reset()
 

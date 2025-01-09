@@ -859,23 +859,26 @@ class ZeldaWrapper(RetroWithRam):
             for k, v in assignment_dict.items():
                 assert state[k+offset] == v
 
-    def _set_random_link_position(self):
+    def _set_random_link_position(self, choice=None):
         subtiles = self._get_subtiles()
         valid_positions = []
         for x in range(32):
-            for y in range(22):
+            for y in range(1, 22):
                 if subtiles[x, y] in self.ignore_tile_set:
-                    valid_positions.append([x*8, y*8+60])
-        position = self.random.choice(valid_positions)
+                    valid_positions.append([x*8, y*8+60-8])
+        if choice is None:
+            position = self.random.choice(valid_positions)
+        else:
+            position = valid_positions[choice]
         self._set_mem({112: position[0], 132: position[1]})
 
     def _set_random_enemy_positions(self):
         subtiles = self._get_subtiles()
         valid_positions = []
         for x in range(32):
-            for y in range(22):
+            for y in range(1, 22):
                 if subtiles[x, y] in self.ignore_tile_set:
-                    valid_positions.append([x*8, y*8+60])
+                    valid_positions.append([x*8, y*8+60-8])
         positions = random.sample(valid_positions, 6)
 
         update_dict = {}

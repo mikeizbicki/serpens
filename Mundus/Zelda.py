@@ -505,25 +505,24 @@ class ZeldaWrapper(RetroWithRam):
                 _gamestate_is_drawing_text(self.ram),
                 _gamestate_is_cave_enter(self.ram),
                 _gamestate_is_inventory_scroll(self.ram),
-                #_gamestate_hearts(self.ram) <= 0,
+                _gamestate_hearts(self.ram2) <= 0,
                 _gamestate_is_openning_scene(self.ram),
                 ]):
                 skipped_frames += 1
-                super().step(action)
+                #super().step(action)
                 # FIXME:
                 # the code above does not work for skipping when link has died;
                 # the code below does, but was designed for action_space Actions.ALL;
                 # it hardcodes the button presses and so fails in other action spaces;
-                '''
                 # NOTE:
                 # but if link has died, we need to press the "continue" button;
                 # to do this, we alternate between no action and pressing "start" every frame
                 # if link has not died, we will not press any action to the environment
-                skipaction = [False]*self.env.action_space.n
-                if _gamestate_hearts(self.ram) <= 0 and skipped_frames%2 == 0:
+                skipaction = action
+                if _gamestate_hearts(self.ram2) <= 0 and skipped_frames%2 == 0:
+                    skipaction = [False] * self.env.action_space.n
                     skipaction[3] = True
                 super().step(skipaction)
-                '''
             self.env.render_mode = render_mode
 
         # return step results

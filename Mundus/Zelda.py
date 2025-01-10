@@ -135,9 +135,12 @@ class RetroWithRam(gymnasium.Wrapper):
         self.ram2 = None
         self.ram = self._IntLookup(self.env.get_ram())
 
-    def step(self, action):
+    def _update_ram(self):
         self.ram2 = self.ram
         self.ram = self._IntLookup(self.env.get_ram())
+
+    def step(self, action):
+        self._update_ram()
         return super().step(action)
 
     def reset(self, **kwargs):
@@ -466,10 +469,12 @@ class ZeldaWrapper(RetroWithRam):
         info['task_success_' + self.episode_task] = task['is_success'](self.ram)
         info['task_count_' + self.episode_task] = 1
 
-        observation = {
+        rewards_array = np.array([v for k, v in sorted(summary_dict.items())])
+        rewards_array = np.clip(rewards_array, -1, 1)
+        modified_observation = {
             'objects_discrete': kb_obs['objects_discrete'],
-            'objects_continuous': kb_obs['objects_continuous'],
-            'rewards': [v for k, v in sorted(summary_dict.items())]
+            'objects_continuous': np.clip(kb_obs['objects_continuous'], -1, 1),
+            'rewards': rewards_array,
             }
 
         # render the environment
@@ -541,7 +546,7 @@ class ZeldaWrapper(RetroWithRam):
             self.env.render_mode = render_mode
 
         # return step results
-        return observation, reward, terminated, truncated, info
+        return modified_observation, reward, terminated, truncated, info
 
     def generate_knowledge_base(self, include_background=True):
         '''
@@ -779,7 +784,7 @@ class ZeldaWrapper(RetroWithRam):
     # These should be expanded to the full set,
     # and the code should be adjusted to be aware of if it's in over/underworld.
     # The lists below is a small list where the passable tiles seem compatible in both situations and capture most of the information.
-    passable_tiles_overworld = [0x24, 0x26, 0x76]
+    passable_tiles_overworld = [0x24, 0x26, 0x76, 0x84]
     passable_tiles_underworld = [0x68, 0x74, 0x7e]
     ignore_tile_set = passable_tiles_overworld + passable_tiles_underworld
 
@@ -858,6 +863,70 @@ class ZeldaWrapper(RetroWithRam):
             state = self.env.em.get_state()
             for k, v in assignment_dict.items():
                 assert state[k+offset] == v
+
+    def _set_buttons(self, buttons):
+        mask = [1 if button in buttons else 0 for button in self.unwrapped.buttons]
+        masp = np.array(mask, dtype=np.uint8)
+        self.unwrapped.em.set_button_mask(mask, 0)
+
+    def _set_map_coordinates_eb(self, eb):
+        '''
+        The RAM position 0xEB stores the screen coordinates.
+        (Y-axis is the high nibble with max of 7, X-axis is the low nibble.)
+        Setting 0xEB directly causes strange behavior.
+        So our strategy is to:
+        compute how many screens left/right and up/down we need to move;
+        then perform the screen transitions with the _move_map() function.
+        '''
+        x0 = eb % 0x10
+        x1 = self.ram[0xEB] % 0x10
+        for i in range(x1 - x0):
+            self._move_map('LEFT')
+        for i in range(x0 - x1):
+            self._move_map('RIGHT')
+
+        y0 = eb // 0x10
+        y1 = self.ram[0xEB] // 0x10
+        for i in range(y0 - y1):
+            self._move_map('DOWN')
+        for i in range(y1 - y0):
+            self._move_map('UP')
+
+    def _move_map(self, direction):
+        '''
+        Scroll the map in the specified direction.
+        This function first teleports link to the edge of the screen,
+        and then presses the corresponding button to trigger the screen transition.
+        '''
+
+        # move link to edge of screen
+        if direction == 'LEFT':
+            self._set_mem({112: 0, 132: 140})
+        elif direction == 'RIGHT':
+            self._set_mem({112: 240, 132: 140})
+        elif direction == 'UP':
+            self._set_mem({112: 120, 132: 61})
+        elif direction == 'DOWN':
+            self._set_mem({112: 120, 132: 221})
+        else:
+            raise ValueError(f'direction={direction}')
+
+        # walk through edge
+        for i in range(10):
+            self._set_buttons([direction])
+            self.env.em.step()
+            self.env.data.update_ram()
+            self._update_ram()
+
+        # skip until frame transition done
+        while _gamestate_is_screen_scrolling(self.ram):
+            self.env.em.step()
+            self.env.data.update_ram()
+            self._update_ram()
+
+        # after switching screens, link might be inside a wall;
+        # so we move him to a random position
+        self._set_random_link_position()
 
     def _set_random_link_position(self, choice=None):
         subtiles = self._get_subtiles()

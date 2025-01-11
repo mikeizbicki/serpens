@@ -13,7 +13,6 @@ import pprint
 import torch
 import retro
 import gymnasium
-from stable_baselines3.common.type_aliases import TensorDict
 from gymnasium import spaces
 from Mundus.Object import *
 
@@ -94,7 +93,9 @@ class RewardExtractor(BaseFeaturesExtractor):
         dim_reward = get_flattened_obs_dim(observation_space['rewards'])
         self._features_dim = dim_objects + dim_reward
 
-    def forward(self, observations: TensorDict) -> torch.Tensor:
+    #from stable_baselines3.common.type_aliases import TensorDict
+    #def forward(self, observations: TensorDict) -> torch.Tensor:
+    def forward(self, observations):
         encoded_tensor_list = [
                 self.extractors['objects']({
                     'objects_discrete': observations['objects_discrete'],

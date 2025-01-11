@@ -4,7 +4,6 @@ import gymnasium
 import torch
 import torch.nn as nn
 from gymnasium import spaces
-from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 
 class LSTMPool(torch.nn.LSTM):
@@ -25,6 +24,8 @@ class MeanPool(torch.nn.Module):
         out = torch.mean(x, 2)
         return out
 
+#from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+BaseFeaturesExtractor = object
 class ObjectCnn(BaseFeaturesExtractor):
     def __init__(
         self,

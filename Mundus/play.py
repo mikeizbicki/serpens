@@ -299,12 +299,13 @@ def main():
     logging.info('loading model')
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        from stable_baselines3 import PPO
-        custom_objects = {
-            'observation_space': env.observation_space,
-            'action_space': env.action_space,
-            }
-        model = PPO.load(args.model, custom_objects=custom_objects)
+        #from stable_baselines3 import PPO
+        #custom_objects = {
+            #'observation_space': env.observation_space,
+            #'action_space': env.action_space,
+            #}
+        #model = PPO.load(args.model, custom_objects=custom_objects)
+        model = None
 
     logging.info('begin main loop')
     env.reset()

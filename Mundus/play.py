@@ -304,7 +304,8 @@ def main():
             'observation_space': env.observation_space,
             'action_space': env.action_space,
             }
-        model = PPO.load(args.model, custom_objects=custom_objects)
+        model = None
+        #model = PPO.load(args.model, custom_objects=custom_objects)
 
     logging.info('begin main loop')
     env.reset()

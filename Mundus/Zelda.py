@@ -144,6 +144,7 @@ class RetroWithRam(gymnasium.Wrapper):
         return super().step(action)
 
     def reset(self, **kwargs):
+        self.ram = self.env.get_ram()
         obs, info = super().reset(**kwargs)
         self.ram2 = None
         self.ram = self.env.get_ram()
@@ -428,6 +429,7 @@ class ZeldaWrapper(RetroWithRam):
         self.stepcount = 0
         obs, info = super().reset(**kwargs)
         # FIXME: randomly initializing link's position should be behind a flag
+        self._set_map_coordinates_eb(self.random.randint(1, 0x80))
         self._set_random_link_position()
         self._set_random_enemy_positions()
         return self.observation_space.sample(), info
@@ -879,14 +881,14 @@ class ZeldaWrapper(RetroWithRam):
         then perform the screen transitions with the _move_map() function.
         '''
         x0 = eb % 0x10
-        x1 = self.ram[0xEB] % 0x10
+        x1 = int(self.ram[0xEB]) % 0x10
         for i in range(x1 - x0):
             self._move_map('LEFT')
         for i in range(x0 - x1):
             self._move_map('RIGHT')
 
         y0 = eb // 0x10
-        y1 = self.ram[0xEB] // 0x10
+        y1 = int(self.ram[0xEB]) // 0x10
         for i in range(y0 - y1):
             self._move_map('DOWN')
         for i in range(y1 - y0):

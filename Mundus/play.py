@@ -185,13 +185,13 @@ class Interactive(gymnasium.Wrapper):
                 logging.debug(f"manual_reward={manual_reward}")
 
         # perform the action
+        # FIXME:
+        # this code only works for the ALL action space
         if self._key_handler.get(keycodes.ESCAPE):
             self.action_override = False
         if self.action_override:
             action = self.keys_to_act(keys_pressed)
-        #print(f"action={action}")
         observation, reward, terminated, truncated, info = super().step(action)
-        #results = (observation, lang_input), reward + manual_reward, terminated, truncated, info
         results = observation, reward + manual_reward, terminated, truncated, info
         self.this_log_reward += reward
         self.total_reward += reward
@@ -210,7 +210,6 @@ class Interactive(gymnasium.Wrapper):
             self.last_log_time = time.time()
             self.frames_since_log = 0
             self.this_log_reward = 0
-
 
         return results
 

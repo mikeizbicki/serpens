@@ -520,37 +520,35 @@ class ZeldaWrapper(RetroWithRam):
 
         # skip the boring frames
         if self.skip_boring_frames:
-
-            # record the environment's render mode so that we can restore it after skipping
-            render_mode = self.env.render_mode
-            if self.no_render_skipped_frames:
-                self.env.render_mode = None
             skipped_frames = 0
-
             while any([
                 _gamestate_is_screen_scrolling(self.ram),
                 _gamestate_is_drawing_text(self.ram),
                 _gamestate_is_cave_enter(self.ram),
                 _gamestate_is_inventory_scroll(self.ram),
-                _gamestate_hearts(self.ram2) <= 0,
+                _gamestate_hearts(self.ram) <= 0,
                 _gamestate_is_openning_scene(self.ram),
                 ]):
                 skipped_frames += 1
-                #super().step(action)
-                # FIXME:
-                # the code above does not work for skipping when link has died;
-                # the code below does, but was designed for action_space Actions.ALL;
-                # it hardcodes the button presses and so fails in other action spaces;
                 # NOTE:
                 # but if link has died, we need to press the "continue" button;
                 # to do this, we alternate between no action and pressing "start" every frame
-                # if link has not died, we will not press any action to the environment
-                skipaction = action
-                if _gamestate_hearts(self.ram2) <= 0 and skipped_frames%2 == 0:
-                    skipaction = [False] * self.env.action_space.n
-                    skipaction[3] = True
-                super().step(skipaction)
-            self.env.render_mode = render_mode
+                # if link has not died, we will not press any action to the environment;
+                # in order to make our button presses compatible with any action_space,
+                # we need to manually set the buttons and step the interpreter;
+                # the code below is very similar to the code in retro.RetroEnv.step()
+
+                skipbuttons = []
+                if _gamestate_hearts(self.ram) <= 0 and skipped_frames%2 == 0:
+                    skipbuttons = ['START']
+                self._set_buttons(skipbuttons)
+
+                self.env.em.step()
+                self.env.data.update_ram()
+                self._update_ram()
+                ob = self.env._update_obs()
+                if self.env.render_mode == "human" and not self.no_render_skipped_frames:
+                    self.env.render()
 
         # return step results
         return modified_observation, reward, terminated, truncated, info

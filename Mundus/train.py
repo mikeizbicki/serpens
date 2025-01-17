@@ -173,7 +173,7 @@ class TensorboardCallback(BaseCallback):
                     if self.num_episodes[i] % self.record_every == 0:
                         self.screens = []
 
-                # record all of the "summary_*" keys within the info dict
+                # record all of the "event_*" keys within the info dict
                 def record_prefix(prefix):
                     keys = [key for key in self.locals['infos'][i].keys() if key.startswith(prefix)]
                     prefixmod = prefix.strip('_')
@@ -181,7 +181,7 @@ class TensorboardCallback(BaseCallback):
                         keymod = key[len(prefix):]
                         self.logger.record_mean(prefixmod+'/'+keymod, self.locals['infos'][i][key], exclude=('stdout',))
 
-                record_prefix('summary_')
+                record_prefix('event_')
                 record_prefix('reward_')
                 record_prefix('task_success_')
                 #record_prefix('task_count_')
@@ -195,7 +195,7 @@ class TensorboardCallback(BaseCallback):
                     self.num_tasks[keymod] += 1
                     self.logger.record(prefixmod+'/'+keymod, self.num_tasks[keymod], exclude=('stdout',))
 
-                #keys = [key for key in self.locals['infos'][i].keys() if key.startswith('summary_')]
+                #keys = [key for key in self.locals['infos'][i].keys() if key.startswith('event_')]
                 #for key in keys:
                     #self.logger.record_mean('summary/'+key, self.locals['infos'][i][key])
                 #keys = [key for key in self.locals['infos'][i].keys() if key.startswith('reward_')]
@@ -221,7 +221,7 @@ def main():
     debug.add_argument("--total_timesteps", default=1_000_000_000_000, type=int)
 
     hyperparameters = parser.add_argument_group('hyperparameters')
-    hyperparameters.add_argument('--policy', choices=['MlpPolicy', 'CnnPolicy', 'ObjectCnn'], default='ObjectCnn')
+    hyperparameters.add_argument('--policy', choices=['ObjectCnn', 'EventExtractor'], default='ObjectCnn')
     hyperparameters.add_argument('--pooling', choices=['lstm', 'mean', 'max'], default='mean')
     hyperparameters.add_argument('--alg', choices=['ppo', 'dqn'], default='ppo')
     hyperparameters.add_argument('--task', default='attack')
@@ -250,14 +250,11 @@ def main():
     starttime = datetime.datetime.now().isoformat()
 
     arch_string = '-'.join([str(i) for i in args.net_arch])
-    policy_params = ''
-    if args.policy == 'ObjectCnn':
-        policy_params = f',pooling={args.pooling}'
 
     experiment_name = ''
     if args.comment is not None:
         experiment_name = args.comment + '--'
-    experiment_name += f'task={args.task},action_space={args.action_space},state={args.state},policy={args.policy}{policy_params},net_arch={arch_string},{args.features_dim},alg={args.alg},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps},batch_size={args.batch_size},seed={args.seed}'
+    experiment_name += f'task={args.task},action_space={args.action_space},state={args.state},policy={args.policy},pooling={args.pooling},net_arch={arch_string},{args.features_dim},alg={args.alg},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps},batch_size={args.batch_size},seed={args.seed}'
     logging.info(f'experiment_name: "{experiment_name}"')
 
     # create the environment
@@ -291,20 +288,18 @@ def main():
             'pooling': args.pooling,
             'features_dim': args.features_dim,
             }
-    elif args.policy == 'RewardsExtractor':
-        policy_kwargs['features_extractor_class'] = RewardExtractor
+    elif args.policy == 'EventExtractor':
+        policy_kwargs['features_extractor_class'] = EventExtractor
         policy_kwargs['features_extractor_kwargs'] = {
-            'pooling': args.pooling,
-            'features_dim': args.features_dim,
+            'ObjectCNN_kwargs': {
+                'pooling': args.pooling,
+                'features_dim': args.features_dim,
+                },
             }
-    if 'Cnn' in args.policy:
-        policy = ActorCriticCnnPolicy
-    else:
-        policy = 'MlpPolicy'
 
     if args.alg == 'ppo':
         model = stable_baselines3.PPO(
-            policy=policy,
+            policy=ActorCriticCnnPolicy,
             env=train_env,
             learning_rate=args.lr,
             n_steps=args.n_steps,

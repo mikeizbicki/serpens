@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 from gymnasium import spaces
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+from stable_baselines3.common.type_aliases import TensorDict
 
 
 class LSTMPool(torch.nn.LSTM):
@@ -96,6 +97,46 @@ class ObjectCnn(BaseFeaturesExtractor):
         ret = self.pool(ret)
         ret = self.linear(ret)
         return ret
+
+
+class EventExtractor(BaseFeaturesExtractor):
+    def __init__(
+        self,
+        observation_space: spaces.Dict,
+        **kwargs,
+    ) -> None:
+        # NOTE:
+        # (this trick is copied from the SB3 MultiPolicy implementation.)
+        # we do not know features_dim here before going over all the items,
+        # so put something there temporarily;
+        # update features_dim later
+        super().__init__(observation_space, features_dim=1)
+
+        object_space = spaces.Dict({
+            'objects_discrete': observation_space['objects_discrete'],
+            'objects_continuous': observation_space['objects_continuous'],
+            })
+        objcnn = ObjectCnn(object_space, **kwargs['ObjectCNN_kwargs'])
+        extractors = {
+            'objects': objcnn,
+            'events': nn.Flatten(),
+            }
+        self.extractors = nn.ModuleDict(extractors)
+
+        # Update the features dim manually
+        from stable_baselines3.common.preprocessing import get_flattened_obs_dim
+        dim_events = get_flattened_obs_dim(observation_space['events'])
+        self._features_dim = objcnn.features_dim + dim_events
+
+    def forward(self, observations: TensorDict) -> torch.Tensor:
+        encoded_tensor_list = [
+                self.extractors['objects']({
+                    'objects_discrete': observations['objects_discrete'],
+                    'objects_continuous': observations['objects_continuous'],
+                    }),
+                self.extractors['events'](observations['events']),
+            ]
+        return torch.cat(encoded_tensor_list, dim=1)
 
 
 class KnowledgeBase:

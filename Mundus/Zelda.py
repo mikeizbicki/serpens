@@ -7,13 +7,12 @@ import random
 import os
 import glob
 import logging
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict, defaultdict, Counter
 import pprint
 
 import torch
 import retro
 import gymnasium
-from stable_baselines3.common.type_aliases import TensorDict
 from gymnasium import spaces
 from Mundus.Object import *
 
@@ -65,46 +64,6 @@ def make_zelda_env(
     return env
 
 
-class RewardExtractor(BaseFeaturesExtractor):
-    def __init__(
-        self,
-        observation_space: spaces.Dict,
-        **kwargs,
-    ) -> None:
-        # NOTE:
-        # (this trick is copied from the SB3 MultiPolicy implementation.)
-        # we do not know features_dim here before going over all the items,
-        # so put something there temoporarily;
-        # update features_dim later
-        super().__init__(observation_space, features_dim=1)
-
-        object_space = spaces.Dict({
-            'objects_discrete': observation_space['objects_discrete'],
-            'objects_continuous': observation_space['objects_continuous'],
-            })
-        extractors = {
-            'objects': ObjectCnn(object_space, **kwargs),
-            'rewards': nn.Flatten(),
-            }
-        self.extractors = nn.ModuleDict(extractors)
-
-        # Update the features dim manually
-        from stable_baselines3.common.preprocessing import get_flattened_obs_dim
-        dim_objects = 64 # FIXME
-        dim_reward = get_flattened_obs_dim(observation_space['rewards'])
-        self._features_dim = dim_objects + dim_reward
-
-    def forward(self, observations: TensorDict) -> torch.Tensor:
-        encoded_tensor_list = [
-                self.extractors['objects']({
-                    'objects_discrete': observations['objects_discrete'],
-                    'objects_continuous': observations['objects_continuous'],
-                    }),
-                self.extractors['rewards'](observations['rewards']),
-            ]
-        return torch.cat(encoded_tensor_list, dim=1)
-
-
 class RetroWithRam(gymnasium.Wrapper):
     '''
     The .get_ram() function is relatively expensive.
@@ -120,6 +79,7 @@ class RetroWithRam(gymnasium.Wrapper):
         '''
         def __init__(self, ram):
             self.ram = ram
+            self.mouse = None
 
         def __getitem__(self, key):
             if isinstance(key, slice):
@@ -156,6 +116,276 @@ class ZeldaWrapper(RetroWithRam):
     Wrapper for extracting useful info from the RAM of original NES Zelda.
     '''
 
+    ########################################
+    # MARK: tasks
+    ########################################
+    tasks = {}
+    tasks['attack'] = {
+        'terminated': [
+            '_ramstate_all_enemies_dead',
+            '_ramstate_link_killed',
+            '_ramstate_is_screen_scrolling',
+            '_ramstate_is_cave_enter',
+            ],
+        'is_success': [
+            '_ramstate_all_enemies_dead',
+            ],
+        'reward': {
+            'link_killed': -2,
+            'link_hit': -1,
+            'enemy_alldead': 2,
+            'screen_scrolling': -2,
+            'screen_cave': -2,
+            'enemy_hit': 1,
+            'enemy_killed': 1,
+            'add_bomb': 1,
+            'add_bombmax': 1,
+            'add_keys': 1,
+            'add_ruppees': 1,
+            'add_clock': 1,
+            'add_heart': 1,
+            'button_push': -0.01,
+            },
+        }
+    tasks['attack'] = {
+        'terminated': [
+            '_ramstate_all_enemies_dead',
+            '_ramstate_link_killed',
+            '_ramstate_is_screen_scrolling',
+            '_ramstate_is_cave_enter',
+            ],
+        'is_success': [
+            '_ramstate_all_enemies_dead',
+            ],
+        'reward': {
+            'link_killed': -2,
+            'link_hit': -1,
+            'enemy_alldead': 2,
+            'screen_scrolling': -2,
+            'screen_cave': -2,
+            'enemy_hit': 1,
+            'enemy_killed': 1,
+            'add_bomb': 1,
+            'add_bombmax': 1,
+            'add_keys': 1,
+            'add_ruppees': 1,
+            'add_clock': 1,
+            'add_heart': 1,
+            'button_push': -0.01,
+            },
+        }
+
+    tasks['onmouse'] = {
+        'terminated': [
+            #_event_link_onmouse(),
+            '_ramstate_link_killed',
+            '_ramstate_is_screen_scrolling',
+            '_ramstate_is_cave_enter',
+            ],
+        'is_success': [
+            #_event_link_onmouse(),
+            ],
+        'reward': {
+            'link_onmouse': 2,
+            'link_l1dist_decrease' : 0.1,
+            'link_l1dist_increase' : -0.1,
+            },
+        }
+    tasks['onmouse2'] = copy.deepcopy(tasks['onmouse'])
+    tasks['onmouse2']['reward']: {
+        'link_onmouse': 2,
+        }
+
+
+    """
+    tasks['noitem'] = copy.deepcopy(tasks['attack'])
+    tasks['noitem']['reward'] = {
+        'add_bomb': -1,
+        'add_clock': -1,
+        'add_heart': -1,
+        'add_keys': -1,
+        'add_ruppees': -1,
+        }
+
+    tasks['noattack'] = copy.deepcopy(tasks['attack'])
+    tasks['noattack']['is_success'] = lambda ram: any([
+        not _ramstate_link_killed(ram),
+        ])
+    tasks['noattack']['reward'] |= {
+        'enemy_hit': -1,
+        'enemy_killed': -1,
+        'enemy_alldead': -1,
+        'add_bomb': -1,
+        'add_clock': -1,
+        'add_heart': -1,
+        'add_keys': -1,
+        'add_ruppees': -1,
+        }
+
+    tasks['screen_cave'] = copy.deepcopy(tasks['noattack'])
+    tasks['screen_cave']['is_success'] = lambda ram:any([
+        _event_screen_cave(),
+        ])
+    tasks['screen_cave']['reward'] |= {
+        'screen_cave': -1,
+        }
+
+    tasks['scroll'] = copy.deepcopy(tasks['noattack'])
+    tasks['scroll']['is_success'] = lambda ram:any([
+        _event_screen_scrolling(),
+        ])
+    tasks['scroll']['reward'] |= {
+        'screen_scrolling': -1,
+        'screen_scrolling_north': -1,
+        'screen_scrolling_south': -1,
+        'screen_scrolling_east': -1,
+        'screen_scrolling_west': -1,
+        }
+
+    tasks['screen_scrolling_north'] = copy.deepcopy(tasks['noattack'])
+    tasks['screen_scrolling_north']['is_success'] = lambda ram:any([
+        _event_screen_scrolling_north(),
+        ])
+    tasks['screen_scrolling_north']['reward'] |= {
+        'screen_scrolling': 0,
+        'screen_scrolling_north': -1,
+        'screen_scrolling_south': 1,
+        'screen_scrolling_east': 1,
+        'screen_scrolling_west': 1,
+        }
+
+    tasks['screen_scrolling_south'] = copy.deepcopy(tasks['noattack'])
+    tasks['screen_scrolling_south']['is_success'] = lambda ram:any([
+        _event_screen_scrolling_south(),
+        ])
+    tasks['screen_scrolling_south']['reward'] |= {
+        'screen_scrolling': 0,
+        'screen_scrolling_north': 1,
+        'screen_scrolling_south': -1,
+        'screen_scrolling_east': 1,
+        'screen_scrolling_west': 1,
+        }
+
+    tasks['screen_scrolling_east'] = copy.deepcopy(tasks['noattack'])
+    tasks['screen_scrolling_east']['is_success'] = lambda ram:any([
+        _event_screen_scrolling_east(),
+        ])
+    tasks['screen_scrolling_east']['reward'] |= {
+        'screen_scrolling': 0,
+        'screen_scrolling_north': 1,
+        'screen_scrolling_south': 1,
+        'screen_scrolling_east': -1,
+        'screen_scrolling_west': 1,
+        }
+
+    tasks['screen_scrolling_west'] = copy.deepcopy(tasks['noattack'])
+    tasks['screen_scrolling_west']['is_success'] = lambda ram:any([
+        _event_screen_scrolling_west(),
+        ])
+    tasks['screen_scrolling_west']['reward'] |= {
+        'screen_scrolling': 0,
+        'screen_scrolling_north': 1,
+        'screen_scrolling_south': 1,
+        'screen_scrolling_east': 1,
+        'screen_scrolling_west': -1,
+        }
+
+    tasks['suicide'] = copy.deepcopy(tasks['attack'])
+    tasks['suicide']['is_success'] = lambda ram: any([
+        _ramstate_link_killed(ram),
+        ])
+    tasks['suicide']['reward'] = {
+        'link_killed': -1,
+        'link_hit': -1,
+        }
+
+    tasks['danger'] = copy.deepcopy(tasks['attack'])
+    tasks['danger']['is_success'] = lambda ram: any([
+        not _ramstate_link_killed(ram),
+        ])
+    tasks['suicide']['reward'] |= {
+        'link_killed': 4,
+        'link_hit': -1,
+        }
+
+    def _step_follow_enemy(self, kb):
+        enemies = []
+        for k in kb.items:
+            if 'enemy' in k:
+                enemies.append(kb.items[k])
+        if len(enemies) == 0:
+            mouse = None
+        else:
+            link = kb.items['link']
+            mouse = {}
+            dist = 9999
+            for i, enemy in enumerate(enemies):
+                newdist = abs(enemy['x'] - link['x']) + abs(enemy['y'] - link['y'])
+                if newdist < dist:
+                    dist = newdist
+                    mouse['x'] = enemy['x']
+                    mouse['y'] = enemy['y']
+    tasks['follow_enemy'] = copy.deepcopy(tasks['follow'])
+    tasks['follow_enemy']['step'] = _step_follow_enemy
+
+    tasks['repel_enemy'] = copy.deepcopy(tasks['follow_enemy'])
+    tasks['repel_enemy']['reward']['link_l1dist'] = -1
+
+    def _step_follow_random(self, kb):
+        #if stepcount%300 == 0:
+        if random.random() < 1/300:
+            if mouse is None or random.random() < 0.2:
+                mode = 'passable_tile'
+            else:
+                mode = 'neighbor'
+            subtiles = ram[0x530+0x800:0x530+0x2c0+0x800].reshape([32,22])
+            tiles = subtiles[::2,::2]
+            if mode == 'neighbor':
+                curx = round(mouse['x'] / 16)
+                cury = round((mouse['y'] - 56 - 8 + 3) / 16)
+                indexes = []
+                if curx > 2:
+                    indexes.append([curx-1, cury])
+                if curx < 14:
+                    indexes.append([curx+1, cury])
+                if cury > 2:
+                    indexes.append([curx, cury-1])
+                if cury < 9:
+                    indexes.append([curx, cury+1])
+                newindex = random.choice(indexes)
+                x = newindex[0] * 16 
+                y = newindex[1] * 16 + 56 + 8 - 3
+                mouse = {'x': x, 'y': y}
+            elif mode == 'passable_tile':
+                indexes = np.argwhere(np.isin(tiles, ignore_tile_set))
+                if len(indexes) > 0:
+                    newindex = random.choice(indexes)
+                    x = newindex[0] * 16 
+                    y = newindex[1] * 16 + 56 + 8 - 3
+                    mouse = {'x': x, 'y': y}
+            elif mode == 'randomxy':
+                x = random.randrange(0, 255) - 8
+                y = random.randrange(60, 240) - 8
+                mouse = {'x': x, 'y': y}
+            else:
+                raise ValueError('should not happen')
+    tasks['follow_random'] = copy.deepcopy(tasks['follow'])
+    #tasks['follow_random']['terminated'] = lambda ram: any([
+            #_ramstate_link_killed(ram),
+            #_ramstate_is_screen_scrolling(ram),
+            #_ramstate_is_cave_enter(ram),
+            #])
+    #tasks['follow_random']['is_success'] = lambda ram: not any([
+            #_ramstate_link_killed(ram),
+            #_ramstate_is_screen_scrolling(ram),
+            #_ramstate_is_cave_enter(ram),
+            #])
+    tasks['follow_random']['step'] = _step_follow_random
+
+    tasks['repel_random'] = copy.deepcopy(tasks['follow_random'])
+    tasks['repel_random']['reward']['link_l1dist'] = -1
+    """
+
     def __init__(
             self,
             env,
@@ -175,10 +405,10 @@ class ZeldaWrapper(RetroWithRam):
         self.no_render_skipped_frames=no_render_skipped_frames
         self.skip_boring_frames = skip_boring_frames 
         self.render_kb = render_kb
-        self.mouse = None
         self.task = task
         self.seed = seed
         self.random = random.Random(self.seed)
+        self.mouse = None
 
         # create a new observation space
         kb = self.generate_knowledge_base()
@@ -186,241 +416,14 @@ class ZeldaWrapper(RetroWithRam):
         self.observation_space = spaces.Dict({
             'objects_discrete': kb_obs['objects_discrete'],
             'objects_continuous': kb_obs['objects_continuous'],
-            'rewards': spaces.Box(-1, 1, [len(self.get_rewards().keys())], np.float16),
+            'events': spaces.Box(-1, 1, [len(self.get_events().keys())], np.float16),
             })
         logging.info(f'self.observation_space.shape={self.observation_space.shape}')
 
-        # define the tasks
-        self.tasks = {}
-        self.tasks['attack'] = {
-            'terminated': lambda ram: any([
-                _gamestate_all_enemies_dead(self.ram),
-                _gamestate_link_killed(self.ram),
-                _gamestate_is_screen_scrolling(self.ram),
-                _gamestate_is_cave_enter(self.ram),
-                ]),
-            'is_success': lambda ram: any([
-                _gamestate_all_enemies_dead(self.ram),
-                ]),
-            'reward': {
-                'link_l1dist': 0,
-                'button_push': 1,
-                },
-            }
-
-        self.tasks['noitem'] = copy.deepcopy(self.tasks['attack'])
-        self.tasks['noitem']['reward'] = {
-            'add_bomb': -1,
-            'add_clock': -1,
-            'add_heart': -1,
-            'add_keys': -1,
-            'add_ruppees': -1,
-            }
-
-        self.tasks['noattack'] = copy.deepcopy(self.tasks['attack'])
-        self.tasks['noattack']['is_success'] = lambda ram: any([
-            not _gamestate_link_killed(self.ram),
-            ])
-        self.tasks['noattack']['reward'] |= {
-            'enemy_hit': -1,
-            'enemy_killed': -1,
-            'enemy_alldead': -1,
-            'add_bomb': -1,
-            'add_clock': -1,
-            'add_heart': -1,
-            'add_keys': -1,
-            'add_ruppees': -1,
-            }
-
-        self.tasks['screen_cave'] = copy.deepcopy(self.tasks['noattack'])
-        self.tasks['screen_cave']['is_success'] = lambda ram:any([
-            self._rewardfunc_screen_cave(),
-            ])
-        self.tasks['screen_cave']['reward'] |= {
-            'screen_cave': -1,
-            }
-
-        self.tasks['scroll'] = copy.deepcopy(self.tasks['noattack'])
-        self.tasks['scroll']['is_success'] = lambda ram:any([
-            self._rewardfunc_screen_scrolling(),
-            ])
-        self.tasks['scroll']['reward'] |= {
-            'screen_scrolling': -1,
-            'screen_scrolling_north': -1,
-            'screen_scrolling_south': -1,
-            'screen_scrolling_east': -1,
-            'screen_scrolling_west': -1,
-            }
-
-        self.tasks['screen_scrolling_north'] = copy.deepcopy(self.tasks['noattack'])
-        self.tasks['screen_scrolling_north']['is_success'] = lambda ram:any([
-            self._rewardfunc_screen_scrolling_north(),
-            ])
-        self.tasks['screen_scrolling_north']['reward'] |= {
-            'screen_scrolling': 0,
-            'screen_scrolling_north': -1,
-            'screen_scrolling_south': 1,
-            'screen_scrolling_east': 1,
-            'screen_scrolling_west': 1,
-            }
-
-        self.tasks['screen_scrolling_south'] = copy.deepcopy(self.tasks['noattack'])
-        self.tasks['screen_scrolling_south']['is_success'] = lambda ram:any([
-            self._rewardfunc_screen_scrolling_south(),
-            ])
-        self.tasks['screen_scrolling_south']['reward'] |= {
-            'screen_scrolling': 0,
-            'screen_scrolling_north': 1,
-            'screen_scrolling_south': -1,
-            'screen_scrolling_east': 1,
-            'screen_scrolling_west': 1,
-            }
-
-        self.tasks['screen_scrolling_east'] = copy.deepcopy(self.tasks['noattack'])
-        self.tasks['screen_scrolling_east']['is_success'] = lambda ram:any([
-            self._rewardfunc_screen_scrolling_east(),
-            ])
-        self.tasks['screen_scrolling_east']['reward'] |= {
-            'screen_scrolling': 0,
-            'screen_scrolling_north': 1,
-            'screen_scrolling_south': 1,
-            'screen_scrolling_east': -1,
-            'screen_scrolling_west': 1,
-            }
-
-        self.tasks['screen_scrolling_west'] = copy.deepcopy(self.tasks['noattack'])
-        self.tasks['screen_scrolling_west']['is_success'] = lambda ram:any([
-            self._rewardfunc_screen_scrolling_west(),
-            ])
-        self.tasks['screen_scrolling_west']['reward'] |= {
-            'screen_scrolling': 0,
-            'screen_scrolling_north': 1,
-            'screen_scrolling_south': 1,
-            'screen_scrolling_east': 1,
-            'screen_scrolling_west': -1,
-            }
-
-        self.tasks['suicide'] = copy.deepcopy(self.tasks['attack'])
-        self.tasks['suicide']['is_success'] = lambda ram: any([
-            _gamestate_link_killed(self.ram),
-            ])
-        self.tasks['suicide']['reward'] = {
-            'link_killed': -1,
-            'link_hit': -1,
-            }
-
-        self.tasks['danger'] = copy.deepcopy(self.tasks['attack'])
-        self.tasks['danger']['is_success'] = lambda ram: any([
-            not _gamestate_link_killed(self.ram),
-            ])
-        self.tasks['suicide']['reward'] |= {
-            'link_killed': 4,
-            'link_hit': -1,
-            }
-
-        self.tasks['follow'] = copy.deepcopy(self.tasks['attack'])
-        self.tasks['follow']['terminated'] = lambda ram: any([
-            self._rewardfunc_link_onmouse(),
-            _gamestate_link_killed(self.ram),
-            _gamestate_is_screen_scrolling(self.ram),
-            _gamestate_is_cave_enter(self.ram),
-            ])
-        self.tasks['follow']['success'] = lambda ram: any([
-            self._rewardfunc_link_onmouse(),
-            ])
-        self.tasks['follow']['reward'] |= {
-            'link_onmouse': 1,
-            'link_l1dist' : 1,
-            'enemy_hit': 0,
-            'enemy_killed': 0,
-            'enemy_alldead': 0,
-            'add_bomb': 0,
-            'add_clock': 0,
-            'add_heart': 0,
-            'add_keys': 0,
-            'add_ruppees': 0,
-            }
-
-        def _step_follow_enemy(self, kb):
-            enemies = []
-            for k in kb.items:
-                if 'enemy' in k:
-                    enemies.append(kb.items[k])
-            if len(enemies) == 0:
-                self.mouse = None
-            else:
-                link = kb.items['link']
-                self.mouse = {}
-                dist = 9999
-                for i, enemy in enumerate(enemies):
-                    newdist = abs(enemy['x'] - link['x']) + abs(enemy['y'] - link['y'])
-                    if newdist < dist:
-                        dist = newdist
-                        self.mouse['x'] = enemy['x']
-                        self.mouse['y'] = enemy['y']
-        self.tasks['follow_enemy'] = copy.deepcopy(self.tasks['follow'])
-        self.tasks['follow_enemy']['step'] = _step_follow_enemy
-
-        self.tasks['repel_enemy'] = copy.deepcopy(self.tasks['follow_enemy'])
-        self.tasks['repel_enemy']['reward']['link_l1dist'] = -1
-
-        def _step_follow_random(self, kb):
-            #if self.stepcount%300 == 0:
-            if random.random() < 1/300:
-                if self.mouse is None or random.random() < 0.2:
-                    mode = 'passable_tile'
-                else:
-                    mode = 'neighbor'
-                subtiles = self.ram[0x530+0x800:0x530+0x2c0+0x800].reshape([32,22])
-                tiles = subtiles[::2,::2]
-                if mode == 'neighbor':
-                    curx = round(self.mouse['x'] / 16)
-                    cury = round((self.mouse['y'] - 56 - 8 + 3) / 16)
-                    indexes = []
-                    if curx > 2:
-                        indexes.append([curx-1, cury])
-                    if curx < 14:
-                        indexes.append([curx+1, cury])
-                    if cury > 2:
-                        indexes.append([curx, cury-1])
-                    if cury < 9:
-                        indexes.append([curx, cury+1])
-                    newindex = random.choice(indexes)
-                    x = newindex[0] * 16 
-                    y = newindex[1] * 16 + 56 + 8 - 3
-                    self.mouse = {'x': x, 'y': y}
-                elif mode == 'passable_tile':
-                    indexes = np.argwhere(np.isin(tiles, self.ignore_tile_set))
-                    if len(indexes) > 0:
-                        newindex = random.choice(indexes)
-                        x = newindex[0] * 16 
-                        y = newindex[1] * 16 + 56 + 8 - 3
-                        self.mouse = {'x': x, 'y': y}
-                elif mode == 'randomxy':
-                    x = random.randrange(0, 255) - 8
-                    y = random.randrange(60, 240) - 8
-                    self.mouse = {'x': x, 'y': y}
-                else:
-                    raise ValueError('should not happen')
-        self.tasks['follow_random'] = copy.deepcopy(self.tasks['follow'])
-        #self.tasks['follow_random']['terminated'] = lambda ram: any([
-                #_gamestate_link_killed(self.ram),
-                #_gamestate_is_screen_scrolling(self.ram),
-                #_gamestate_is_cave_enter(self.ram),
-                #])
-        #self.tasks['follow_random']['is_success'] = lambda ram: not any([
-                #_gamestate_link_killed(self.ram),
-                #_gamestate_is_screen_scrolling(self.ram),
-                #_gamestate_is_cave_enter(self.ram),
-                #])
-        self.tasks['follow_random']['step'] = _step_follow_random
-
-        self.tasks['repel_random'] = copy.deepcopy(self.tasks['follow_random'])
-        self.tasks['repel_random']['reward']['link_l1dist'] = -1
 
     def reset(self, **kwargs):
-        self.episode_summary_dict = {}
-        self.episode_reward_dict = {}
+        self.episode_event_counter = Counter()
+        self.episode_reward_counter = Counter()
         self.episode_reward = 0
         if self.task is not None:
             self.episode_task = self.task
@@ -448,39 +451,34 @@ class ZeldaWrapper(RetroWithRam):
         self.env.render_mode = render_mode
 
         # compute the task information
+        self.ram.mouse = self.mouse
         kb = self.generate_knowledge_base()
         kb_obs = kb.to_observation()
 
         task = self.tasks[self.episode_task]
-        terminated = task['terminated'](self.ram)
-        info['is_success'] = task['is_success'](self.ram)
+        terminated = any([globals()[fname](self.ram) for fname in task['terminated']])
+        info['is_success'] = any([globals()[fname](self.ram) for fname in task['is_success']])
         if 'step' in task:
             task['step'](self, kb)
 
-        summary_dict = self.get_rewards()
-        reward_dict = {}
-        reward = 0
-        for k, v in summary_dict.items():
-            reward_k = summary_dict[k] * task['reward'].get(k, 1)
-            reward += reward_k
-            reward_dict[k] = reward_k
+        event_counter = Counter(self.get_events())
+        reward_counter = Counter({k: v * event_counter[k] for k, v in event_counter.items()})
+        self.episode_reward += sum(reward_counter.values())
+        self.episode_event_counter += event_counter
+        self.episode_reward_counter += reward_counter
+        for k in event_counter.keys():
+            info['event_' + k] = self.episode_event_counter[k]
+            info['reward_' + k] = self.episode_reward_counter[k]
 
-        self.episode_reward += reward
-        self.episode_summary_dict = {k: self.episode_summary_dict.get(k, 0) + summary_dict.get(k, 0) for k in set(self.episode_summary_dict) | set(summary_dict)}
-        self.episode_reward_dict = {k: self.episode_reward_dict.get(k, 0) + reward_dict.get(k, 0) for k in set(self.episode_reward_dict) | set(reward_dict)}
-        for k in summary_dict.keys():
-            info['summary_' + k] = self.episode_summary_dict[k]
-            info['reward_' + k] = self.episode_reward_dict[k]
-
-        info['task_success_' + self.episode_task] = task['is_success'](self.ram)
+        info['task_success_' + self.episode_task] = info['is_success']
         info['task_count_' + self.episode_task] = 1
 
-        rewards_array = np.array([v for k, v in sorted(summary_dict.items())])
-        rewards_array = np.clip(rewards_array, -1, 1)
+        events_array = np.array([v for k, v in sorted(event_counter.items())])
+        events_array = np.clip(events_array, -1, 1)
         modified_observation = {
             'objects_discrete': kb_obs['objects_discrete'],
             'objects_continuous': np.clip(kb_obs['objects_continuous'], -1, 1),
-            'rewards': rewards_array,
+            'events': events_array,
             }
 
         # render the environment
@@ -511,7 +509,7 @@ class ZeldaWrapper(RetroWithRam):
             text = ''
             text += kb.display()
             #text += kb.info['mapstr']
-            text += f'\n{format_dict_pretty(self.episode_summary_dict)}'
+            text += f'\n{format_dict_pretty(self.episode_event_counter)}'
             text += f'\n'
             text += f'\nepisode_reward = {self.episode_reward:0.4f}'
             text += f'\nterminated = {terminated}'
@@ -522,12 +520,12 @@ class ZeldaWrapper(RetroWithRam):
         if self.skip_boring_frames:
             skipped_frames = 0
             while any([
-                _gamestate_is_screen_scrolling(self.ram),
-                _gamestate_is_drawing_text(self.ram),
-                _gamestate_is_cave_enter(self.ram),
-                _gamestate_is_inventory_scroll(self.ram),
-                _gamestate_hearts(self.ram) <= 0,
-                _gamestate_is_openning_scene(self.ram),
+                _ramstate_is_screen_scrolling(self.ram),
+                _ramstate_is_drawing_text(self.ram),
+                _ramstate_is_cave_enter(self.ram),
+                _ramstate_is_inventory_scroll(self.ram),
+                _ramstate_hearts(self.ram) <= 0,
+                _ramstate_is_openning_scene(self.ram),
                 ]):
                 skipped_frames += 1
                 # NOTE:
@@ -539,7 +537,7 @@ class ZeldaWrapper(RetroWithRam):
                 # the code below is very similar to the code in retro.RetroEnv.step()
 
                 skipbuttons = []
-                if _gamestate_hearts(self.ram) <= 0 and skipped_frames%2 == 0:
+                if _ramstate_hearts(self.ram) <= 0 and skipped_frames%2 == 0:
                     skipbuttons = ['START']
                 self._set_buttons(skipbuttons)
 
@@ -631,10 +629,10 @@ class ZeldaWrapper(RetroWithRam):
             })
         ram = self.ram
 
-        if self.mouse is not None:
+        if self.ram.mouse is not None:
             item = {}
-            item['x'] = self.mouse['x']
-            item['y'] = self.mouse['y']
+            item['x'] = self.ram.mouse['x']
+            item['y'] = self.ram.mouse['y']
             item['type'] = -5
             item['state'] = 0
             item['direction'] = 0
@@ -924,7 +922,7 @@ class ZeldaWrapper(RetroWithRam):
             self._update_ram()
 
         # skip until frame transition done
-        while _gamestate_is_screen_scrolling(self.ram):
+        while _ramstate_is_screen_scrolling(self.ram):
             self.env.em.step()
             self.env.data.update_ram()
             self._update_ram()
@@ -973,63 +971,83 @@ class ZeldaWrapper(RetroWithRam):
         self._set_mem(update_dict)
 
     ########################################
-    # MARK: reward functions
+    # MARK: event functions
     ########################################
 
-    def get_rewards(self):
+    def get_events(self):
         ret = {}
-        prefix = '_rewardfunc_'
-        reward_functions = [f for f in dir(self) if f.startswith(prefix)]
-        for reward_function in reward_functions:
-            f = getattr(self, reward_function)
+        prefix = '_event_'
+        event_functions = [f for f in dir(self) if f.startswith(prefix)]
+        for event_function in event_functions:
+            f = getattr(self, event_function)
             if self.ram2 is not None:
-                ret[reward_function[len(prefix):]] = f()
+                ret[event_function[len(prefix):]] = f()
             else:
-                ret[reward_function[len(prefix):]] = 0
+                ret[event_function[len(prefix):]] = 0
         return ret
 
-    def _rewardfunc_link_killed(self):
-        return - int(_gamestate_hearts(self.ram) == 0 and _gamestate_hearts(self.ram2) != 0)
+    def _event_link_killed(self):
+        return int(_ramstate_hearts(self.ram) == 0 and _ramstate_hearts(self.ram2) != 0)
 
-    def _rewardfunc_link_hit(self):
-        return -1 * round(2*max(0, _gamestate_hearts(self.ram2) - _gamestate_hearts(self.ram)))
+    def _event_link_hit(self):
+        return round(2*max(0, _ramstate_hearts(self.ram2) - _ramstate_hearts(self.ram)))
 
-    def _rewardfunc_enemy_alldead(self):
-        return (_gamestate_all_enemies_health(self.ram) == 0 and _gamestate_all_enemies_health(self.ram2) != 0) and not (_gamestate_is_screen_scrolling(self.ram) or _gamestate_is_cave_enter(self.ram))
+    def _event_enemy_alldead(self):
+        return int((_ramstate_all_enemies_health(self.ram) == 0 and _ramstate_all_enemies_health(self.ram2) != 0) and not (_ramstate_is_screen_scrolling(self.ram) or _ramstate_is_cave_enter(self.ram)))
 
-    def _rewardfunc_screen_scrolling(self):
-        return - int(_gamestate_is_screen_scrolling(self.ram) and not _gamestate_is_screen_scrolling(self.ram2))
+    def _event_screen_scrolling(self):
+        return int(_ramstate_is_screen_scrolling(self.ram) and not _ramstate_is_screen_scrolling(self.ram2))
 
-    def _rewardfunc_screen_scrolling_north(self):
-        return int(self.ram[132] == 61) * self._rewardfunc_screen_scrolling()
+    def _event_screen_scrolling_north(self):
+        return int(self.ram[132] == 61) * self._event_screen_scrolling()
 
-    def _rewardfunc_screen_scrolling_south(self):
-        return int(self.ram[132] == 221) * self._rewardfunc_screen_scrolling()
+    def _event_screen_scrolling_south(self):
+        return int(self.ram[132] == 221) * self._event_screen_scrolling()
 
-    def _rewardfunc_screen_scrolling_west(self):
-        return int(self.ram[112] == 0) * self._rewardfunc_screen_scrolling()
+    def _event_screen_scrolling_west(self):
+        return int(self.ram[112] == 0) * self._event_screen_scrolling()
 
-    def _rewardfunc_screen_scrolling_east(self):
-        return int(self.ram[112] == 240) * self._rewardfunc_screen_scrolling()
+    def _event_screen_scrolling_east(self):
+        return int(self.ram[112] == 240) * self._event_screen_scrolling()
 
-    def _rewardfunc_screen_cave(self):
-        return - int(_gamestate_is_cave_enter(self.ram) and not _gamestate_is_cave_enter(self.ram2))
+    def _event_screen_cave(self):
+        return int(_ramstate_is_cave_enter(self.ram) and not _ramstate_is_cave_enter(self.ram2))
 
-    def _rewardfunc_enemy_hit(self):
-        return max(0, _gamestate_all_enemies_health(self.ram2) - _gamestate_all_enemies_health(self.ram))
+    def _event_enemy_hit(self):
+        return max(0, _ramstate_all_enemies_health(self.ram2) - _ramstate_all_enemies_health(self.ram))
 
-    def _rewardfunc_enemy_killed(self):
-        return max(0, _gamestate_total_enemies(self.ram2) - _gamestate_total_enemies(self.ram))
+    def _event_enemy_killed(self):
+        return max(0, _ramstate_total_enemies(self.ram2) - _ramstate_total_enemies(self.ram))
 
-    def _rewardfunc_link_onmouse(self):
-        link_x = self.ram[112]
-        link_y = self.ram[132]
-        if self.mouse is None:
-            return False
+    def _event_link_onmouse(self):
+        return int(_ramstate_link_onmouse(self.ram) and not _ramstate_link_onmouse(self.ram2))
+
+    def _event_link_l1dist_decrease(self):
+        if self.ram.mouse is None or self.ram2.mouse is None:
+            return 0
         else:
-            return self.mouse['x'] == link_x and self.mouse['y'] == link_y
+            x1 = self.ram[112]
+            y1 = self.ram[132]
+            l1dist1 = abs(self.ram.mouse['x'] - x1) + abs(self.ram.mouse['y'] - y1)
+            x2 = self.ram2[112]
+            y2 = self.ram2[132]
+            l1dist2 = abs(self.ram2.mouse['x'] - x2) + abs(self.ram2.mouse['y'] - y2)
+            return min(max(l1dist2 - l1dist1, 0), 1)
 
-    def _rewardfunc_link_l1dist(self):
+    def _event_link_l1dist_increase(self):
+        if self.ram.mouse is None or self.ram2.mouse is None:
+            return 0
+        else:
+            x1 = self.ram[112]
+            y1 = self.ram[132]
+            l1dist1 = abs(self.ram.mouse['x'] - x1) + abs(self.ram.mouse['y'] - y1)
+            x2 = self.ram2[112]
+            y2 = self.ram2[132]
+            l1dist2 = abs(self.ram2.mouse['x'] - x2) + abs(self.ram2.mouse['y'] - y2)
+            return min(max(l1dist1 - l1dist2, 0), 1)
+
+    """
+    def _reward_link_l1dist(self):
         if self.mouse is None:
             return 0
         else:
@@ -1039,66 +1057,77 @@ class ZeldaWrapper(RetroWithRam):
             l1dist = abs(self.mouse['x'] - link_x) + abs(self.mouse['y'] - link_y)
             score = -max(0, l1dist-safe_radius) / 1000 / 60
             return score
+    """
 
-    def _rewardfunc_button_push(self):
-        return -min(1, abs(self.ram[0xfa] - self.ram2[0xfa])) / 1000
+    def _event_button_push(self):
+        return min(1, abs(self.ram[0xfa] - self.ram2[0xfa]))
 
-    def _rewardfunc_add_bomb(self):
+    def _event_add_bomb(self):
         return max(0, self.ram[1624] - self.ram2[1624])
 
-    def _rewardfunc_add_bombmax(self):
+    def _event_add_bombmax(self):
         return max(0, self.ram[1660] - self.ram2[1660])
 
-    def _rewardfunc_add_keys(self):
+    def _event_add_keys(self):
         return max(0, self.ram[1646] - self.ram2[1646])
 
-    def _rewardfunc_add_ruppees(self):
+    def _event_add_ruppees(self):
         return max(0, self.ram[1645] - self.ram2[1645])
 
-    def _rewardfunc_add_clock(self):
+    def _event_add_clock(self):
         return max(0, self.ram[1644] - self.ram2[1644])
 
-    def _rewardfunc_add_heart(self):
-        return max(0, _gamestate_hearts(self.ram) - _gamestate_hearts(self.ram2))
+    def _event_add_heart(self):
+        return max(0, _ramstate_hearts(self.ram) - _ramstate_hearts(self.ram2))
 
 ########################################
-# MARK: _gamestate
+# MARK: _ramstate
 ########################################
 
-# The _gamestate functions modified from gym-zelda-1 repo;
+def _ramstate_link_onmouse(ram):
+    if ram.mouse is None:
+        return 0
+    else:
+        safe_radius = 8
+        link_x = ram[112]
+        link_y = ram[132]
+        l1dist = abs(ram.mouse['x'] - link_x) + abs(ram.mouse['y'] - link_y)
+        return l1dist <= safe_radius
+
+# The _ramstate functions modified from gym-zelda-1 repo;
 # that repo uses the nesgym library, which is a pure python nes emulator
 # and about 10x slower than the gymretro environment;
-def _gamestate_screen_change(ram):
-    return _gamestate_is_screen_scrolling(ram) or _gamestate_is_cave_enter(ram)
+def _ramstate_screen_change(ram):
+    return _ramstate_is_screen_scrolling(ram) or _ramstate_is_cave_enter(ram)
 
-def _gamestate_is_screen_scrolling(ram):
+def _ramstate_is_screen_scrolling(ram):
     SCROLL_GAME_MODES = {4, 6, 7}
     return ram[0x12] in SCROLL_GAME_MODES
 
-def _gamestate_is_drawing_text(ram):
+def _ramstate_is_drawing_text(ram):
     return ram[0x0605] == 0x10
 
-def _gamestate_is_cave_enter(ram):
+def _ramstate_is_cave_enter(ram):
     return ram[0x0606] == 0x08
 
-def _gamestate_is_inventory_scroll(ram):
+def _ramstate_is_inventory_scroll(ram):
     return 65 < ram[0xfc]
 
-def _gamestate_is_openning_scene(ram):
+def _ramstate_is_openning_scene(ram):
     return bool(ram[0x007c])
 
-def _gamestate_link_killed(ram):
-    return _gamestate_hearts(ram) <= 0
+def _ramstate_link_killed(ram):
+    return _ramstate_hearts(ram) <= 0
 
-def _gamestate_hearts(ram):
+def _ramstate_hearts(ram):
     link_full_hearts = 0x0f & ram[0x066f]
     link_partial_hearts = ram[0x0670] / 255
     return link_full_hearts + link_partial_hearts
 
-def _gamestate_all_enemies_dead(ram):
+def _ramstate_all_enemies_dead(ram):
     return all([ram[848+i] == 0 for i in range(6)])
 
-def _gamestate_all_enemies_health(ram):
+def _ramstate_all_enemies_health(ram):
     healths = []
     for i in range(6):
         rawhealth = ram[1158+i]
@@ -1108,7 +1137,7 @@ def _gamestate_all_enemies_health(ram):
             healths.append(rawhealth//16)
     return sum(healths)
 
-def _gamestate_total_enemies(ram):
+def _ramstate_total_enemies(ram):
     healths = []
     for i in range(6):
         rawhealth = ram[1158+i]
@@ -1118,7 +1147,7 @@ def _gamestate_total_enemies(ram):
             healths.append(rawhealth//16)
     return sum([1 for health in healths if health > 0])
 
-def _gamestate_screen_change(ram):
+def _ramstate_screen_change(ram):
     return ram[18] == 5
 
 
@@ -1213,8 +1242,8 @@ def format_dict_pretty(d: Dict[str, Any], min_spacing: int = 2) -> str:
     items.sort(key=lambda x: x[0])
 
     # Find the maximum lengths
-    max_key_len = max(len(k) for k, v in items)
-    max_val_len = max(len(v) for k, v in items)
+    max_key_len = max((len(k) for k, v in items), default=0)
+    max_val_len = max((len(v) for k, v in items), default=0)
 
     # Calculate the width needed for each pair
     pair_width = max_key_len + max_val_len + 4  # 4 accounts for ': ' and minimum spacing

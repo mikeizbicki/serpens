@@ -147,54 +147,87 @@ class ZeldaWrapper(RetroWithRam):
             'button_push': -0.01,
             },
         }
-    tasks['attack'] = {
+
+
+    def _step_follow_random(self, kb):
+        if self.ram.mouse is None or self.random.random() < 1/300:
+            if self.ram.mouse is None or self.random.random() < 0.2:
+                mode = 'passable_tile'
+            else:
+                mode = 'neighbor'
+            subtiles = self.ram[0x530+0x800:0x530+0x2c0+0x800].reshape([32,22])
+            tiles = subtiles[::2,::2]
+            if mode == 'neighbor':
+                curx = round(self.ram.mouse['x'] / 16)
+                cury = round((self.ram.mouse['y'] - 56 - 8 + 3) / 16)
+                indexes = []
+                if curx > 2:
+                    indexes.append([curx-1, cury])
+                if curx < 14:
+                    indexes.append([curx+1, cury])
+                if cury > 2:
+                    indexes.append([curx, cury-1])
+                if cury < 9:
+                    indexes.append([curx, cury+1])
+                newindex = self.random.choice(indexes)
+                x = newindex[0] * 16 
+                y = newindex[1] * 16 + 56 + 8 - 3
+                self.ram.mouse = {'x': x, 'y': y}
+            elif mode == 'passable_tile':
+                indexes = np.argwhere(np.isin(tiles, ignore_tile_set))
+                if len(indexes) > 0:
+                    newindex = self.random.choice(indexes)
+                    x = newindex[0] * 16 
+                    y = newindex[1] * 16 + 56 + 8 - 3
+                    self.ram.mouse = {'x': x, 'y': y}
+            elif mode == 'randomxy':
+                x = self.random.randrange(0, 255) - 8
+                y = self.random.randrange(60, 240) - 8
+                self.ram.mouse = {'x': x, 'y': y}
+            else:
+                raise ValueError('should not happen')
+            self.mouse = self.ram.mouse
+    tasks['onmouse'] = {
         'terminated': [
-            '_ramstate_all_enemies_dead',
+            '_ramstate_link_onmouse',
             '_ramstate_link_killed',
             '_ramstate_is_screen_scrolling',
             '_ramstate_is_cave_enter',
             ],
         'is_success': [
-            '_ramstate_all_enemies_dead',
+            '_ramstate_link_onmouse',
             ],
         'reward': {
             'link_killed': -2,
             'link_hit': -1,
-            'enemy_alldead': 2,
-            'screen_scrolling': -2,
-            'screen_cave': -2,
-            'enemy_hit': 1,
-            'enemy_killed': 1,
-            'add_bomb': 1,
-            'add_bombmax': 1,
-            'add_keys': 1,
-            'add_ruppees': 1,
-            'add_clock': 1,
-            'add_heart': 1,
-            'button_push': -0.01,
-            },
-        }
-
-    tasks['onmouse'] = {
-        'terminated': [
-            #_event_link_onmouse(),
-            '_ramstate_link_killed',
-            '_ramstate_is_screen_scrolling',
-            '_ramstate_is_cave_enter',
-            ],
-        'is_success': [
-            #_event_link_onmouse(),
-            ],
-        'reward': {
             'link_onmouse': 2,
-            'link_l1dist_decrease' : 0.1,
-            'link_l1dist_increase' : -0.1,
+            'link_l1dist_decrease' : 0.01,
+            'link_l1dist_increase' : -0.01,
             },
+        'step': _step_follow_random
         }
     tasks['onmouse2'] = copy.deepcopy(tasks['onmouse'])
     tasks['onmouse2']['reward']: {
         'link_onmouse': 2,
         }
+
+    def _step_onmouse_enemy(self, kb):
+        enemies = []
+        for k in kb.items:
+            if 'enemy' in k:
+                enemies.append(kb.items[k])
+        if len(enemies) == 0:
+            mouse = None
+        else:
+            link = kb.items['link']
+            mouse = {
+                'x': enemies[0]['x'],
+                'y': enemies[0]['y'],
+                }
+            self.mouse = mouse
+            self.ram.mouse = mouse
+    tasks['onmouse_enemy'] = copy.deepcopy(tasks['onmouse'])
+    tasks['onmouse_enemy']['step'] = _step_onmouse_enemy
 
 
     """
@@ -331,57 +364,6 @@ class ZeldaWrapper(RetroWithRam):
     tasks['repel_enemy'] = copy.deepcopy(tasks['follow_enemy'])
     tasks['repel_enemy']['reward']['link_l1dist'] = -1
 
-    def _step_follow_random(self, kb):
-        #if stepcount%300 == 0:
-        if random.random() < 1/300:
-            if mouse is None or random.random() < 0.2:
-                mode = 'passable_tile'
-            else:
-                mode = 'neighbor'
-            subtiles = ram[0x530+0x800:0x530+0x2c0+0x800].reshape([32,22])
-            tiles = subtiles[::2,::2]
-            if mode == 'neighbor':
-                curx = round(mouse['x'] / 16)
-                cury = round((mouse['y'] - 56 - 8 + 3) / 16)
-                indexes = []
-                if curx > 2:
-                    indexes.append([curx-1, cury])
-                if curx < 14:
-                    indexes.append([curx+1, cury])
-                if cury > 2:
-                    indexes.append([curx, cury-1])
-                if cury < 9:
-                    indexes.append([curx, cury+1])
-                newindex = random.choice(indexes)
-                x = newindex[0] * 16 
-                y = newindex[1] * 16 + 56 + 8 - 3
-                mouse = {'x': x, 'y': y}
-            elif mode == 'passable_tile':
-                indexes = np.argwhere(np.isin(tiles, ignore_tile_set))
-                if len(indexes) > 0:
-                    newindex = random.choice(indexes)
-                    x = newindex[0] * 16 
-                    y = newindex[1] * 16 + 56 + 8 - 3
-                    mouse = {'x': x, 'y': y}
-            elif mode == 'randomxy':
-                x = random.randrange(0, 255) - 8
-                y = random.randrange(60, 240) - 8
-                mouse = {'x': x, 'y': y}
-            else:
-                raise ValueError('should not happen')
-    tasks['follow_random'] = copy.deepcopy(tasks['follow'])
-    #tasks['follow_random']['terminated'] = lambda ram: any([
-            #_ramstate_link_killed(ram),
-            #_ramstate_is_screen_scrolling(ram),
-            #_ramstate_is_cave_enter(ram),
-            #])
-    #tasks['follow_random']['is_success'] = lambda ram: not any([
-            #_ramstate_link_killed(ram),
-            #_ramstate_is_screen_scrolling(ram),
-            #_ramstate_is_cave_enter(ram),
-            #])
-    tasks['follow_random']['step'] = _step_follow_random
-
     tasks['repel_random'] = copy.deepcopy(tasks['follow_random'])
     tasks['repel_random']['reward']['link_l1dist'] = -1
     """
@@ -411,15 +393,13 @@ class ZeldaWrapper(RetroWithRam):
         self.mouse = None
 
         # create a new observation space
-        kb = self.generate_knowledge_base()
+        kb = generate_knowledge_base(self.ram, self.ram2)
         kb_obs = kb.get_observation_space()
-        self.observation_space = spaces.Dict({
-            'objects_discrete': kb_obs['objects_discrete'],
-            'objects_continuous': kb_obs['objects_continuous'],
-            'events': spaces.Box(-1, 1, [len(self.get_events().keys())], np.float16),
-            })
+        self.observation_space = spaces.Dict(kb_obs)
         logging.info(f'self.observation_space.shape={self.observation_space.shape}')
-
+        logging.info(f"self.observation_space.keys()={self.observation_space.keys()}")
+        for k in self.observation_space:
+            logging.info(f"self.observation_space[k].shape={self.observation_space[k].shape}")
 
     def reset(self, **kwargs):
         self.episode_event_counter = Counter()
@@ -452,7 +432,7 @@ class ZeldaWrapper(RetroWithRam):
 
         # compute the task information
         self.ram.mouse = self.mouse
-        kb = self.generate_knowledge_base()
+        kb = generate_knowledge_base(self.ram, self.ram2)
         kb_obs = kb.to_observation()
 
         task = self.tasks[self.episode_task]
@@ -461,8 +441,8 @@ class ZeldaWrapper(RetroWithRam):
         if 'step' in task:
             task['step'](self, kb)
 
-        event_counter = Counter(self.get_events())
-        reward_counter = Counter({k: v * event_counter[k] for k, v in event_counter.items()})
+        event_counter = Counter(kb.events)
+        reward_counter = Counter({k: v * event_counter[k] for k, v in task['reward'].items()})
         self.episode_reward += sum(reward_counter.values())
         self.episode_event_counter += event_counter
         self.episode_reward_counter += reward_counter
@@ -472,14 +452,6 @@ class ZeldaWrapper(RetroWithRam):
 
         info['task_success_' + self.episode_task] = info['is_success']
         info['task_count_' + self.episode_task] = 1
-
-        events_array = np.array([v for k, v in sorted(event_counter.items())])
-        events_array = np.clip(events_array, -1, 1)
-        modified_observation = {
-            'objects_discrete': kb_obs['objects_discrete'],
-            'objects_continuous': np.clip(kb_obs['objects_continuous'], -1, 1),
-            'events': events_array,
-            }
 
         # render the environment
         if self.render_kb:
@@ -549,267 +521,8 @@ class ZeldaWrapper(RetroWithRam):
                     self.env.render()
 
         # return step results
-        return modified_observation, reward, terminated, truncated, info
+        return kb_obs, reward, terminated, truncated, info
 
-    def generate_knowledge_base(self, include_background=True):
-        '''
-        Enemy Type:
-        There are many different memory locations that seem to store the enemy type;
-        I'm not sure about what is different about them,
-        and the particular location I chose may be wrong in some subtle situations.
-        The values represent:
-        00= NOTHING
-        01= B. LION GUYS
-        02= R. LION GUYS
-        03= B. MOBLINS
-        04= R. MOBLINS
-        05= B. RATS
-        06= R. RATS
-        07= SLOW R. OCTOROCKS
-        08= FAST R. OCTOROCKS
-        09= SLOW B. OCTOROCKS
-        0A= FAST B. OCTOROCKS
-        0B= R. DARKNUTS
-        0C= B. DARKNUTS
-        0D= B. TECHTIKES
-        0E= R. TECHTIKES
-        0F= R. LEVERS
-        10= B. LEVERS
-        11= ZORAS
-        12= VAMPIERS
-        13= BIG SLIMES
-        14= LIL, SLIMES
-        15= LIL, SLIMES
-        16= POLS VOICES
-        17= LIKE LIKES
-        18= ????
-        19= ???
-        1A= PEAHATS
-        1B= B.BATS
-        1C= R. BATS
-        1D= B. BATS
-        1E= ????
-        1F= FALLING ROCKS
-        20= R. LEVERS
-        21= MUMMIES
-        22= ????
-        23= B. WIZROBES
-        24= R. WIZROBES
-        25= ????
-        26= ????
-        27= WALL MASTERS
-        28= ROPES (SNAKES)
-        29= ????
-        2A= STALFOSE
-        2B= BUBBLES
-        2C= B. BUBBLES
-        2D= R. BUBBLES
-        2E= ????
-        2F= FAIRY AT POND
-        30= ????
-        31= 3 DODONGOS
-        32= 1 DODONGO
-        33= B. GHOMA
-        34= R. GHOMA
-        35= RUPIE STASH
-        36= GRUMBLE
-        37= ZELDA
-        38= DIGDOGER?
-        39= DIGDOGER?
-        3A= 2 R. WORMS
-        3B= 2 B. WORMS
-        3C= MANHANDELA
-        3D= AQUAMENTIS
-        3E= GANNON
-        3F= FIRE
-        '''
-        kb = KnowledgeBase(keys={
-            'objects_discrete': ['type', 'direction', 'state'],
-            'objects_continuous': ['relx', 'rely', 'x', 'y', 'health'],
-            })
-        ram = self.ram
-
-        if self.ram.mouse is not None:
-            item = {}
-            item['x'] = self.ram.mouse['x']
-            item['y'] = self.ram.mouse['y']
-            item['type'] = -5
-            item['state'] = 0
-            item['direction'] = 0
-            item['health'] = 0
-            kb['mouse'] = item
-
-        # link info
-        item = {}
-        item['x'] = ram[112]
-        item['y'] = ram[132]
-        item['type'] = -1
-        item['state'] = ram[172]
-        item['direction'] = ram[152]
-        if ram[1648] == 0:
-            item['health'] = 0.0
-        else:
-            partial = 0.5
-            if ram[1648] > 127:
-                partial = 0
-            item['health'] = float(ram[1647] - math.floor(ram[1647] / 16) * 16 - partial + 1)
-        kb['link'] = item
-
-        # sword info
-        item = {}
-        item['state'] = ram[185]
-        item['direction'] = ram[165]
-        item['type'] = -2
-        item['health'] = 0
-        item['x'] = ram[125]
-        item['y'] = ram[145]
-        if item['state'] != 0:
-            kb['sword_melee'] = item
-
-        item = {}
-        item['state'] = ram[186]
-        item['direction'] = ram[166]
-        item['type'] = -2
-        item['health'] = 0
-        item['x'] = ram[126]
-        item['y'] = ram[146]
-        if item['state'] != 0:
-            kb['sword_proj'] = item
-
-        # enemy info
-        for i in range(6):
-            item = {}
-            #item['countdown'] = ram[41+i]
-            item['state'] = ram[173+i]
-            item['direction'] = ram[153+i]
-            item['type'] = ram[848+i]
-            item['x'] = ram[113+i]
-            item['y'] = ram[133+i]
-            rawhealth = ram[1158+i]
-            if rawhealth > 0 and (rawhealth < 16 or rawhealth >= 128):
-                item['health'] = 0
-            else:
-                item['health'] = rawhealth//16
-            if item['type'] > 0:
-                kb[f'enemy_{i}'] = item
-
-        # projectile info
-        for i in range(6):
-            item = {}
-            item['direction'] = ram[159+i]
-            item['state'] = ram[179+i]
-            item['type'] = -3
-            item['health'] = 0
-            item['x'] = ram[119+i]
-            item['y'] = ram[139+i]
-            if item['state'] != 0:
-                kb[f'projectile_{i}'] = item
-
-        # add tile information last
-        subtiles = self._get_subtiles()
-        view_radius = 2
-        if include_background:
-            if self.use_subtiles:
-                tiles = subtiles
-                tile_size = 8
-            else:
-                tiles = subtiles[::2,::2]
-                tile_size = 16
-            kb.info['tiles'] = tiles
-            kb.info['tile_size'] = tile_size
-
-            link_x = ram[112]
-            link_y = ram[132]
-            link_tile_x = (link_x+8)//tile_size
-            link_tile_y = (link_y-56)//tile_size
-            if not self.use_subtiles:
-                link_tile_y = (link_y-48)//tile_size
-
-            mapstr = ''
-            for y in range(tiles.shape[1]):
-                for x in range(tiles.shape[0]):
-                    if abs(int(x) - int(link_tile_x)) + abs(int(y) - int(link_tile_y)) <= view_radius:
-                        item = {}
-                        item['x'] = x*tile_size 
-                        item['y'] = y*tile_size + 61
-                        item['type'] = -4
-                        item['state'] = tiles[x, y]
-                        item['direction'] = 0
-                        item['health'] = 0
-                        if tiles[x, y] not in self.ignore_tile_set:
-                            kb[f'tile_{x:0>2d}_{y:0>2d}'] = item
-                        prefix = '*'
-                    else:
-                        prefix = ' '
-                    if (x, y) == (link_tile_x, link_tile_y):
-                        mapstr += prefix + '# '
-                    else:
-                        if tiles[x, y] in self.ignore_tile_set:
-                            mapstr += prefix + '  '
-                        else:
-                            mapstr += prefix + f'{hex(tiles[x, y])[2:]:2}'
-                mapstr += '\n'
-            kb.info['mapstr'] = mapstr
-
-        # normalize and center all item positions
-        kb.columns.add('relx')
-        kb.columns.add('rely')
-        for item, val in kb.items.items():
-            # center on link
-            if item != 'link':
-                link_x = int(ram[112])
-                link_y = int(ram[132])
-            else:
-                link_x = 0
-                link_y = 0
-            kb.items[item]['relx'] = kb.items[item]['x'] - link_x
-            kb.items[item]['rely'] = kb.items[item]['y'] - link_y
-
-            # normalize
-            kb.items[item]['relx'] /= 240
-            kb.items[item]['rely'] /= 160
-            # NOTE:
-            # the NES x resolution is 256,
-            # but all sprites are 16 pixels wide,
-            # so there are 240 available for positioning;
-            # the y resolution is 224,
-            # but the top vertical bar uses 56 pixels,
-            # and only 8 pixels are reserved for "link positioning"
-            # because he does not go "partially off the edge" on the top screen
-
-        return kb
-
-    # FIXME:
-    # Zelda has two tilemaps, one for the overworld and one for the underworld.
-    # Each tile is represented as a single byte.
-    # The overworld and underworld have different sets of passable tiles,
-    # and only a small set of passable tiles is listed below.
-    # These should be expanded to the full set,
-    # and the code should be adjusted to be aware of if it's in over/underworld.
-    # The lists below is a small list where the passable tiles seem compatible in both situations and capture most of the information.
-    passable_tiles_overworld = [0x24, 0x26, 0x76, 0x84]
-    passable_tiles_underworld = [0x68, 0x74, 0x7e]
-    ignore_tile_set = passable_tiles_overworld + passable_tiles_underworld
-
-    def _get_subtiles(self):
-        # The screen is divided into an 11x16 grid,
-        # and each tile is divided into 2x2 subtiles;
-        # therefore, the subtile grid is 22x32 (=0x2c0).
-        # the leftmost, rightmost, and bottommost subtiles do not get displayed,
-        # so only a 21x30 grid of subtiles is displayed
-        subtiles = self.ram[0x530+0x800:0x530+0x2c0+0x800].reshape([32,22])
-        # NOTE:
-        # accessing the memory through get_state() allows changing the state;
-        # the code below is usefull for modifying the grid in a running game;
-        # it does not update the pictures (which are drawn at the beginning of the screen),
-        # but does update how link/enemies behave on the tiles
-        #import code
-        #code.interact(local=locals())
-        # >>> tiles = self.env.unwrapped.em.get_state()[14657:14657+11*4*16]
-        # >>> newstate = b'\x00'*88; state = self.env.unwrapped.em.get_state(); state = state[:14657]+newstate+state[14657+len(newstate):]; self.env.unwrapped.em.set_state(state)
-
-        return subtiles
-    
     ########################################
     # MARK: debug code
     ########################################
@@ -932,11 +645,11 @@ class ZeldaWrapper(RetroWithRam):
         self._set_random_link_position()
 
     def _set_random_link_position(self, choice=None):
-        subtiles = self._get_subtiles()
+        subtiles = _get_subtiles(self.ram)
         valid_positions = []
         for x in range(32):
             for y in range(1, 22):
-                if subtiles[x, y] in self.ignore_tile_set:
+                if subtiles[x, y] in ignore_tile_set:
                     valid_positions.append([x*8, y*8+60-8])
         if choice is None:
             position = self.random.choice(valid_positions)
@@ -945,11 +658,11 @@ class ZeldaWrapper(RetroWithRam):
         self._set_mem({112: position[0], 132: position[1]})
 
     def _set_random_enemy_positions(self):
-        subtiles = self._get_subtiles()
+        subtiles = _get_subtiles(self.ram)
         valid_positions = []
         for x in range(32):
             for y in range(1, 22):
-                if subtiles[x, y] in self.ignore_tile_set:
+                if subtiles[x, y] in ignore_tile_set:
                     valid_positions.append([x*8, y*8+60-8])
         positions = random.sample(valid_positions, 6)
 
@@ -970,115 +683,369 @@ class ZeldaWrapper(RetroWithRam):
 
         self._set_mem(update_dict)
 
-    ########################################
-    # MARK: event functions
-    ########################################
+########################################
+# MARK: knowledge base
+########################################
 
-    def get_events(self):
-        ret = {}
-        prefix = '_event_'
-        event_functions = [f for f in dir(self) if f.startswith(prefix)]
-        for event_function in event_functions:
-            f = getattr(self, event_function)
-            if self.ram2 is not None:
-                ret[event_function[len(prefix):]] = f()
-            else:
-                ret[event_function[len(prefix):]] = 0
-        return ret
+def generate_knowledge_base(ram, ram2, include_background=True, use_subtiles=False):
+    '''
+    Enemy Type:
+    There are many different memory locations that seem to store the enemy type;
+    I'm not sure about what is different about them,
+    and the particular location I chose may be wrong in some subtle situations.
+    The values represent:
+    00= NOTHING
+    01= B. LION GUYS
+    02= R. LION GUYS
+    03= B. MOBLINS
+    04= R. MOBLINS
+    05= B. RATS
+    06= R. RATS
+    07= SLOW R. OCTOROCKS
+    08= FAST R. OCTOROCKS
+    09= SLOW B. OCTOROCKS
+    0A= FAST B. OCTOROCKS
+    0B= R. DARKNUTS
+    0C= B. DARKNUTS
+    0D= B. TECHTIKES
+    0E= R. TECHTIKES
+    0F= R. LEVERS
+    10= B. LEVERS
+    11= ZORAS
+    12= VAMPIERS
+    13= BIG SLIMES
+    14= LIL, SLIMES
+    15= LIL, SLIMES
+    16= POLS VOICES
+    17= LIKE LIKES
+    18= ????
+    19= ???
+    1A= PEAHATS
+    1B= B.BATS
+    1C= R. BATS
+    1D= B. BATS
+    1E= ????
+    1F= FALLING ROCKS
+    20= R. LEVERS
+    21= MUMMIES
+    22= ????
+    23= B. WIZROBES
+    24= R. WIZROBES
+    25= ????
+    26= ????
+    27= WALL MASTERS
+    28= ROPES (SNAKES)
+    29= ????
+    2A= STALFOSE
+    2B= BUBBLES
+    2C= B. BUBBLES
+    2D= R. BUBBLES
+    2E= ????
+    2F= FAIRY AT POND
+    30= ????
+    31= 3 DODONGOS
+    32= 1 DODONGO
+    33= B. GHOMA
+    34= R. GHOMA
+    35= RUPIE STASH
+    36= GRUMBLE
+    37= ZELDA
+    38= DIGDOGER?
+    39= DIGDOGER?
+    3A= 2 R. WORMS
+    3B= 2 B. WORMS
+    3C= MANHANDELA
+    3D= AQUAMENTIS
+    3E= GANNON
+    3F= FIRE
+    '''
+    kb = KnowledgeBase(keys={
+        'objects_discrete': ['type', 'direction', 'state'],
+        'objects_continuous': ['relx', 'rely', 'x', 'y', 'health'],
+        })
 
-    def _event_link_killed(self):
-        return int(_ramstate_hearts(self.ram) == 0 and _ramstate_hearts(self.ram2) != 0)
+    if ram.mouse is not None:
+        item = {}
+        item['x'] = ram.mouse['x']
+        item['y'] = ram.mouse['y']
+        item['type'] = -5
+        item['state'] = 0
+        item['direction'] = 0
+        item['health'] = 0
+        kb['mouse'] = item
 
-    def _event_link_hit(self):
-        return round(2*max(0, _ramstate_hearts(self.ram2) - _ramstate_hearts(self.ram)))
+    # link info
+    item = {}
+    item['x'] = ram[112]
+    item['y'] = ram[132]
+    item['type'] = -1
+    item['state'] = ram[172]
+    item['direction'] = ram[152]
+    if ram[1648] == 0:
+        item['health'] = 0.0
+    else:
+        partial = 0.5
+        if ram[1648] > 127:
+            partial = 0
+        item['health'] = float(ram[1647] - math.floor(ram[1647] / 16) * 16 - partial + 1)
+    kb['link'] = item
 
-    def _event_enemy_alldead(self):
-        return int((_ramstate_all_enemies_health(self.ram) == 0 and _ramstate_all_enemies_health(self.ram2) != 0) and not (_ramstate_is_screen_scrolling(self.ram) or _ramstate_is_cave_enter(self.ram)))
+    # sword info
+    item = {}
+    item['state'] = ram[185]
+    item['direction'] = ram[165]
+    item['type'] = -2
+    item['health'] = 0
+    item['x'] = ram[125]
+    item['y'] = ram[145]
+    if item['state'] != 0:
+        kb['sword_melee'] = item
 
-    def _event_screen_scrolling(self):
-        return int(_ramstate_is_screen_scrolling(self.ram) and not _ramstate_is_screen_scrolling(self.ram2))
+    item = {}
+    item['state'] = ram[186]
+    item['direction'] = ram[166]
+    item['type'] = -2
+    item['health'] = 0
+    item['x'] = ram[126]
+    item['y'] = ram[146]
+    if item['state'] != 0:
+        kb['sword_proj'] = item
 
-    def _event_screen_scrolling_north(self):
-        return int(self.ram[132] == 61) * self._event_screen_scrolling()
-
-    def _event_screen_scrolling_south(self):
-        return int(self.ram[132] == 221) * self._event_screen_scrolling()
-
-    def _event_screen_scrolling_west(self):
-        return int(self.ram[112] == 0) * self._event_screen_scrolling()
-
-    def _event_screen_scrolling_east(self):
-        return int(self.ram[112] == 240) * self._event_screen_scrolling()
-
-    def _event_screen_cave(self):
-        return int(_ramstate_is_cave_enter(self.ram) and not _ramstate_is_cave_enter(self.ram2))
-
-    def _event_enemy_hit(self):
-        return max(0, _ramstate_all_enemies_health(self.ram2) - _ramstate_all_enemies_health(self.ram))
-
-    def _event_enemy_killed(self):
-        return max(0, _ramstate_total_enemies(self.ram2) - _ramstate_total_enemies(self.ram))
-
-    def _event_link_onmouse(self):
-        return int(_ramstate_link_onmouse(self.ram) and not _ramstate_link_onmouse(self.ram2))
-
-    def _event_link_l1dist_decrease(self):
-        if self.ram.mouse is None or self.ram2.mouse is None:
-            return 0
+    # enemy info
+    for i in range(6):
+        item = {}
+        #item['countdown'] = ram[41+i]
+        item['state'] = ram[173+i]
+        item['direction'] = ram[153+i]
+        item['type'] = ram[848+i]
+        item['x'] = ram[113+i]
+        item['y'] = ram[133+i]
+        rawhealth = ram[1158+i]
+        if rawhealth > 0 and (rawhealth < 16 or rawhealth >= 128):
+            item['health'] = 0
         else:
-            x1 = self.ram[112]
-            y1 = self.ram[132]
-            l1dist1 = abs(self.ram.mouse['x'] - x1) + abs(self.ram.mouse['y'] - y1)
-            x2 = self.ram2[112]
-            y2 = self.ram2[132]
-            l1dist2 = abs(self.ram2.mouse['x'] - x2) + abs(self.ram2.mouse['y'] - y2)
-            return min(max(l1dist2 - l1dist1, 0), 1)
+            item['health'] = rawhealth//16
+        if item['type'] > 0:
+            kb[f'enemy_{i}'] = item
 
-    def _event_link_l1dist_increase(self):
-        if self.ram.mouse is None or self.ram2.mouse is None:
-            return 0
+    # projectile info
+    for i in range(6):
+        item = {}
+        item['direction'] = ram[159+i]
+        item['state'] = ram[179+i]
+        item['type'] = -3
+        item['health'] = 0
+        item['x'] = ram[119+i]
+        item['y'] = ram[139+i]
+        if item['state'] != 0:
+            kb[f'projectile_{i}'] = item
+
+    # add tile information last
+    subtiles = _get_subtiles(ram)
+    view_radius = 2
+    if include_background:
+        if use_subtiles:
+            tiles = subtiles
+            tile_size = 8
         else:
-            x1 = self.ram[112]
-            y1 = self.ram[132]
-            l1dist1 = abs(self.ram.mouse['x'] - x1) + abs(self.ram.mouse['y'] - y1)
-            x2 = self.ram2[112]
-            y2 = self.ram2[132]
-            l1dist2 = abs(self.ram2.mouse['x'] - x2) + abs(self.ram2.mouse['y'] - y2)
-            return min(max(l1dist1 - l1dist2, 0), 1)
+            tiles = subtiles[::2,::2]
+            tile_size = 16
+        kb.info['tiles'] = tiles
+        kb.info['tile_size'] = tile_size
 
-    """
-    def _reward_link_l1dist(self):
-        if self.mouse is None:
-            return 0
+        link_x = ram[112]
+        link_y = ram[132]
+        link_tile_x = (link_x+8)//tile_size
+        link_tile_y = (link_y-56)//tile_size
+        if not use_subtiles:
+            link_tile_y = (link_y-48)//tile_size
+
+        mapstr = ''
+        for y in range(tiles.shape[1]):
+            for x in range(tiles.shape[0]):
+                if abs(int(x) - int(link_tile_x)) + abs(int(y) - int(link_tile_y)) <= view_radius:
+                    item = {}
+                    item['x'] = x*tile_size 
+                    item['y'] = y*tile_size + 61
+                    item['type'] = -4
+                    item['state'] = tiles[x, y]
+                    item['direction'] = 0
+                    item['health'] = 0
+                    if tiles[x, y] not in ignore_tile_set:
+                        kb[f'tile_{x:0>2d}_{y:0>2d}'] = item
+                    prefix = '*'
+                else:
+                    prefix = ' '
+                if (x, y) == (link_tile_x, link_tile_y):
+                    mapstr += prefix + '# '
+                else:
+                    if tiles[x, y] in ignore_tile_set:
+                        mapstr += prefix + '  '
+                    else:
+                        mapstr += prefix + f'{hex(tiles[x, y])[2:]:2}'
+            mapstr += '\n'
+        kb.info['mapstr'] = mapstr
+
+    # normalize and center all item positions
+    kb.columns.add('relx')
+    kb.columns.add('rely')
+    for item, val in kb.items.items():
+        # center on link
+        if item != 'link':
+            link_x = int(ram[112])
+            link_y = int(ram[132])
         else:
-            safe_radius = 8
-            link_x = self.ram[112]
-            link_y = self.ram[132]
-            l1dist = abs(self.mouse['x'] - link_x) + abs(self.mouse['y'] - link_y)
-            score = -max(0, l1dist-safe_radius) / 1000 / 60
-            return score
-    """
+            link_x = 0
+            link_y = 0
+        kb.items[item]['relx'] = kb.items[item]['x'] - link_x
+        kb.items[item]['rely'] = kb.items[item]['y'] - link_y
 
-    def _event_button_push(self):
-        return min(1, abs(self.ram[0xfa] - self.ram2[0xfa]))
+        # normalize
+        kb.items[item]['relx'] /= 240
+        kb.items[item]['rely'] /= 160
+        # NOTE:
+        # the NES x resolution is 256,
+        # but all sprites are 16 pixels wide,
+        # so there are 240 available for positioning;
+        # the y resolution is 224,
+        # but the top vertical bar uses 56 pixels,
+        # and only 8 pixels are reserved for "link positioning"
+        # because he does not go "partially off the edge" on the top screen
 
-    def _event_add_bomb(self):
-        return max(0, self.ram[1624] - self.ram2[1624])
+    # add events
+    kb.events = get_events(ram, ram2)
 
-    def _event_add_bombmax(self):
-        return max(0, self.ram[1660] - self.ram2[1660])
+    return kb
 
-    def _event_add_keys(self):
-        return max(0, self.ram[1646] - self.ram2[1646])
+# FIXME:
+# Zelda has two tilemaps, one for the overworld and one for the underworld.
+# Each tile is represented as a single byte.
+# The overworld and underworld have different sets of passable tiles,
+# and only a small set of passable tiles is listed below.
+# These should be expanded to the full set,
+# and the code should be adjusted to be aware of if it's in over/underworld.
+# The lists below is a small list where the passable tiles seem compatible in both situations and capture most of the information.
+passable_tiles_overworld = [0x24, 0x26, 0x76, 0x84]
+passable_tiles_underworld = [0x68, 0x74, 0x7e]
+ignore_tile_set = passable_tiles_overworld + passable_tiles_underworld
 
-    def _event_add_ruppees(self):
-        return max(0, self.ram[1645] - self.ram2[1645])
+def _get_subtiles(ram):
+    # The screen is divided into an 11x16 grid,
+    # and each tile is divided into 2x2 subtiles;
+    # therefore, the subtile grid is 22x32 (=0x2c0).
+    # the leftmost, rightmost, and bottommost subtiles do not get displayed,
+    # so only a 21x30 grid of subtiles is displayed
+    subtiles = ram[0x530+0x800:0x530+0x2c0+0x800].reshape([32,22])
+    # NOTE:
+    # accessing the memory through get_state() allows changing the state;
+    # the code below is usefull for modifying the grid in a running game;
+    # it does not update the pictures (which are drawn at the beginning of the screen),
+    # but does update how link/enemies behave on the tiles
+    #import code
+    #code.interact(local=locals())
+    # >>> tiles = self.env.unwrapped.em.get_state()[14657:14657+11*4*16]
+    # >>> newstate = b'\x00'*88; state = self.env.unwrapped.em.get_state(); state = state[:14657]+newstate+state[14657+len(newstate):]; self.env.unwrapped.em.set_state(state)
 
-    def _event_add_clock(self):
-        return max(0, self.ram[1644] - self.ram2[1644])
+    return subtiles
+    
+########################################
+# MARK: event functions
+########################################
 
-    def _event_add_heart(self):
-        return max(0, _ramstate_hearts(self.ram) - _ramstate_hearts(self.ram2))
+def get_events(ram, ram2):
+    prefix = '_event_'
+    if not hasattr(get_events, 'event_names'):
+        get_events.event_names = [f for f in globals() if f.startswith(prefix)]
+        get_events.event_names.sort()
+    ret = {}
+    for event_name in get_events.event_names:
+        f = globals()[event_name]
+        if ram2 is not None:
+            ret[event_name[len(prefix):]] = f(ram, ram2)
+        else:
+            ret[event_name[len(prefix):]] = 0
+    return ret
+
+def _event_link_killed(ram, ram2):
+    return int(_ramstate_hearts(ram) == 0 and _ramstate_hearts(ram2) != 0)
+
+def _event_link_hit(ram, ram2):
+    return round(2*max(0, _ramstate_hearts(ram2) - _ramstate_hearts(ram)))
+
+def _event_enemy_alldead(ram, ram2):
+    return int((_ramstate_all_enemies_health(ram) == 0 and _ramstate_all_enemies_health(ram2) != 0) and not (_ramstate_is_screen_scrolling(ram) or _ramstate_is_cave_enter(ram)))
+
+def _event_screen_scrolling(ram, ram2):
+    return int(_ramstate_is_screen_scrolling(ram) and not _ramstate_is_screen_scrolling(ram2))
+
+def _event_screen_scrolling_north(ram, ram2):
+    return int(ram[132] == 61) * _event_screen_scrolling(ram, ram2)
+
+def _event_screen_scrolling_south(ram, ram2):
+    return int(ram[132] == 221) * _event_screen_scrolling(ram, ram2)
+
+def _event_screen_scrolling_west(ram, ram2):
+    return int(ram[112] == 0) * _event_screen_scrolling(ram, ram2)
+
+def _event_screen_scrolling_east(ram, ram2):
+    return int(ram[112] == 240) * _event_screen_scrolling(ram, ram2)
+
+def _event_screen_cave(ram, ram2):
+    return int(_ramstate_is_cave_enter(ram) and not _ramstate_is_cave_enter(ram2))
+
+def _event_enemy_hit(ram, ram2):
+    return max(0, _ramstate_all_enemies_health(ram2) - _ramstate_all_enemies_health(ram))
+
+def _event_enemy_killed(ram, ram2):
+    return max(0, _ramstate_total_enemies(ram2) - _ramstate_total_enemies(ram))
+
+def _event_link_onmouse(ram, ram2):
+    return int(_ramstate_link_onmouse(ram) and not _ramstate_link_onmouse(ram2))
+
+def _event_link_l1dist_decrease(ram, ram2):
+    if ram.mouse is None or ram2.mouse is None:
+        return 0
+    else:
+        x1 = ram[112]
+        y1 = ram[132]
+        l1dist1 = abs(ram.mouse['x'] - x1) + abs(ram.mouse['y'] - y1)
+        x2 = ram2[112]
+        y2 = ram2[132]
+        l1dist2 = abs(ram2.mouse['x'] - x2) + abs(ram2.mouse['y'] - y2)
+        return min(max(l1dist2 - l1dist1, 0), 1)
+
+def _event_link_l1dist_increase(ram, ram2):
+    if ram.mouse is None or ram2.mouse is None:
+        return 0
+    else:
+        x1 = ram[112]
+        y1 = ram[132]
+        l1dist1 = abs(ram.mouse['x'] - x1) + abs(ram.mouse['y'] - y1)
+        x2 = ram2[112]
+        y2 = ram2[132]
+        l1dist2 = abs(ram2.mouse['x'] - x2) + abs(ram2.mouse['y'] - y2)
+        return min(max(l1dist1 - l1dist2, 0), 1)
+
+def _event_button_push(ram, ram2):
+    return min(1, abs(ram[0xfa] - ram2[0xfa]))
+
+def _event_add_bomb(ram, ram2):
+    return max(0, ram[1624] - ram2[1624])
+
+def _event_add_bombmax(ram, ram2):
+    return max(0, ram[1660] - ram2[1660])
+
+def _event_add_keys(ram, ram2):
+    return max(0, ram[1646] - ram2[1646])
+
+def _event_add_ruppees(ram, ram2):
+    return max(0, ram[1645] - ram2[1645])
+
+def _event_add_clock(ram, ram2):
+    return max(0, ram[1644] - ram2[1644])
+
+def _event_add_heart(ram, ram2):
+    return max(0, _ramstate_hearts(ram) - _ramstate_hearts(ram2))
 
 ########################################
 # MARK: _ramstate

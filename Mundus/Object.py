@@ -142,6 +142,7 @@ class EventExtractor(BaseFeaturesExtractor):
 class KnowledgeBase:
     def __init__(self, keys, max_objects=24):
         self.items = defaultdict(lambda: {})
+        self.events = {}
         self.columns = set()
         self.max_objects = max_objects
         self.dtype_discrete = np.uint8
@@ -164,6 +165,7 @@ class KnowledgeBase:
                     val[k] = int(v)
 
     def to_observation(self):
+
         observations = []
         for item, val in self.items.items():
             observation = {
@@ -180,9 +182,13 @@ class KnowledgeBase:
             }
         observations += [pad] * (self.max_objects - len(observations))
 
+        events_array = np.array([v for k, v in sorted(self.events.items())])
+        events_array = np.clip(events_array, -1, 1)
+
         ret = {
             'objects_continuous': np.array([x['objects_continuous'] for x in observations], dtype=self.dtype_continuous),
             'objects_discrete': np.array([x['objects_discrete'] for x in observations], dtype=self.dtype_discrete),
+            'events': events_array,
             }
         return ret
 
@@ -190,7 +196,8 @@ class KnowledgeBase:
         observation = self.to_observation()
         space = gymnasium.spaces.Dict({
             'objects_continuous': gymnasium.spaces.Box(-1, 1, observation['objects_continuous'].shape, self.dtype_continuous),
-            'objects_discrete': gymnasium.spaces.Box(0, 255, observation['objects_discrete'].shape, self.dtype_discrete)
+            'objects_discrete': gymnasium.spaces.Box(0, 255, observation['objects_discrete'].shape, self.dtype_discrete),
+            'events': gymnasium.spaces.Box(-1, 1, observation['events'].shape, self.dtype_continuous)
             })
         return space
 

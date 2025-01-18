@@ -397,7 +397,7 @@ class ZeldaWrapper(RetroWithRam):
         # create a new observation space
         kb = generate_knowledge_base(self.ram, self.ram2)
         self.observation_space = kb.get_observation_space()
-        #self.observation_space['rewards'] = self.observation_space['events']
+        self.observation_space['rewards'] = self.observation_space['events']
         logging.info(f'self.observation_space.shape={self.observation_space.shape}')
         logging.info(f"self.observation_space.keys()={self.observation_space.keys()}")
         for k in self.observation_space:
@@ -433,11 +433,13 @@ class ZeldaWrapper(RetroWithRam):
         self.env.render_mode = render_mode
 
         # compute the task information
-        self.ram.mouse = self.mouse
+        self.ram.mouse = self.mouse # FIXME: this should be in only one spot
         kb = generate_knowledge_base(self.ram, self.ram2)
         kb_obs = kb.to_observation()
-
         task = self.tasks[self.episode_task]
+
+        kb_obs['rewards'] = np.array([task['reward'].get(k, 0) for k in sorted(kb.events)])
+
         terminated = any([globals()[fname](self.ram) for fname in task['terminated']])
         info['is_success'] = any([globals()[fname](self.ram) for fname in task['is_success']])
         if 'step' in task:

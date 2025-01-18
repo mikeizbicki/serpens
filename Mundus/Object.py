@@ -120,13 +120,15 @@ class EventExtractor(BaseFeaturesExtractor):
         extractors = {
             'objects': objcnn,
             'events': nn.Flatten(),
+            'rewards': nn.Flatten(),
             }
         self.extractors = nn.ModuleDict(extractors)
 
         # Update the features dim manually
         from stable_baselines3.common.preprocessing import get_flattened_obs_dim
         dim_events = get_flattened_obs_dim(observation_space['events'])
-        self._features_dim = objcnn.features_dim + dim_events
+        dim_rewards = get_flattened_obs_dim(observation_space['rewards'])
+        self._features_dim = objcnn.features_dim + dim_events + dim_rewards
 
     def forward(self, observations: TensorDict) -> torch.Tensor:
         encoded_tensor_list = [
@@ -135,6 +137,7 @@ class EventExtractor(BaseFeaturesExtractor):
                     'objects_continuous': observations['objects_continuous'],
                     }),
                 self.extractors['events'](observations['events']),
+                self.extractors['rewards'](observations['rewards']),
             ]
         return torch.cat(encoded_tensor_list, dim=1)
 

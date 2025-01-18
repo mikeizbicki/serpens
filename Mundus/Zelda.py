@@ -208,6 +208,8 @@ class ZeldaWrapper(RetroWithRam):
         }
     tasks['onmouse2'] = copy.deepcopy(tasks['onmouse'])
     tasks['onmouse2']['reward']: {
+        'link_killed': -2,
+        'link_hit': -1,
         'link_onmouse': 2,
         }
 
@@ -394,8 +396,8 @@ class ZeldaWrapper(RetroWithRam):
 
         # create a new observation space
         kb = generate_knowledge_base(self.ram, self.ram2)
-        kb_obs = kb.get_observation_space()
-        self.observation_space = spaces.Dict(kb_obs)
+        self.observation_space = kb.get_observation_space()
+        #self.observation_space['rewards'] = self.observation_space['events']
         logging.info(f'self.observation_space.shape={self.observation_space.shape}')
         logging.info(f"self.observation_space.keys()={self.observation_space.keys()}")
         for k in self.observation_space:
@@ -1003,7 +1005,7 @@ def _event_link_onmouse(ram, ram2):
     return int(_ramstate_link_onmouse(ram) and not _ramstate_link_onmouse(ram2))
 
 def _event_link_l1dist_decrease(ram, ram2):
-    if ram.mouse is None or ram2.mouse is None:
+    if ram.mouse is None or not hasattr(ram2, 'mouse') or ram2.mouse is None:
         return 0
     else:
         x1 = ram[112]
@@ -1015,7 +1017,7 @@ def _event_link_l1dist_decrease(ram, ram2):
         return min(max(l1dist2 - l1dist1, 0), 1)
 
 def _event_link_l1dist_increase(ram, ram2):
-    if ram.mouse is None or ram2.mouse is None:
+    if ram.mouse is None or not hasattr(ram2, 'mouse') or ram2.mouse is None:
         return 0
     else:
         x1 = ram[112]

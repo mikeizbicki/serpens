@@ -445,7 +445,8 @@ class ZeldaWrapper(RetroWithRam):
 
         event_counter = Counter(kb.events)
         reward_counter = Counter({k: v * event_counter[k] for k, v in task['reward'].items()})
-        self.episode_reward += sum(reward_counter.values())
+        reward = sum(reward_counter.values())
+        self.episode_reward += reward
         self.episode_event_counter += event_counter
         self.episode_reward_counter += reward_counter
         for k in event_counter.keys():

@@ -144,7 +144,7 @@ class ZeldaWrapper(RetroWithRam):
             'add_ruppees': 1,
             'add_clock': 1,
             'add_heart': 1,
-            'button_push': -0.01,
+            'button_push': -0.001,
             },
         }
 

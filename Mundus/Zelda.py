@@ -7,7 +7,7 @@ import random
 import os
 import glob
 import logging
-from collections import OrderedDict, defaultdict, Counter
+from collections import OrderedDict, defaultdict
 import pprint
 
 import torch
@@ -15,6 +15,7 @@ import retro
 import gymnasium
 from gymnasium import spaces
 from Mundus.Object import *
+from Mundus.util import *
 
 
 def make_zelda_env(
@@ -404,8 +405,8 @@ class ZeldaWrapper(RetroWithRam):
             logging.info(f"self.observation_space[k].shape={self.observation_space[k].shape}")
 
     def reset(self, **kwargs):
-        self.episode_event_counter = Counter()
-        self.episode_reward_counter = Counter()
+        self.episode_event_multiset = MultiSet()
+        self.episode_reward_multiset = MultiSet()
         self.episode_reward = 0
         if self.task is not None:
             self.episode_task = self.task
@@ -445,15 +446,15 @@ class ZeldaWrapper(RetroWithRam):
         if 'step' in task:
             task['step'](self, kb)
 
-        event_counter = Counter(kb.events)
-        reward_counter = Counter({k: v * event_counter[k] for k, v in task['reward'].items()})
-        reward = sum(reward_counter.values())
+        event_multiset = MultiSet(kb.events)
+        reward_multiset = MultiSet({k: v * event_multiset[k] for k, v in task['reward'].items()})
+        reward = sum(reward_multiset.values())
         self.episode_reward += reward
-        self.episode_event_counter += event_counter
-        self.episode_reward_counter += reward_counter
-        for k in event_counter.keys():
-            info['event_' + k] = self.episode_event_counter[k]
-            info['reward_' + k] = self.episode_reward_counter[k]
+        self.episode_event_multiset += event_multiset
+        self.episode_reward_multiset += reward_multiset
+        for k in event_multiset.keys():
+            info['event_' + k] = self.episode_event_multiset[k]
+            info['reward_' + k] = self.episode_reward_multiset[k]
 
         info['task_success_' + self.episode_task] = info['is_success']
         info['task_count_' + self.episode_task] = 1
@@ -486,7 +487,7 @@ class ZeldaWrapper(RetroWithRam):
             text = ''
             text += kb.display()
             #text += kb.info['mapstr']
-            text += f'\n{format_dict_pretty(self.episode_event_counter)}'
+            text += f'\n{format_dict_pretty(self.episode_event_multiset)}'
             text += f'\n'
             text += f'\nepisode_reward = {self.episode_reward:0.4f}'
             text += f'\nterminated = {terminated}'
@@ -1174,73 +1175,3 @@ class ZeldaActionSpace(gymnasium.ActionWrapper):
             return arr
 
         return self._decode_discrete_action[action].copy()
-
-
-################################################################################
-# MARK: utils
-################################################################################
-
-import shutil
-from typing import Dict, Any
-
-def format_dict_pretty(d: Dict[str, Any], min_spacing: int = 2) -> str:
-    """
-    Format dictionary key-value pairs in aligned columns that fit the terminal width.
-    Keys are sorted alphabetically and arranged in columns from top to bottom.
-    Floating point values are limited to 4 decimal places.
-
-    Args:
-        d: Dictionary to format
-        min_spacing: Minimum number of spaces between columns
-
-    Returns:
-        Formatted string representation of the dictionary
-    """
-
-    # Get terminal width
-    terminal_width = shutil.get_terminal_size().columns
-
-    # Convert all items to strings, handling floats specially
-    items = []
-    for k, v in d.items():
-        key_str = str(k)
-        if isinstance(v, float):
-            val_str = f"{v:.4f}" #.rstrip('0').rstrip('.')
-        else:
-            val_str = str(v)
-        items.append((key_str, val_str))
-
-    # Sort items by key
-    items.sort(key=lambda x: x[0])
-
-    # Find the maximum lengths
-    max_key_len = max((len(k) for k, v in items), default=0)
-    max_val_len = max((len(v) for k, v in items), default=0)
-
-    # Calculate the width needed for each pair
-    pair_width = max_key_len + max_val_len + 4  # 4 accounts for ': ' and minimum spacing
-
-    # Calculate how many pairs can fit in one row
-    pairs_per_row = max(1, terminal_width // pair_width)
-
-    # Calculate number of rows needed
-    num_rows = (len(items) + pairs_per_row - 1) // pairs_per_row
-
-    # Reorder items to go down columns instead of across rows
-    column_ordered_items = []
-    for row in range(num_rows):
-        for col in range(pairs_per_row):
-            idx = row + col * num_rows
-            if idx < len(items):
-                column_ordered_items.append(items[idx])
-
-    # Build the output string
-    result = []
-    for i in range(0, len(column_ordered_items), pairs_per_row):
-        row_items = column_ordered_items[i:i + pairs_per_row]
-        format_str = ""
-        for _ in row_items:
-            format_str += f"{{:<{max_key_len}}}: {{:<{max_val_len}}}{' ' * min_spacing}"
-        result.append(format_str.format(*[item for pair in row_items for item in pair]))
-
-    return "\n".join(result)

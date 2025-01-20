@@ -1058,7 +1058,7 @@ def _event_add_heart(ram, ram2):
 ########################################
 
 def _ramstate_link_onmouse(ram):
-    if ram.mouse is None:
+    if not hasattr(ram, 'mouse') or ram.mouse is None:
         return 0
     else:
         safe_radius = 8

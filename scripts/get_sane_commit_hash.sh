@@ -10,6 +10,8 @@ This scripts should be called at the beginning of every training run for reprodu
 I have unfortunately had a major regression that I couldn't debug because I'm not sure exactly what the code was run for several training runs because the code wasn't being committed.
 "
 
+mkdir -p nohup
+
 if ! [ -z "$(git status --porcelain)" ]; then
     echo "ERROR: there are uncommitted files"
     git status

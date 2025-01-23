@@ -1,5 +1,10 @@
 #!/bin/sh
 
+about="
+This scripts trains a series of models on passed git commits.
+It is useful for finding the source of regressions.
+"
+
 set -e
 
 mkdir -p nohup

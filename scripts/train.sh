@@ -9,5 +9,6 @@ mkdir -p nohup
 #done
 
 for i in $(seq 0 4); do
-    CUDA_VISIBLE_DEVICES=$i nohup python3 Mundus/train.py --comment=new --n_env=128 --batch_size=256 --policy=ObjectCnn --features_dim=256 --gamma=0.9 --state=overworld*.state --scenario=attack > nohup/nohup.$i &
+    CUDA_VISIBLE_DEVICES=$i nohup python3 Mundus/train.py --comment=hash_explore --n_env=128 --batch_size=256 --policy=ObjectCnn --features_dim=256 --gamma=0.9 --state=overworld*.state --task=attack --seed=$i > nohup/nohup.$i &
+    sleep 1
 done

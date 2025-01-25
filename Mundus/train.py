@@ -224,9 +224,8 @@ def main():
     hyperparameters.add_argument('--policy', choices=['ObjectCnn', 'EventExtractor'], default='ObjectCnn')
     hyperparameters.add_argument('--pooling', choices=['lstm', 'mean', 'max'], default='mean')
     hyperparameters.add_argument('--alg', choices=['ppo', 'dqn'], default='ppo')
-    hyperparameters.add_argument('--task', default='attack')
-    #hyperparameters.add_argument('--task', default=None)
-    hyperparameters.add_argument('--state', default='spiders_lowhealth_01*.state')
+    #hyperparameters.add_argument('--task', default='attack')
+    hyperparameters.add_argument('--task', default=None)
     hyperparameters.add_argument('--net_arch', type=int, nargs='*', default=[])
     hyperparameters.add_argument('--features_dim', type=int, default=64)
     hyperparameters.add_argument('--lr', type=float, default=3e-4)
@@ -254,7 +253,7 @@ def main():
     experiment_name = ''
     if args.comment is not None:
         experiment_name = args.comment + '--'
-    experiment_name += f'task={args.task},action_space={args.action_space},state={args.state},policy={args.policy},pooling={args.pooling},net_arch={arch_string},{args.features_dim},alg={args.alg},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps},batch_size={args.batch_size},seed={args.seed}'
+    experiment_name += f'task={args.task},action_space={args.action_space},policy={args.policy},pooling={args.pooling},net_arch={arch_string},{args.features_dim},alg={args.alg},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps},batch_size={args.batch_size},seed={args.seed}'
     logging.info(f'experiment_name: "{experiment_name}"')
 
     # create the environment
@@ -269,7 +268,6 @@ def main():
                 )
         env = TimeLimit(env, max_episode_steps=30*60*5)
         env = StochasticFrameSkip(env, 4, 0.25, seed=seed)
-        #env = RandomStateReset(env, path='custom_integrations/Zelda-Nes', globstr=args.state, seed=seed)
         return env
 
     # NOTE:

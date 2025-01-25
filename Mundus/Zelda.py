@@ -392,7 +392,8 @@ class ZeldaWrapper(RetroWithRam):
         self.render_kb = render_kb
         self.task = task
         self.seed = seed
-        self.random = random.Random(self.seed)
+        self.random = None
+        self.random_reset = random.Random(self.seed)
         self.mouse = None
 
         # create a new observation space
@@ -405,6 +406,7 @@ class ZeldaWrapper(RetroWithRam):
             logging.info(f"self.observation_space[k].shape={self.observation_space[k].shape}")
 
     def reset(self, **kwargs):
+        self.random = random.Random(self.random_reset.randint(0, 2**30))
         self.episode_event_multiset = MultiSet()
         self.episode_reward_multiset = MultiSet()
         self.episode_reward = 0

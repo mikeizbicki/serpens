@@ -259,6 +259,7 @@ def main():
 
     # create the environment
     def make_env(seed):
+        print(f"seed={seed}")
         env = make_zelda_env(
                 action_space=args.action_space,
                 render_mode=args.render_mode,
@@ -268,14 +269,14 @@ def main():
                 )
         env = TimeLimit(env, max_episode_steps=30*60*5)
         env = StochasticFrameSkip(env, 4, 0.25, seed=seed)
-        env = RandomStateReset(env, path='custom_integrations/Zelda-Nes', globstr=args.state, seed=seed)
+        #env = RandomStateReset(env, path='custom_integrations/Zelda-Nes', globstr=args.state, seed=seed)
         return env
 
     # NOTE:
     # we use a simple LCG to generate non-sequential seeds for each environment;
     # this ensures that changing args.seed=0 to args.seed=1 doesn't result in many
     # environments with duplicate seeds
-    train_env = SubprocVecEnv([lambda: make_env((seed*134775813+1)%(2**31)) for seed in range(args.n_env)])
+    train_env = SubprocVecEnv([lambda seed=seed: make_env((seed*134775813+1)%(2**31)) for seed in range(args.n_env)])
     train_env = VecMonitor(train_env)
     train_env.reset()
 

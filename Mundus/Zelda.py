@@ -140,7 +140,6 @@ class ZeldaWrapper(RetroWithRam):
             'enemy_hit': 1,
             'enemy_killed': 1,
             'add_bomb': 1,
-            'add_bombmax': 1,
             'add_keys': 1,
             'add_ruppees': 1,
             'add_clock': 1,
@@ -148,7 +147,33 @@ class ZeldaWrapper(RetroWithRam):
             'button_push': -0.001,
             },
         }
+    tasks['attack_noitem'] = copy.deepcopy(tasks['attack'])
+    tasks['attack_noitem']['reward'] |= {
+        'add_bomb': -1,
+        'add_clock': -1,
+        'add_heart': -1,
+        'add_keys': -1,
+        'add_ruppees': -1,
+        }
+    tasks['noattack'] = copy.deepcopy(tasks['attack'])
+    tasks['noattack'] |= {
+        'is_success': [
+            '_ramstate_link_alive',
+            ],
+        'reward': {
+            'link_killed': -2,
+            'link_hit': -1,
+            'enemy_alldead': -2,
+            'screen_scrolling': -2,
+            'screen_cave': -2,
+            'enemy_hit': -1,
+            'enemy_killed': -1,
+            },
+        }
 
+    ####################
+    # mouse tasks
+    ####################
 
     def _step_follow_random(self, kb):
         if self.ram.mouse is None or self.random.random() < 1/300:
@@ -232,144 +257,50 @@ class ZeldaWrapper(RetroWithRam):
     tasks['onmouse_enemy'] = copy.deepcopy(tasks['onmouse'])
     tasks['onmouse_enemy']['step'] = _step_onmouse_enemy
 
-
-    """
-    tasks['noitem'] = copy.deepcopy(tasks['attack'])
-    tasks['noitem']['reward'] = {
-        'add_bomb': -1,
-        'add_clock': -1,
-        'add_heart': -1,
-        'add_keys': -1,
-        'add_ruppees': -1,
-        }
-
-    tasks['noattack'] = copy.deepcopy(tasks['attack'])
-    tasks['noattack']['is_success'] = lambda ram: any([
-        not _ramstate_link_killed(ram),
-        ])
-    tasks['noattack']['reward'] |= {
-        'enemy_hit': -1,
-        'enemy_killed': -1,
-        'enemy_alldead': -1,
-        'add_bomb': -1,
-        'add_clock': -1,
-        'add_heart': -1,
-        'add_keys': -1,
-        'add_ruppees': -1,
-        }
+    ####################
+    # screen change tasks
+    ####################
 
     tasks['screen_cave'] = copy.deepcopy(tasks['noattack'])
-    tasks['screen_cave']['is_success'] = lambda ram:any([
-        _event_screen_cave(),
-        ])
+    tasks['screen_cave']['is_success'] = [
+        '_ramstate_is_cave_enter',
+        ]
     tasks['screen_cave']['reward'] |= {
-        'screen_cave': -1,
+        'screen_cave': 2,
         }
 
-    tasks['scroll'] = copy.deepcopy(tasks['noattack'])
-    tasks['scroll']['is_success'] = lambda ram:any([
-        _event_screen_scrolling(),
-        ])
-    tasks['scroll']['reward'] |= {
-        'screen_scrolling': -1,
-        'screen_scrolling_north': -1,
-        'screen_scrolling_south': -1,
-        'screen_scrolling_east': -1,
-        'screen_scrolling_west': -1,
+    tasks['screen_north'] = copy.deepcopy(tasks['noattack'])
+    tasks['screen_north']['is_success'] = [
+        '_ramstate_screen_scrolling_north'
+        ]
+    tasks['screen_north']['reward'] |= {
+        'screen_scrolling_north': 4,
         }
 
-    tasks['screen_scrolling_north'] = copy.deepcopy(tasks['noattack'])
-    tasks['screen_scrolling_north']['is_success'] = lambda ram:any([
-        _event_screen_scrolling_north(),
-        ])
-    tasks['screen_scrolling_north']['reward'] |= {
-        'screen_scrolling': 0,
-        'screen_scrolling_north': -1,
-        'screen_scrolling_south': 1,
-        'screen_scrolling_east': 1,
-        'screen_scrolling_west': 1,
+    tasks['screen_south'] = copy.deepcopy(tasks['noattack'])
+    tasks['screen_south']['is_success'] = [
+        '_ramstate_screen_scrolling_south'
+        ]
+    tasks['screen_south']['reward'] |= {
+        'screen_scrolling_south': 4,
         }
 
-    tasks['screen_scrolling_south'] = copy.deepcopy(tasks['noattack'])
-    tasks['screen_scrolling_south']['is_success'] = lambda ram:any([
-        _event_screen_scrolling_south(),
-        ])
-    tasks['screen_scrolling_south']['reward'] |= {
-        'screen_scrolling': 0,
-        'screen_scrolling_north': 1,
-        'screen_scrolling_south': -1,
-        'screen_scrolling_east': 1,
-        'screen_scrolling_west': 1,
+    tasks['screen_east'] = copy.deepcopy(tasks['noattack'])
+    tasks['screen_east']['is_success'] = [
+        '_ramstate_screen_scrolling_east'
+        ]
+    tasks['screen_east']['reward'] |= {
+        'screen_scrolling_east': 4,
         }
 
-    tasks['screen_scrolling_east'] = copy.deepcopy(tasks['noattack'])
-    tasks['screen_scrolling_east']['is_success'] = lambda ram:any([
-        _event_screen_scrolling_east(),
-        ])
-    tasks['screen_scrolling_east']['reward'] |= {
-        'screen_scrolling': 0,
-        'screen_scrolling_north': 1,
-        'screen_scrolling_south': 1,
-        'screen_scrolling_east': -1,
-        'screen_scrolling_west': 1,
+    tasks['screen_west'] = copy.deepcopy(tasks['noattack'])
+    tasks['screen_west']['is_success'] = [
+        '_ramstate_screen_scrolling_west'
+        ]
+    tasks['screen_west']['reward'] |= {
+        'screen_scrolling_west': 4,
         }
 
-    tasks['screen_scrolling_west'] = copy.deepcopy(tasks['noattack'])
-    tasks['screen_scrolling_west']['is_success'] = lambda ram:any([
-        _event_screen_scrolling_west(),
-        ])
-    tasks['screen_scrolling_west']['reward'] |= {
-        'screen_scrolling': 0,
-        'screen_scrolling_north': 1,
-        'screen_scrolling_south': 1,
-        'screen_scrolling_east': 1,
-        'screen_scrolling_west': -1,
-        }
-
-    tasks['suicide'] = copy.deepcopy(tasks['attack'])
-    tasks['suicide']['is_success'] = lambda ram: any([
-        _ramstate_link_killed(ram),
-        ])
-    tasks['suicide']['reward'] = {
-        'link_killed': -1,
-        'link_hit': -1,
-        }
-
-    tasks['danger'] = copy.deepcopy(tasks['attack'])
-    tasks['danger']['is_success'] = lambda ram: any([
-        not _ramstate_link_killed(ram),
-        ])
-    tasks['suicide']['reward'] |= {
-        'link_killed': 4,
-        'link_hit': -1,
-        }
-
-    def _step_follow_enemy(self, kb):
-        enemies = []
-        for k in kb.items:
-            if 'enemy' in k:
-                enemies.append(kb.items[k])
-        if len(enemies) == 0:
-            mouse = None
-        else:
-            link = kb.items['link']
-            mouse = {}
-            dist = 9999
-            for i, enemy in enumerate(enemies):
-                newdist = abs(enemy['x'] - link['x']) + abs(enemy['y'] - link['y'])
-                if newdist < dist:
-                    dist = newdist
-                    mouse['x'] = enemy['x']
-                    mouse['y'] = enemy['y']
-    tasks['follow_enemy'] = copy.deepcopy(tasks['follow'])
-    tasks['follow_enemy']['step'] = _step_follow_enemy
-
-    tasks['repel_enemy'] = copy.deepcopy(tasks['follow_enemy'])
-    tasks['repel_enemy']['reward']['link_l1dist'] = -1
-
-    tasks['repel_random'] = copy.deepcopy(tasks['follow_random'])
-    tasks['repel_random']['reward']['link_l1dist'] = -1
-    """
 
     def __init__(
             self,
@@ -381,6 +312,7 @@ class ZeldaWrapper(RetroWithRam):
             render_kb=True,
             task='attack',
             seed=None,
+            reset_method='link enemy map',
             ):
 
         # bookkeeping
@@ -395,6 +327,7 @@ class ZeldaWrapper(RetroWithRam):
         self.random = None
         self.random_reset = random.Random(self.seed)
         self.mouse = None
+        self.reset_method = reset_method
 
         # create a new observation space
         kb = generate_knowledge_base(self.ram, self.ram2)
@@ -413,17 +346,24 @@ class ZeldaWrapper(RetroWithRam):
         if self.task is not None:
             self.episode_task = self.task
         else:
-            self.episode_task = random.choice(sorted(self.tasks.keys()))
+            if self.random.choice([True, False]):
+                self.episode_task = 'attack'
+            else:
+                self.episode_task = self.random.choice(sorted(self.tasks.keys()))
         self.stepcount = 0
         obs, info = super().reset(**kwargs)
-        # FIXME: randomly initializing link's position should be behind a flag
+
+        # reset map/link/enemy location
         valid_map_coords = [
             0x1e, 0x1f, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x38, 0x3a, 0x3b, 0x3d, 0x3e, 0x3f, 0x48, 0x49, 0x4a, 0x4c, 0x4d, 0x4e, 0x4f, 0x51, 0x52, 0x53, 0x5d, 0x58, 0x59, 0x5a, 0x5b, 0x5b, 0x5e, 0x5f, 0x61, 0x63, 0x63, 0x64, 0x65, 0x66, 0x67, 0x69, 0x6a, 0x6b, 0x6f, 0x70, 0x71, 0x73, 0x73, 0x76, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d
             ]
         hard_coords = [0x10, 0x11, 0x20, 0x12, 0x13, 0x14, 0x15, 0x25, 0x26, 0x70, 0x50, 0x60]
-        self._set_map_coordinates_eb(self.random.choice(valid_map_coords))
-        self._set_random_link_position()
-        self._set_random_enemy_positions()
+        if 'map' in self.reset_method:
+            self._set_map_coordinates_eb(self.random.choice(valid_map_coords))
+        if 'link' in self.reset_method:
+            self._set_random_link_position()
+        if 'enemy' in self.reset_method:
+            self._set_random_enemy_positions()
         return self.observation_space.sample(), info
 
     def step(self, action):
@@ -672,7 +612,7 @@ class ZeldaWrapper(RetroWithRam):
             for y in range(1, 22):
                 if subtiles[x, y] in ignore_tile_set:
                     valid_positions.append([x*8, y*8+60-8])
-        positions = random.sample(valid_positions, 6)
+        positions = self.random.sample(valid_positions, 6)
 
         update_dict = {}
         for i in range(6):
@@ -1079,6 +1019,18 @@ def _ramstate_is_screen_scrolling(ram):
     SCROLL_GAME_MODES = {4, 6, 7}
     return ram[0x12] in SCROLL_GAME_MODES
 
+def _ramstate_screen_scrolling_north(ram):
+    return int(ram[132] == 61) * _ramstate_is_screen_scrolling(ram)
+
+def _ramstate_screen_scrolling_south(ram):
+    return int(ram[132] == 221) * _ramstate_is_screen_scrolling(ram)
+
+def _ramstate_screen_scrolling_west(ram):
+    return int(ram[112] == 0) * _ramstate_is_screen_scrolling(ram)
+
+def _ramstate_screen_scrolling_east(ram):
+    return int(ram[112] == 240) * _ramstate_is_screen_scrolling(ram)
+
 def _ramstate_is_drawing_text(ram):
     return ram[0x0605] == 0x10
 
@@ -1093,6 +1045,9 @@ def _ramstate_is_openning_scene(ram):
 
 def _ramstate_link_killed(ram):
     return _ramstate_hearts(ram) <= 0
+
+def _ramstate_link_alive(ram):
+    return _ramstate_hearts(ram) > 0
 
 def _ramstate_hearts(ram):
     link_full_hearts = 0x0f & ram[0x066f]

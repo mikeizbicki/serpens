@@ -313,6 +313,7 @@ class ZeldaWrapper(RetroWithRam):
             task='attack',
             seed=None,
             reset_method='link enemy map',
+            frames_without_attack_threshold=None,
             ):
 
         # bookkeeping
@@ -328,6 +329,10 @@ class ZeldaWrapper(RetroWithRam):
         self.random_reset = random.Random(self.seed)
         self.mouse = None
         self.reset_method = reset_method
+        if frames_without_attack_threshold is None:
+            self.frames_without_attack_threshold = math.inf
+        else:
+            self.frames_without_attack_threshold = frames_without_attack_threshold
 
         # create a new observation space
         kb = generate_knowledge_base(self.ram, self.ram2)
@@ -351,6 +356,9 @@ class ZeldaWrapper(RetroWithRam):
             else:
                 self.episode_task = self.random.choice(sorted(self.tasks.keys()))
         self.stepcount = 0
+        self.frames_without_attack = 0
+        self.max_frames_without_attack = 0
+        self.skipped_frames = 0
         obs, info = super().reset(**kwargs)
 
         # reset map/link/enemy location
@@ -388,6 +396,20 @@ class ZeldaWrapper(RetroWithRam):
         if 'step' in task:
             task['step'](self, kb)
 
+        # potentially end task early if we're going too long
+        if _ramstate_all_enemies_health(self.ram) == _ramstate_all_enemies_health(self.ram2) and _ramstate_hearts(self.ram) == _ramstate_hearts(self.ram2):
+            self.frames_without_attack += 1
+        else:
+            self.frames_without_attack = 0
+        self.max_frames_without_attack = max(self.max_frames_without_attack, self.frames_without_attack)
+
+        info['misc_max_frames_without_attack'] = self.max_frames_without_attack
+        info['misc_truncated_noattack'] = 0
+        if self.frames_without_attack >= self.frames_without_attack_threshold:
+            truncated = True
+            info['misc_truncated_noattack'] = 1
+
+        # compute logging information
         event_multiset = MultiSet(kb.events)
         reward_multiset = MultiSet({k: v * event_multiset[k] for k, v in task['reward'].items()})
         reward = sum(reward_multiset.values())
@@ -438,7 +460,6 @@ class ZeldaWrapper(RetroWithRam):
 
         # skip the boring frames
         if self.skip_boring_frames:
-            skipped_frames = 0
             while any([
                 _ramstate_is_screen_scrolling(self.ram),
                 _ramstate_is_drawing_text(self.ram),
@@ -447,7 +468,16 @@ class ZeldaWrapper(RetroWithRam):
                 _ramstate_hearts(self.ram) <= 0,
                 _ramstate_is_openning_scene(self.ram),
                 ]):
-                skipped_frames += 1
+                self.skipped_frames += 1
+                conditions = [
+                    _ramstate_is_screen_scrolling(self.ram),
+                    _ramstate_is_drawing_text(self.ram),
+                    _ramstate_is_cave_enter(self.ram),
+                    _ramstate_is_inventory_scroll(self.ram),
+                    _ramstate_hearts(self.ram) <= 0,
+                    _ramstate_is_openning_scene(self.ram),
+                    ]
+                print(f"conditions={conditions}")
                 # NOTE:
                 # but if link has died, we need to press the "continue" button;
                 # to do this, we alternate between no action and pressing "start" every frame
@@ -457,7 +487,7 @@ class ZeldaWrapper(RetroWithRam):
                 # the code below is very similar to the code in retro.RetroEnv.step()
 
                 skipbuttons = []
-                if _ramstate_hearts(self.ram) <= 0 and skipped_frames%2 == 0:
+                if _ramstate_hearts(self.ram) <= 0 and self.skipped_frames%2 == 0:
                     skipbuttons = ['START']
                 self._set_buttons(skipbuttons)
 
@@ -467,6 +497,10 @@ class ZeldaWrapper(RetroWithRam):
                 ob = self.env._update_obs()
                 if self.env.render_mode == "human" and not self.no_render_skipped_frames:
                     self.env.render()
+
+        info['misc_step'] = self.stepcount
+        info['misc_skipped_frames'] = self.skipped_frames
+        info['misc_episode_reward'] = self.episode_reward
 
         # return step results
         return kb_obs, reward, terminated, truncated, info

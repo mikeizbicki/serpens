@@ -18,4 +18,6 @@ if ! [ -z "$(git status --porcelain)" ]; then
     exit 1
 fi
 
-git rev-parse --short=8 HEAD
+dist=$(git rev-list --count HEAD)
+commit=$(git rev-parse --short=8 HEAD)
+echo "$dist-$commit"

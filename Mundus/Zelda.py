@@ -314,6 +314,7 @@ class ZeldaWrapper(RetroWithRam):
             seed=None,
             reset_method='link enemy map',
             frames_without_attack_threshold=None,
+            fast_termination=False,
             ):
 
         # bookkeeping
@@ -329,6 +330,7 @@ class ZeldaWrapper(RetroWithRam):
         self.random_reset = random.Random(self.seed)
         self.mouse = None
         self.reset_method = reset_method
+        self.fast_termination = fast_termination
         if frames_without_attack_threshold is None:
             self.frames_without_attack_threshold = math.inf
         else:
@@ -459,7 +461,7 @@ class ZeldaWrapper(RetroWithRam):
             print(text)
 
         # skip the boring frames
-        if self.skip_boring_frames:
+        if not (self.fast_termination and (terminated or truncated)) and self.skip_boring_frames:
             while any([
                 _ramstate_is_screen_scrolling(self.ram),
                 _ramstate_is_drawing_text(self.ram),
@@ -469,15 +471,6 @@ class ZeldaWrapper(RetroWithRam):
                 _ramstate_is_openning_scene(self.ram),
                 ]):
                 self.skipped_frames += 1
-                conditions = [
-                    _ramstate_is_screen_scrolling(self.ram),
-                    _ramstate_is_drawing_text(self.ram),
-                    _ramstate_is_cave_enter(self.ram),
-                    _ramstate_is_inventory_scroll(self.ram),
-                    _ramstate_hearts(self.ram) <= 0,
-                    _ramstate_is_openning_scene(self.ram),
-                    ]
-                print(f"conditions={conditions}")
                 # NOTE:
                 # but if link has died, we need to press the "continue" button;
                 # to do this, we alternate between no action and pressing "start" every frame

@@ -16,6 +16,7 @@ from stable_baselines3.common.results_plotter import load_results, ts2xy, plot_r
 from Mundus.Wrappers import *
 from Mundus.Zelda import *
 import torch
+from torch.utils.tensorboard import SummaryWriter
 
 
 class SaveOnBestTrainingRewardCallback(BaseCallback):
@@ -138,8 +139,14 @@ class TensorboardCallback(BaseCallback):
         else:
             self.screens = []
 
-    def _on_step(self) -> bool:
+    def _init_callback(self) -> None:
+        # self.logger already contains a SummaryWriter,
+        # but it's hidden away where we can't access it directly;
+        # creating a new one here allows us to create plots with
+        # different x-axes
+        self.my_writer = SummaryWriter(log_dir=self.logger.get_dir())
 
+    def _on_step(self) -> bool:
         # on the first iteration,
         # we set num_episodes to a list whose length is the number of vectorized environments;
         # each entry will count the total number of episodes for that environment
@@ -156,6 +163,7 @@ class TensorboardCallback(BaseCallback):
         for i, done in enumerate(self.locals['dones']):
             if done:
                 self.num_episodes[i] += 1
+                sum_num_episodes = sum(self.num_episodes)
 
                 # special screen recording processing for the first environment only
                 if self.record_every is not None and i == 0:
@@ -179,33 +187,24 @@ class TensorboardCallback(BaseCallback):
                     prefixmod = prefix.strip('_')
                     for key in keys:
                         keymod = key[len(prefix):]
-                        self.logger.record_mean(prefixmod+'/'+keymod, self.locals['infos'][i][key], exclude=('stdout',))
+                        self.logger.record_mean('step_' + prefixmod+'/'+keymod, self.locals['infos'][i][key], exclude=('stdout',))
+                        self.my_writer.add_scalar('episode_' + prefixmod+'/'+keymod, self.locals['infos'][i][key], sum_num_episodes)
 
                 record_prefix('event_')
                 record_prefix('reward_')
                 record_prefix('task_success_')
+                record_prefix('misc_')
                 #record_prefix('task_count_')
 
                 prefix = 'task_count_'
                 keys = [key for key in self.locals['infos'][i].keys() if key.startswith(prefix)]
-                self.logger.record('episode/num_episodes', sum(self.num_episodes))
                 prefixmod = prefix.strip('_')
                 for key in keys:
                     keymod = key[len(prefix):]
                     self.num_tasks[keymod] += 1
-                    self.logger.record(prefixmod+'/'+keymod, self.num_tasks[keymod], exclude=('stdout',))
+                    self.my_writer.add_scalar('episode_' + prefixmod+'/'+keymod, self.num_tasks[keymod], sum_num_episodes)
 
-                #keys = [key for key in self.locals['infos'][i].keys() if key.startswith('event_')]
-                #for key in keys:
-                    #self.logger.record_mean('summary/'+key, self.locals['infos'][i][key])
-                #keys = [key for key in self.locals['infos'][i].keys() if key.startswith('reward_')]
-                #self.logger.record('episode/num_episodes', sum(self.num_episodes))
-                #for key in keys:
-                    #self.logger.record_mean('reward/'+key, self.locals['infos'][i][key])
-#
-                #task_keys = [key for key in self.locals['infos'][i].keys() if key.startswith('task_success_')]
-                #for key in task_keys:
-                    #self.logger.record_mean('task_success/'+key, self.locals['infos'][i][key])
+                self.logger.record('step_misc/num_episodes', sum(self.num_episodes))
         return True
 
 
@@ -236,6 +235,7 @@ def main():
     hyperparameters.add_argument('--seed', type=int, default=0)
     hyperparameters.add_argument('--warmstart', default=None)
     hyperparameters.add_argument('--action_space', default='DISCRETE')
+    hyperparameters.add_argument('--fwat', default=None, type=int)
 
     args = parser.parse_args()
 
@@ -253,7 +253,7 @@ def main():
     experiment_name = ''
     if args.comment is not None:
         experiment_name = args.comment + '--'
-    experiment_name += f'task={args.task},action_space={args.action_space},policy={args.policy},pooling={args.pooling},net_arch={arch_string},{args.features_dim},alg={args.alg},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps},batch_size={args.batch_size},seed={args.seed}'
+    experiment_name += f'task={args.task},action_space={args.action_space},fwat={args.fwat},policy={args.policy},pooling={args.pooling},net_arch={arch_string},{args.features_dim},alg={args.alg},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps},batch_size={args.batch_size},seed={args.seed}'
     logging.info(f'experiment_name: "{experiment_name}"')
 
     # create the environment
@@ -265,6 +265,7 @@ def main():
                 skip_boring_frames=True,
                 task=args.task,
                 seed=seed,
+                frames_without_attack_threshold=args.fwat,
                 )
         env = TimeLimit(env, max_episode_steps=30*60*5)
         env = StochasticFrameSkip(env, 4, 0.25, seed=seed)
@@ -342,7 +343,7 @@ def main():
         reset_num_timesteps=reset_num_timesteps,
         callback = [
             SaveOnBestTrainingRewardCallback(),
-            #HParamCallback(),
+            HParamCallback(),
             TensorboardCallback(record_every=None if args.disable_video or args.render_mode=='human' else 1),
             ],
     )

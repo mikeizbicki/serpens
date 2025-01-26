@@ -477,7 +477,6 @@ class ZeldaWrapper(RetroWithRam):
                     _ramstate_hearts(self.ram) <= 0,
                     _ramstate_is_openning_scene(self.ram),
                     ]
-                print(f"conditions={conditions}")
                 # NOTE:
                 # but if link has died, we need to press the "continue" button;
                 # to do this, we alternate between no action and pressing "start" every frame

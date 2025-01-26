@@ -266,6 +266,7 @@ def main():
                 task=args.task,
                 seed=seed,
                 frames_without_attack_threshold=args.fwat,
+                fast_termination=True,
                 )
         env = TimeLimit(env, max_episode_steps=30*60*5)
         env = StochasticFrameSkip(env, 4, 0.25, seed=seed)

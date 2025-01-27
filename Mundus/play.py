@@ -280,6 +280,7 @@ def main():
             # the action_space should be loaded automatically from the model
             action_space=args.action_space,
             stdout_debug=not args.no_alternate_screen,
+            debug_assert=True,
             no_render_skipped_frames=args.no_render_skipped_frames,
             skip_boring_frames=not args.allframes,
             task=args.task,

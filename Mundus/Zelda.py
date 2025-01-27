@@ -306,6 +306,7 @@ class ZeldaWrapper(RetroWithRam):
             self,
             env,
             stdout_debug=False,
+            debug_assert=False,
             use_subtiles=False,
             no_render_skipped_frames=True,
             skip_boring_frames=True,
@@ -320,6 +321,7 @@ class ZeldaWrapper(RetroWithRam):
         # bookkeeping
         super().__init__(env)
         self.stdout_debug = stdout_debug
+        self.debug_assert = debug_assert
         self.use_subtiles = use_subtiles
         self.no_render_skipped_frames=no_render_skipped_frames
         self.skip_boring_frames = skip_boring_frames 
@@ -364,12 +366,21 @@ class ZeldaWrapper(RetroWithRam):
         obs, info = super().reset(**kwargs)
 
         # reset map/link/enemy location
-        valid_map_coords = [
-            0x1e, 0x1f, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x38, 0x3a, 0x3b, 0x3d, 0x3e, 0x3f, 0x48, 0x49, 0x4a, 0x4c, 0x4d, 0x4e, 0x4f, 0x51, 0x52, 0x53, 0x5d, 0x58, 0x59, 0x5a, 0x5b, 0x5b, 0x5e, 0x5f, 0x61, 0x63, 0x63, 0x64, 0x65, 0x66, 0x67, 0x69, 0x6a, 0x6b, 0x6f, 0x70, 0x71, 0x73, 0x73, 0x76, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d
-            ]
-        hard_coords = [0x10, 0x11, 0x20, 0x12, 0x13, 0x14, 0x15, 0x25, 0x26, 0x70, 0x50, 0x60]
+        valid_coords = []
         if 'map' in self.reset_method:
-            self._set_map_coordinates_eb(self.random.choice(valid_map_coords))
+            valid_map_coords = [
+                0x1e, 0x1f, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x38, 0x3a, 0x3b, 0x3d, 0x3e, 0x3f, 0x48, 0x49, 0x4a, 0x4c, 0x4d, 0x4e, 0x4f, 0x51, 0x52, 0x53, 0x5d, 0x58, 0x59, 0x5a, 0x5b, 0x5b, 0x5e, 0x5f, 0x61, 0x63, 0x63, 0x64, 0x65, 0x66, 0x67, 0x69, 0x6a, 0x6b, 0x6f, 0x70, 0x71, 0x73, 0x73, 0x76, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d
+                ]
+            hard_coords = [0x10, 0x11, 0x20, 0x12, 0x13, 0x14, 0x15, 0x25, 0x26, 0x70, 0x50, 0x60]
+            valid_coords += valid_map_coords
+        if 'spider' in self.reset_method:
+            valid_coords += [0x76, 0x79, 0x71, 0x4a, 0x2c]
+        if 'octo' in self.reset_method:
+            valid_coords += [0x68, 0x78, 0x58, 0x57, 0x67, 0x66, 0x49, 0x64]
+        if valid_coords != []:
+            new_coord = self.random.choice(valid_coords)
+            self._set_map_coordinates_eb(new_coord)
+
         if 'link' in self.reset_method:
             self._set_random_link_position()
         if 'enemy' in self.reset_method:
@@ -544,13 +555,7 @@ class ZeldaWrapper(RetroWithRam):
         state1 = b''.join(chunks)
         self.env.em.set_state(state1)
 
-        # NOTE:
-        # if the state update is malformed for some reason,
-        # then the state won't update;
-        # this simple assert checks that the state update actually happened;
-        # it might be too slow for an inner loop or interfere with a long training run;
-        # so it should probably be put behind a flag
-        if True:
+        if self.debug_assert:
             state = self.env.em.get_state()
             for k, v in assignment_dict.items():
                 assert state[k+offset] == v
@@ -569,6 +574,17 @@ class ZeldaWrapper(RetroWithRam):
         compute how many screens left/right and up/down we need to move;
         then perform the screen transitions with the _move_map() function.
         '''
+        # NOTE:
+        # there seems to be a bug in the _move_map function;
+        # sometimes it does not correctly move the map the first time it is called;
+        # we work around this bug by first calling it in all the directions,
+        # then calculating our current position and the location we need to move to;
+        # this seems to work, but adds overhead
+        self._move_map('LEFT')
+        self._move_map('RIGHT')
+        self._move_map('DOWN')
+        self._move_map('UP')
+
         x0 = eb % 0x10
         x1 = int(self.ram[0xEB]) % 0x10
         for i in range(x1 - x0):
@@ -582,6 +598,9 @@ class ZeldaWrapper(RetroWithRam):
             self._move_map('DOWN')
         for i in range(y1 - y0):
             self._move_map('UP')
+
+        if self.debug_assert:
+            assert eb == self.ram[0xEB], f'eb={hex(eb)}, self.ram[0xEB]={hex(self.ram[0xEB])}'
 
     def _move_map(self, direction):
         '''

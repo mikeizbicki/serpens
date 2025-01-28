@@ -1,3 +1,4 @@
+import hashlib
 import retro
 import time
 import os
@@ -226,15 +227,15 @@ def main():
     #hyperparameters.add_argument('--task', default='attack')
     hyperparameters.add_argument('--task', default=None)
     hyperparameters.add_argument('--net_arch', type=int, nargs='*', default=[])
-    hyperparameters.add_argument('--features_dim', type=int, default=64)
+    hyperparameters.add_argument('--features_dim', type=int, default=256)
     hyperparameters.add_argument('--lr', type=float, default=3e-4)
-    hyperparameters.add_argument('--gamma', type=float, default=0.99)
-    hyperparameters.add_argument('--n_env', type=int, default=3)
+    hyperparameters.add_argument('--gamma', type=float, default=0.9)
+    hyperparameters.add_argument('--n_env', type=int, default=128)
     hyperparameters.add_argument('--n_steps', type=int, default=128)
-    hyperparameters.add_argument('--batch_size', type=int, default=32)
-    hyperparameters.add_argument('--seed', type=int, default=0)
+    hyperparameters.add_argument('--batch_size', type=int, default=256)
+    hyperparameters.add_argument('--seed', type=int, default=42)
     hyperparameters.add_argument('--warmstart', default=None)
-    hyperparameters.add_argument('--action_space', default='DISCRETE')
+    hyperparameters.add_argument('--action_space', default='zelda-all')
     hyperparameters.add_argument('--fwat', default=None, type=int)
     hyperparameters.add_argument('--reset_method', default='map link enemy', type=str)
 
@@ -246,15 +247,16 @@ def main():
     logging.getLogger().setLevel(logging.INFO)
 
     # set experiment name
-    import datetime
-    starttime = datetime.datetime.now().isoformat()
-
-    arch_string = '-'.join([str(i) for i in args.net_arch])
-
-    experiment_name = ''
-    if args.comment is not None:
-        experiment_name = args.comment + '--'
-    experiment_name += f'task={args.task},action_space={args.action_space},fwat={args.fwat},reset_method={args.reset_method},policy={args.policy},pooling={args.pooling},net_arch={arch_string},{args.features_dim},alg={args.alg},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps},batch_size={args.batch_size},seed={args.seed}'
+    nondefault_params = [f'comment={args.comment}']
+    for arg, value in sorted(vars(args).items()):
+        if arg == 'comment':
+            continue
+        default = parser.get_default(arg)
+        if value != default:
+            nondefault_params.append(f'{arg}={value}')
+    experiment_name = ','.join(nondefault_params)
+    experiment_id = hashlib.md5(experiment_name.encode()).hexdigest()[:8]
+    experiment_name += f'--experiment_id={experiment_id}'
     logging.info(f'experiment_name: "{experiment_name}"')
 
     # create the environment

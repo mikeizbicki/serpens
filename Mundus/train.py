@@ -236,6 +236,7 @@ def main():
     hyperparameters.add_argument('--warmstart', default=None)
     hyperparameters.add_argument('--action_space', default='DISCRETE')
     hyperparameters.add_argument('--fwat', default=None, type=int)
+    hyperparameters.add_argument('--reset_method', default='map link enemy', type=str)
 
     args = parser.parse_args()
 
@@ -253,7 +254,7 @@ def main():
     experiment_name = ''
     if args.comment is not None:
         experiment_name = args.comment + '--'
-    experiment_name += f'task={args.task},action_space={args.action_space},fwat={args.fwat},policy={args.policy},pooling={args.pooling},net_arch={arch_string},{args.features_dim},alg={args.alg},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps},batch_size={args.batch_size},seed={args.seed}'
+    experiment_name += f'task={args.task},action_space={args.action_space},fwat={args.fwat},reset_method={args.reset_method},policy={args.policy},pooling={args.pooling},net_arch={arch_string},{args.features_dim},alg={args.alg},lr={args.lr},gamma={args.gamma},n_env={args.n_env},n_steps={args.n_steps},batch_size={args.batch_size},seed={args.seed}'
     logging.info(f'experiment_name: "{experiment_name}"')
 
     # create the environment
@@ -267,6 +268,7 @@ def main():
                 seed=seed,
                 frames_without_attack_threshold=args.fwat,
                 fast_termination=True,
+                reset_method=args.reset_method,
                 )
         env = TimeLimit(env, max_episode_steps=30*60*5)
         env = StochasticFrameSkip(env, 4, 0.25, seed=seed)

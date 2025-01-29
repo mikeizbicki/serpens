@@ -1,23 +1,26 @@
+from collections import Counter
 import hashlib
+import os
+import re
 import retro
 import time
-import os
-from collections import Counter
-from  gymnasium.wrappers import *
-import stable_baselines3
+
+from gymnasium.wrappers import *
 from stable_baselines3 import TD3
 from stable_baselines3.common import results_plotter
-from stable_baselines3.common.evaluation import evaluate_policy
-from stable_baselines3.common.vec_env import *
 from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.logger import HParam, Video
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.policies import *
 from stable_baselines3.common.results_plotter import load_results, ts2xy, plot_results
+from stable_baselines3.common.vec_env import *
+from torch.utils.tensorboard import SummaryWriter
+import stable_baselines3
+import torch
+
 from Mundus.Wrappers import *
 from Mundus.Zelda import *
-import torch
-from torch.utils.tensorboard import SummaryWriter
 
 
 class SaveOnBestTrainingRewardCallback(BaseCallback):
@@ -244,7 +247,7 @@ def main():
     # set logging level
     import logging
     logging.basicConfig()
-    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().setLevel(logging.DEBUG)
 
     # set experiment name
     nondefault_params = [f'comment={args.comment}']
@@ -261,7 +264,7 @@ def main():
 
     # create the environment
     def make_env(seed):
-        print(f"seed={seed}")
+        logging.debug(f"seed={seed}")
         env = make_zelda_env(
                 action_space=args.action_space,
                 render_mode=args.render_mode,
@@ -334,13 +337,30 @@ def main():
 
     reset_num_timesteps = True
     if args.warmstart:
+        warmstart_path = args.warmstart
+
+        # if warmstart is an 8 char hash value,
+        # then assume it is an experiment_id;
+        # then search the log folder for this experiment_id
+        # and adjust warmstart_path to the matching path
+        pattern = r'^[0-9a-f]{8}$'
+        match = re.match(pattern, args.warmstart)
+        if match:
+            globstr = args.log_dir + '/*experiment_id=' + match.group() + '*'
+            logging.debug(f"globstr={globstr}")
+            filepath = None
+            for filepath in glob.glob(globstr):
+                logging.debug(f"filepath={filepath}")
+                warmstart_path = filepath + '/model.zip'
+
+        logging.info(f"warmstart_path={warmstart_path}")
+        assert os.path.isfile(warmstart_path)
         reset_num_timesteps = False
-        warmstart = stable_baselines3.PPO.load(args.warmstart)
+        warmstart = stable_baselines3.PPO.load(warmstart_path)
         model.policy = warmstart.policy
         model.num_timesteps = warmstart.num_timesteps
-        #import code
-        #code.interact(local=locals())
 
+    # train the model
     model.learn(
         total_timesteps=args.total_timesteps,
         log_interval=1,

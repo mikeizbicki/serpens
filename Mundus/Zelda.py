@@ -145,6 +145,7 @@ class ZeldaWrapper(RetroWithRam):
             'add_clock': 1,
             'add_heart': 1,
             'button_push': -0.001,
+            'button_arrow_nomove': -0.1,
             },
         }
     tasks['attack_noitem'] = copy.deepcopy(tasks['attack'])
@@ -374,12 +375,14 @@ class ZeldaWrapper(RetroWithRam):
             hard_coords = [0x10, 0x11, 0x20, 0x12, 0x13, 0x14, 0x15, 0x25, 0x26, 0x70, 0x50, 0x60]
             valid_coords += valid_map_coords
         if 'spider' in self.reset_method:
-            valid_coords += [0x76, 0x79, 0x71, 0x4a, 0x2c]
+            valid_coords += [0x76, 0x79, 0x7a, 0x4a, 0x2c]
         if 'octo' in self.reset_method:
             valid_coords += [0x68, 0x78, 0x58, 0x57, 0x67, 0x66, 0x49, 0x64]
         if valid_coords != []:
             new_coord = self.random.choice(valid_coords)
+            print(f"hex(new_coord)={hex(new_coord)}")
             self._set_map_coordinates_eb(new_coord)
+            hex(self.ram[0xEB])
 
         if 'link' in self.reset_method:
             self._set_random_link_position()
@@ -755,13 +758,15 @@ def generate_knowledge_base(ram, ram2, include_background=True, use_subtiles=Fal
     '''
     kb = KnowledgeBase(keys={
         'objects_discrete': ['type', 'direction', 'state'],
-        'objects_continuous': ['relx', 'rely', 'x', 'y', 'health'],
+        'objects_continuous': ['relx', 'rely', 'x', 'y', 'dx', 'dy', 'health'],
         })
 
     if ram.mouse is not None:
         item = {}
         item['x'] = ram.mouse['x']
         item['y'] = ram.mouse['y']
+        item['dx'] = ram.mouse['x'] - ram2.mouse['x'] if ram2 is not None and ram2.mouse is not None else 0
+        item['dy'] = ram.mouse['y'] - ram2.mouse['y'] if ram2 is not None and ram2.mouse is not None else 0
         item['type'] = -5
         item['state'] = 0
         item['direction'] = 0
@@ -772,6 +777,8 @@ def generate_knowledge_base(ram, ram2, include_background=True, use_subtiles=Fal
     item = {}
     item['x'] = ram[112]
     item['y'] = ram[132]
+    item['dx'] = ram[112] - ram2[112] if ram2 is not None else 0
+    item['dy'] = ram[132] - ram2[132] if ram2 is not None else 0
     item['type'] = -1
     item['state'] = ram[172]
     item['direction'] = ram[152]
@@ -792,6 +799,8 @@ def generate_knowledge_base(ram, ram2, include_background=True, use_subtiles=Fal
     item['health'] = 0
     item['x'] = ram[125]
     item['y'] = ram[145]
+    item['dx'] = ram[125] - ram2[125] if ram2 is not None else 0
+    item['dy'] = ram[145] - ram2[145] if ram2 is not None else 0
     if item['state'] != 0:
         kb['sword_melee'] = item
 
@@ -802,6 +811,8 @@ def generate_knowledge_base(ram, ram2, include_background=True, use_subtiles=Fal
     item['health'] = 0
     item['x'] = ram[126]
     item['y'] = ram[146]
+    item['dx'] = ram[126] - ram2[126] if ram2 is not None else 0
+    item['dy'] = ram[146] - ram2[146] if ram2 is not None else 0
     if item['state'] != 0:
         kb['sword_proj'] = item
 
@@ -814,6 +825,8 @@ def generate_knowledge_base(ram, ram2, include_background=True, use_subtiles=Fal
         item['type'] = ram[848+i]
         item['x'] = ram[113+i]
         item['y'] = ram[133+i]
+        item['dx'] = ram[113+i] - ram2[113+i] if ram2 is not None else 0
+        item['dy'] = ram[133+i] - ram2[133+i] if ram2 is not None else 0
         rawhealth = ram[1158+i]
         if rawhealth > 0 and (rawhealth < 16 or rawhealth >= 128):
             item['health'] = 0
@@ -831,6 +844,8 @@ def generate_knowledge_base(ram, ram2, include_background=True, use_subtiles=Fal
         item['health'] = 0
         item['x'] = ram[119+i]
         item['y'] = ram[139+i]
+        item['dx'] = ram[119+i] - ram2[119+i] if ram2 is not None else 0
+        item['dy'] = ram[139+i] - ram2[139+i] if ram2 is not None else 0
         if item['state'] != 0:
             kb[f'projectile_{i}'] = item
 
@@ -861,6 +876,8 @@ def generate_knowledge_base(ram, ram2, include_background=True, use_subtiles=Fal
                     item = {}
                     item['x'] = x*tile_size 
                     item['y'] = y*tile_size + 61
+                    item['dx'] = 0
+                    item['dy'] = 0
                     item['type'] = -4
                     item['state'] = tiles[x, y]
                     item['direction'] = 0
@@ -1022,6 +1039,15 @@ def _event_link_l1dist_increase(ram, ram2):
 
 def _event_button_push(ram, ram2):
     return min(1, abs(ram[0xfa] - ram2[0xfa]))
+
+def _event_button_arrow_nomove(ram, ram2):
+    arrow1 = ram[0xfa] & 15
+    arrow2 = ram2[0xfa] & 15
+    x1 = ram[112]
+    y1 = ram[132]
+    x2 = ram2[112]
+    y2 = ram2[132]
+    return arrow1 and x1 == x2 and y1 == y2
 
 def _event_add_bomb(ram, ram2):
     return max(0, ram[1624] - ram2[1624])

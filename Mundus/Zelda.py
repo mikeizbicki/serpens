@@ -144,9 +144,11 @@ class ZeldaWrapper(RetroWithRam):
             'add_ruppees': 1,
             'add_clock': 1,
             'add_heart': 1,
+            },
+        'pseudoreward': {
             'button_push': -0.001,
             'button_arrow_nomove': -0.01,
-            },
+            }
         }
     tasks['attack_noitem'] = copy.deepcopy(tasks['attack'])
     tasks['attack_noitem']['reward'] |= {
@@ -352,7 +354,9 @@ class ZeldaWrapper(RetroWithRam):
         self.random = random.Random(self.random_reset.randint(0, 2**30))
         self.episode_event_multiset = MultiSet()
         self.episode_reward_multiset = MultiSet()
+        self.episode_pseudoreward_multiset = MultiSet()
         self.episode_reward = 0
+        self.episode_pseudoreward = 0
         if self.task is not None:
             self.episode_task = self.task
         else:
@@ -380,9 +384,7 @@ class ZeldaWrapper(RetroWithRam):
             valid_coords += [0x68, 0x78, 0x58, 0x57, 0x67, 0x66, 0x49, 0x64]
         if valid_coords != []:
             new_coord = self.random.choice(valid_coords)
-            print(f"hex(new_coord)={hex(new_coord)}")
             self._set_map_coordinates_eb(new_coord)
-            hex(self.ram[0xEB])
 
         if 'link' in self.reset_method:
             self._set_random_link_position()
@@ -428,13 +430,17 @@ class ZeldaWrapper(RetroWithRam):
         # compute logging information
         event_multiset = MultiSet(kb.events)
         reward_multiset = MultiSet({k: v * event_multiset[k] for k, v in task['reward'].items()})
+        pseudoreward_multiset = MultiSet({k: v * event_multiset[k] for k, v in task['pseudoreward'].items()})
         reward = sum(reward_multiset.values())
+        pseudoreward = sum(pseudoreward_multiset.values())
         self.episode_reward += reward
+        self.episode_pseudoreward += pseudoreward
         self.episode_event_multiset += event_multiset
         self.episode_reward_multiset += reward_multiset
         for k in event_multiset.keys():
             info['event_' + k] = self.episode_event_multiset[k]
             info['reward_' + k] = self.episode_reward_multiset[k]
+            info['reward_' + k] = self.episode_pseudoreward_multiset[k]
 
         info['task_success_' + self.episode_task] = info['is_success']
         info['task_count_' + self.episode_task] = 1
@@ -508,9 +514,10 @@ class ZeldaWrapper(RetroWithRam):
         info['misc_step'] = self.stepcount
         info['misc_skipped_frames'] = self.skipped_frames
         info['misc_episode_reward'] = self.episode_reward
+        info['misc_episode_pseudoreward'] = self.episode_pseudoreward
 
         # return step results
-        return kb_obs, reward, terminated, truncated, info
+        return kb_obs, reward + pseudoreward, terminated, truncated, info
 
     ########################################
     # MARK: debug code

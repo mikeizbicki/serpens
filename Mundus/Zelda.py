@@ -145,7 +145,7 @@ class ZeldaWrapper(RetroWithRam):
             'add_clock': 1,
             'add_heart': 1,
             'button_push': -0.001,
-            'button_arrow_nomove': -0.1,
+            'button_arrow_nomove': -0.01,
             },
         }
     tasks['attack_noitem'] = copy.deepcopy(tasks['attack'])

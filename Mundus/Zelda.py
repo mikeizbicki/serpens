@@ -1,14 +1,14 @@
 import copy
-import math
-import pyglet
-import time
-import numpy as np
-import random
-import os
+import fnmatch
 import glob
 import logging
-from collections import OrderedDict, defaultdict
+import math
+import numpy as np
+import os
 import pprint
+import pyglet
+import random
+import time
 
 import torch
 import retro
@@ -178,7 +178,7 @@ class ZeldaWrapper(RetroWithRam):
     # mouse tasks
     ####################
 
-    def _step_follow_random(self, kb):
+    def _step_onmouse_random(self, kb):
         if self.ram.mouse is None or self.random.random() < 1/300:
             if self.ram.mouse is None or self.random.random() < 0.2:
                 mode = 'passable_tile'
@@ -216,7 +216,7 @@ class ZeldaWrapper(RetroWithRam):
             else:
                 raise ValueError('should not happen')
             self.mouse = self.ram.mouse
-    tasks['onmouse'] = {
+    tasks['onmouse_random'] = {
         'terminated': [
             '_ramstate_link_onmouse',
             '_ramstate_link_killed',
@@ -230,16 +230,14 @@ class ZeldaWrapper(RetroWithRam):
             'link_killed': -2,
             'link_hit': -1,
             'link_onmouse': 2,
+            },
+        'pseudoreward': {
             'link_l1dist_decrease' : 0.01,
             'link_l1dist_increase' : -0.01,
+            'button_push': -0.001,
+            'button_arrow_nomove': -0.01,
             },
-        'step': _step_follow_random
-        }
-    tasks['onmouse2'] = copy.deepcopy(tasks['onmouse'])
-    tasks['onmouse2']['reward']: {
-        'link_killed': -2,
-        'link_hit': -1,
-        'link_onmouse': 2,
+        'step': _step_onmouse_random
         }
 
     def _step_onmouse_enemy(self, kb):
@@ -257,7 +255,7 @@ class ZeldaWrapper(RetroWithRam):
                 }
             self.mouse = mouse
             self.ram.mouse = mouse
-    tasks['onmouse_enemy'] = copy.deepcopy(tasks['onmouse'])
+    tasks['onmouse_enemy'] = copy.deepcopy(tasks['onmouse_random'])
     tasks['onmouse_enemy']['step'] = _step_onmouse_enemy
 
     ####################
@@ -329,7 +327,6 @@ class ZeldaWrapper(RetroWithRam):
         self.no_render_skipped_frames=no_render_skipped_frames
         self.skip_boring_frames = skip_boring_frames 
         self.render_kb = render_kb
-        self.task = task
         self.seed = seed
         self.random = None
         self.random_reset = random.Random(self.seed)
@@ -340,6 +337,10 @@ class ZeldaWrapper(RetroWithRam):
             self.frames_without_attack_threshold = math.inf
         else:
             self.frames_without_attack_threshold = frames_without_attack_threshold
+
+        # self.valid_tasks contains all the tasks that match the task glob
+        self.task = task
+        self.valid_tasks = sorted([task for task in self.tasks.keys() if fnmatch.fnmatch(task, self.task)])
 
         # create a new observation space
         kb = generate_knowledge_base(self.ram, self.ram2)
@@ -357,13 +358,7 @@ class ZeldaWrapper(RetroWithRam):
         self.episode_pseudoreward_multiset = MultiSet()
         self.episode_reward = 0
         self.episode_pseudoreward = 0
-        if self.task is not None:
-            self.episode_task = self.task
-        else:
-            if self.random.choice([True, False]):
-                self.episode_task = 'attack'
-            else:
-                self.episode_task = self.random.choice(sorted(self.tasks.keys()))
+        self.episode_task = self.random.choice(self.valid_tasks)
         self.stepcount = 0
         self.frames_without_attack = 0
         self.max_frames_without_attack = 0

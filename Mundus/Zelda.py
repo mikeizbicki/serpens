@@ -234,8 +234,6 @@ class ZeldaWrapper(RetroWithRam):
         'pseudoreward': {
             'link_l1dist_decrease' : 0.01,
             'link_l1dist_increase' : -0.01,
-            'button_push': -0.001,
-            'button_arrow_nomove': -0.01,
             },
         'step': _step_onmouse_random
         }

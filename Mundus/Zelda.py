@@ -1,5 +1,4 @@
 import copy
-import fnmatch
 import glob
 import logging
 import math
@@ -8,6 +7,7 @@ import os
 import pprint
 import pyglet
 import random
+import re
 import time
 
 import torch
@@ -348,7 +348,8 @@ class ZeldaWrapper(RetroWithRam):
 
         # self.valid_tasks contains all the tasks that match the task glob
         self.task = task
-        self.valid_tasks = sorted([task for task in self.tasks.keys() if fnmatch.fnmatch(task, self.task)])
+        pattern = re.compile("^" + self.task)
+        self.valid_tasks = sorted([task for task in self.tasks.keys() if pattern.match(task)])
 
         # create a new observation space
         kb = generate_knowledge_base(self.ram, self.ram2)

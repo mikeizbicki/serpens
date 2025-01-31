@@ -254,6 +254,16 @@ class ZeldaWrapper(RetroWithRam):
             self.mouse = mouse
             self.ram.mouse = mouse
     tasks['onmouse_enemy'] = copy.deepcopy(tasks['onmouse_random'])
+    tasks['onmouse_enemy']['reward'] = {
+        'link_killed': -2,
+        'link_hit': -1,
+        'link_onmouse': 2,
+        'mouse_enemy_hit': 1,
+        'nomouse_enemy_hit': -0.1,
+        'mouse_enemy_killed': 1,
+        'screen_scrolling': -2,
+        'screen_cave': -2,
+        }
     tasks['onmouse_enemy']['step'] = _step_onmouse_enemy
 
     ####################
@@ -1004,6 +1014,30 @@ def _event_screen_scrolling_east(ram, ram2):
 def _event_screen_cave(ram, ram2):
     return int(_ramstate_is_cave_enter(ram) and not _ramstate_is_cave_enter(ram2))
 
+def _event_nomouse_enemy_hit(ram, ram2):
+    return _event_enemy_hit(ram, ram2) and not _event_mouse_enemy_hit(ram, ram2)
+
+def _event_mouse_enemy_killed(ram, ram2):
+    return _event_enemy_killed(ram, ram2) and _event_mouse_enemy_hit(ram, ram2)
+
+def _event_mouse_enemy_hit(ram, ram2):
+    if ram is None or ram.mouse is None or ram2 is None or ram2.mouse is None:
+        return 0
+    mindist = 999
+    mini = None
+    for i in range(6):
+        dist = abs(ram[113+i] - ram.mouse['x']) + abs(ram[133+i] - ram.mouse['y'])
+        if dist < mindist:
+            mindist = dist
+            mini = i
+    return max(0, _ramstate_enemy_health(ram2, mini) - _ramstate_enemy_health(ram, mini))
+
+def _ramstate_enemy_health(ram, i):
+    rawhealth = ram[1158+i]
+    if rawhealth > 0 and (rawhealth < 16 or rawhealth >= 128):
+        return 0
+    return rawhealth//16
+
 def _event_enemy_hit(ram, ram2):
     return max(0, _ramstate_all_enemies_health(ram2) - _ramstate_all_enemies_health(ram))
 
@@ -1075,7 +1109,7 @@ def _ramstate_link_onmouse(ram):
     if not hasattr(ram, 'mouse') or ram.mouse is None:
         return 0
     else:
-        safe_radius = 8
+        safe_radius = 2
         link_x = ram[112]
         link_y = ram[132]
         l1dist = abs(ram.mouse['x'] - link_x) + abs(ram.mouse['y'] - link_y)

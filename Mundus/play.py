@@ -1,11 +1,11 @@
-import time
-import numpy as np
-import random
-import os
+import atexit
 import logging
-import sys
+import numpy as np
+import os
 import pprint
-from queue import Queue
+import random
+import sys
+import time
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pyglet
@@ -68,15 +68,19 @@ class Interactive(gymnasium.Wrapper):
         self._key_handler = pyglet.window.key.KeyStateHandler()
         self.unwrapped.viewer.window.push_handlers(self._key_handler)
 
-        # setup the mouse handler
-        # FIXME:
-        # this is a janky setup to set the mouse coordinates in the Zelda environment;
-        # it assumes that this Wrapper is called directly on the Zelda
+        # NOTE:
+        # the mouse handler requires direct access to ZeldaWrapper
+        # (and not e.g. a self.env that has additional Wrappers applied later)
+        # so we first extract the zelda_env, then register the mouse handler
+        zelda_env = self.env
+        while not isinstance(zelda_env, ZeldaWrapper):
+            assert zelda_env.env is not None
+            zelda_env = env.env
+
         def on_mouse_motion(x, y, dx, dy):
-            self.env.mouse = {}
-            self.env.mouse['x'] = int(x / self.unwrapped.viewer.window.width * 240)
-            self.env.mouse['y'] = int((self.unwrapped.viewer.window.height - y) / self.unwrapped.viewer.window.height * 224)
-            
+            zelda_env.mouse = {}
+            zelda_env.mouse['x'] = int(x / self.unwrapped.viewer.window.width * 240)
+            zelda_env.mouse['y'] = int((self.unwrapped.viewer.window.height - y) / self.unwrapped.viewer.window.height * 224)
             # NOTE:
             # the values above are hardcoded for zelda;
             # 240 is the y resolution,
@@ -246,7 +250,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--task', default='attack')
     parser.add_argument('--state', default='spiders_lowhealth_01*.state')
-    parser.add_argument('--model', default='models/simple_attack.zip')
+    parser.add_argument('--model')
     parser.add_argument('--logfile', default='.play.log')
     parser.add_argument('--action_space', default='DISCRETE')
 
@@ -272,6 +276,10 @@ def main():
     import warnings
     warnings.filterwarnings('always', append=True)
     warnings.simplefilter('error')
+    # FIXME:
+    # there is a tempfile getting created somewhere that doesn't get deleted;
+    # this filter cleans up the warning
+    warnings.filterwarnings('ignore', category=ResourceWarning)
 
     # create the environment
     logging.info('creating environment')
@@ -297,60 +305,61 @@ def main():
     # loading the models can cause a large number of warnings;
     # this with block prevents those warnings from being displayed
     logging.info('loading model')
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        from stable_baselines3 import PPO
-        custom_objects = {
-            'observation_space': env.observation_space,
-            'action_space': env.action_space,
-            }
-        model = None
-        #model = PPO.load(args.model, custom_objects=custom_objects)
+    model = None
+    if args.model:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            from stable_baselines3 import PPO
+            custom_objects = {
+                'observation_space': env.observation_space,
+                'action_space': env.action_space,
+                }
+            model = PPO.load(args.model, custom_objects=custom_objects)
+
+    # set the default action
+    action = env.action_space.sample() * 0
+
+    # switch the terminal to the alternate screen
+    if not args.no_alternate_screen:
+        print('\u001B[?1049h')
+
+        # cause the program to exit the alternate screen when the program exits;
+        # the use of the atexit library ensures that we switch
+        # even when the program exits abnormally
+        def exit_alternate_screen():
+            print('\u001B[?1049l')
+        atexit.register(exit_alternate_screen)
+
+    # if python crashes, we want the exception printed to the main screen
+    # and not the alternate screen
+    def crash_handler(type, value, tb):
+        env.close()
+        print("\033[?1049l")  # exit alternate screen
+        if type == KeyboardInterrupt:
+            sys.exit(0)
+        else:
+            sys.__excepthook__(type, value, tb)
+    sys.excepthook = crash_handler
 
     logging.info('begin main loop')
     env.reset()
-    env.reset()
-    try:
-        # set the default action
-        action = env.action_space.sample() * 0
-
-        # switch the terminal to the alternate screen
+    while True:
+        # clear the screen
         if not args.no_alternate_screen:
-            print('\u001B[?1049h')
+            print('\x1b[2J', end='')
 
-        while True:
-            # clear the screen
-            if not args.no_alternate_screen:
-                print('\x1b[2J', end='')
+        # step the environment
+        observation, reward, terminated, truncated, info = env.step(action)
+        if args.doresets and (terminated or truncated):
+            env.reset()
 
-            # step the environment
-            observation, reward, terminated, truncated, info = env.step(action)
-            if args.doresets and (terminated or truncated):
-                env.reset()
-
-            # select the next action;
-            if model is not None:
-                action, _states = model.predict(observation, deterministic=True)
-                
-                # ensure that the model does not press start/select
-                action[2] = 0
-                action[3] = 0
-
-            #import code
-            #code.interact(local=locals())
-            # >>> model.policy.value_net.weight
-            # >>> list(zip(env.observations_keys, model.policy.value_net.weight[0]))
-            # for x in list(zip(env.observations_keys, model.policy.value_net.weight[0])): print(x)
-            # for x in list(zip(env.observations_keys, model.policy.action_net.weight.T)):
-    except KeyboardInterrupt:
-        pass
-
-    # clean all resources
-    env.close()
-
-    # switch the terminal away from the alternate screen
-    if not args.no_alternate_screen:
-        print('\u001B[?1049l')
+        # select the next action;
+        if model is not None:
+            action, _states = model.predict(observation, deterministic=True)
+            
+            # ensure that the model does not press start/select
+            #action[2] = 0
+            #action[3] = 0
 
 
 if __name__ == "__main__":

@@ -224,7 +224,7 @@ def main():
     debug.add_argument("--total_timesteps", default=1_000_000_000_000, type=int)
 
     hyperparameters = parser.add_argument_group('hyperparameters')
-    hyperparameters.add_argument('--policy', choices=['ObjectCnn', 'EventExtractor'], default='ObjectCnn')
+    hyperparameters.add_argument('--policy', choices=['ObjectCnn', 'EventExtractor', 'ContinuousEventExtractor'], default='ObjectCnn')
     hyperparameters.add_argument('--pooling', choices=['lstm', 'mean', 'max'], default='mean')
     hyperparameters.add_argument('--alg', choices=['ppo', 'dqn'], default='ppo')
     #hyperparameters.add_argument('--task', default='attack')
@@ -304,6 +304,15 @@ def main():
                 'features_dim': args.features_dim,
                 },
             }
+    elif args.policy == 'ContinuousEventExtractor':
+        policy_kwargs['features_extractor_class'] = ContinuousEventExtractor
+        policy_kwargs['features_extractor_kwargs'] = {
+            'ObjectCNN_kwargs': {
+                'pooling': args.pooling,
+                'features_dim': args.features_dim,
+                },
+            }
+
 
     if args.alg == 'ppo':
         model = stable_baselines3.PPO(

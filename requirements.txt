@@ -6,3 +6,5 @@ psutil
 pyaudio
 pygame
 pyglet
+jax
+simpleaudio

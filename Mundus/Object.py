@@ -142,6 +142,48 @@ class EventExtractor(BaseFeaturesExtractor):
         return torch.cat(encoded_tensor_list, dim=1)
 
 
+class ContinuousEventExtractor(BaseFeaturesExtractor):
+    def __init__(
+        self,
+        observation_space: spaces.Dict,
+        events_dim=32,
+        rewards_dim=32,
+        **kwargs,
+    ) -> None:
+        # NOTE:
+        # (this trick is copied from the SB3 MultiPolicy implementation.)
+        # we do not know features_dim here before going over all the items,
+        # so put something there temporarily;
+        # update features_dim later
+        super().__init__(observation_space, features_dim=1)
+
+        object_space = spaces.Dict({
+            'objects_discrete': observation_space['objects_discrete'],
+            'objects_continuous': observation_space['objects_continuous'],
+            })
+        objcnn = ObjectCnn(object_space, **kwargs['ObjectCNN_kwargs'])
+        extractors = {
+            'objects': objcnn,
+            'events': nn.Linear(observation_space['events'].shape[0], events_dim, bias=False),
+            'rewards': nn.Linear(observation_space['rewards'].shape[0], rewards_dim, bias=False),
+            }
+        self.extractors = nn.ModuleDict(extractors)
+
+        # Update the features dim manually
+        self._features_dim = objcnn.features_dim + events_dim + rewards_dim
+
+    def forward(self, observations: TensorDict) -> torch.Tensor:
+        encoded_tensor_list = [
+                self.extractors['objects']({
+                    'objects_discrete': observations['objects_discrete'],
+                    'objects_continuous': observations['objects_continuous'],
+                    }),
+                self.extractors['events'](observations['events']),
+                self.extractors['rewards'](observations['rewards']),
+            ]
+        return torch.cat(encoded_tensor_list, dim=1)
+
+
 class KnowledgeBase:
     def __init__(self, keys, max_objects=24):
         self.items = defaultdict(lambda: {})

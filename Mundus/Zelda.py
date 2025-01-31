@@ -348,7 +348,7 @@ class ZeldaWrapper(RetroWithRam):
 
         # self.valid_tasks contains all the tasks that match the task glob
         self.task = task
-        pattern = re.compile("^" + self.task)
+        pattern = re.compile(self.task)
         self.valid_tasks = sorted([task for task in self.tasks.keys() if pattern.match(task)])
 
         # create a new observation space

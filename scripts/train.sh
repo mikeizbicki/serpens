@@ -15,12 +15,12 @@ if [ "$pids" != "" ]; then
 fi
 
 # start the new scripts
-common="--comment=$commit" 
+common="--comment=$commit --task=(attack|onmouse)" 
 
-CUDA_VISIBLE_DEVICES=0 nohup python3 Mundus/train.py $common --policy=ObjectCnn --task='onmouse*' > nohup/nohup.0 &
-CUDA_VISIBLE_DEVICES=1 nohup python3 Mundus/train.py $common --policy=EventExtractor --task='onmouse*' --reset_method='spider enemy' > nohup/nohup.1 &
-CUDA_VISIBLE_DEVICES=2 nohup python3 Mundus/train.py $common --policy=EventExtractor --task='onmouse*' --reset_method='octo spider enemy' > nohup/nohup.2 &
-CUDA_VISIBLE_DEVICES=3 nohup python3 Mundus/train.py $common --policy=EventExtractor --task='onmouse*' > nohup/nohup.3 &
+CUDA_VISIBLE_DEVICES=0 nohup python3 Mundus/train.py $common --policy=EventExtractor --reset_method='octo spider enemy' > nohup/nohup.0 &
+CUDA_VISIBLE_DEVICES=1 nohup python3 Mundus/train.py $common --policy=ContinuousEventExtractor --reset_method='octo spider enemy' > nohup/nohup.1 &
+CUDA_VISIBLE_DEVICES=2 nohup python3 Mundus/train.py $common --policy=EventExtractor > nohup/nohup.2 &
+CUDA_VISIBLE_DEVICES=3 nohup python3 Mundus/train.py $common --policy=ContinuousEventExtractor > nohup/nohup.3 &
 
 sleep 1
 tail -f nohup/nohup.?

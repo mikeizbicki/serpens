@@ -274,14 +274,6 @@ class ZeldaWrapper(RetroWithRam):
     # screen change tasks
     ####################
 
-    tasks['screen_cave'] = copy.deepcopy(tasks['noattack'])
-    tasks['screen_cave']['is_success'] = [
-        '_ramstate_is_cave_enter',
-        ]
-    tasks['screen_cave']['reward'] |= {
-        'screen_cave': 2,
-        }
-
     tasks['screen_north'] = copy.deepcopy(tasks['noattack'])
     tasks['screen_north']['is_success'] = [
         '_ramstate_screen_scrolling_north'
@@ -289,6 +281,7 @@ class ZeldaWrapper(RetroWithRam):
     tasks['screen_north']['reward'] |= {
         'screen_scrolling_north': 4,
         }
+    tasks['screen_north']['is_valid'] = lambda ram: _isscreen_changeable(ram, 'NORTH')
 
     tasks['screen_south'] = copy.deepcopy(tasks['noattack'])
     tasks['screen_south']['is_success'] = [
@@ -297,6 +290,7 @@ class ZeldaWrapper(RetroWithRam):
     tasks['screen_south']['reward'] |= {
         'screen_scrolling_south': 4,
         }
+    tasks['screen_south']['is_valid'] = lambda ram: _isscreen_changeable(ram, 'SOUTH')
 
     tasks['screen_east'] = copy.deepcopy(tasks['noattack'])
     tasks['screen_east']['is_success'] = [
@@ -305,6 +299,7 @@ class ZeldaWrapper(RetroWithRam):
     tasks['screen_east']['reward'] |= {
         'screen_scrolling_east': 4,
         }
+    tasks['screen_east']['is_valid'] = lambda ram: _isscreen_changeable(ram, 'EAST')
 
     tasks['screen_west'] = copy.deepcopy(tasks['noattack'])
     tasks['screen_west']['is_success'] = [
@@ -313,6 +308,7 @@ class ZeldaWrapper(RetroWithRam):
     tasks['screen_west']['reward'] |= {
         'screen_scrolling_west': 4,
         }
+    tasks['screen_west']['is_valid'] = lambda ram: _isscreen_changeable(ram, 'WEST')
 
 
     def __init__(
@@ -394,6 +390,10 @@ class ZeldaWrapper(RetroWithRam):
         if valid_coords != []:
             new_coord = self.random.choice(valid_coords)
             self._set_map_coordinates_eb(new_coord)
+
+        isvalid = self.tasks[self.episode_task].get('is_valid', lambda ram:True)(self.ram)
+        if not isvalid:
+            self.episode_task = 'attack'
 
         if 'link' in self.reset_method:
             self._set_random_link_position()
@@ -989,7 +989,29 @@ def _get_subtiles(ram):
     # >>> newstate = b'\x00'*88; state = self.env.unwrapped.em.get_state(); state = state[:14657]+newstate+state[14657+len(newstate):]; self.env.unwrapped.em.set_state(state)
 
     return subtiles
+
+
+def _isscreen_changeable(ram, direction):
+    '''
+    Return True if Link can change screens in the specified direction.
+    This function is used to determine if the `screen_*` set of tasks are possible.
+
+    FIXME:
+    Link can also sometimes enter a cave.
+    We should detect when this is possible and add a new task for entering caves.
+    '''
+    subtiles = _get_subtiles(ram)
+    if direction == 'NORTH':
+        return any(np.isin(subtiles[:,0], ignore_tile_set))
+    if direction == 'SOUTH':
+        return any(np.isin(subtiles[:,21], ignore_tile_set))
+    if direction == 'EAST':
+        return any(np.isin(subtiles[0,:], ignore_tile_set))
+    if direction == 'WEST':
+        return any(np.isin(subtiles[31,:], ignore_tile_set))
+    assert False, 'should not happen'
     
+
 ########################################
 # MARK: event functions
 ########################################

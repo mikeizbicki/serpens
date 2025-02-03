@@ -11,7 +11,7 @@ if [ "$pids" != "" ]; then
     # kill will fail on this pid because the process has finished
     # by the time this command is run;
     # adding the || true ensures that the script doesn't terminate
-    sleep 1
+    sleep 5
 fi
 
 # start the new scripts

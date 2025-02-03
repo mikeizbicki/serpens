@@ -274,6 +274,18 @@ class ZeldaWrapper(RetroWithRam):
     # screen change tasks
     ####################
 
+    def _step_screen(self, kb, direction):
+        if direction == 'NORTH':
+            mouse = {'x': 120, 'y': 40}
+        if direction == 'SOUTH':
+            mouse = {'x': 120, 'y': 240}
+        if direction == 'WEST':
+            mouse = {'x': -20, 'y': 140}
+        if direction == 'EAST':
+            mouse = {'x': 260, 'y': 140}
+        self.mouse = mouse
+        self.ram.mouse = mouse
+
     tasks['screen_north'] = copy.deepcopy(tasks['noattack'])
     tasks['screen_north']['is_success'] = [
         '_ramstate_screen_scrolling_north'
@@ -281,7 +293,12 @@ class ZeldaWrapper(RetroWithRam):
     tasks['screen_north']['reward'] |= {
         'screen_scrolling_north': 4,
         }
+    tasks['screen_north']['pseudoreward'] = {
+        'link_l1dist_decrease' : 0.01,
+        'link_l1dist_increase' : -0.01,
+        }
     tasks['screen_north']['is_valid'] = lambda ram: _isscreen_changeable(ram, 'NORTH')
+    tasks['screen_north']['step'] = lambda self, kb: self._step_screen(kb, 'NORTH')
 
     tasks['screen_south'] = copy.deepcopy(tasks['noattack'])
     tasks['screen_south']['is_success'] = [
@@ -290,7 +307,12 @@ class ZeldaWrapper(RetroWithRam):
     tasks['screen_south']['reward'] |= {
         'screen_scrolling_south': 4,
         }
+    tasks['screen_south']['pseudoreward'] = {
+        'link_l1dist_decrease' : 0.01,
+        'link_l1dist_increase' : -0.01,
+        }
     tasks['screen_south']['is_valid'] = lambda ram: _isscreen_changeable(ram, 'SOUTH')
+    tasks['screen_south']['step'] = lambda self, kb: self._step_screen(kb, 'SOUTH')
 
     tasks['screen_east'] = copy.deepcopy(tasks['noattack'])
     tasks['screen_east']['is_success'] = [
@@ -299,7 +321,12 @@ class ZeldaWrapper(RetroWithRam):
     tasks['screen_east']['reward'] |= {
         'screen_scrolling_east': 4,
         }
+    tasks['screen_east']['pseudoreward'] = {
+        'link_l1dist_decrease' : 0.01,
+        'link_l1dist_increase' : -0.01,
+        }
     tasks['screen_east']['is_valid'] = lambda ram: _isscreen_changeable(ram, 'EAST')
+    tasks['screen_east']['step'] = lambda self, kb: self._step_screen(kb, 'EAST')
 
     tasks['screen_west'] = copy.deepcopy(tasks['noattack'])
     tasks['screen_west']['is_success'] = [
@@ -308,7 +335,12 @@ class ZeldaWrapper(RetroWithRam):
     tasks['screen_west']['reward'] |= {
         'screen_scrolling_west': 4,
         }
+    tasks['screen_west']['pseudoreward'] = {
+        'link_l1dist_decrease' : 0.01,
+        'link_l1dist_increase' : -0.01,
+        }
     tasks['screen_west']['is_valid'] = lambda ram: _isscreen_changeable(ram, 'WEST')
+    tasks['screen_west']['step'] = lambda self, kb: self._step_screen(kb, 'WEST')
 
 
     def __init__(

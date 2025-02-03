@@ -252,7 +252,7 @@ def main():
     parser.add_argument('--state', default='spiders_lowhealth_01*.state')
     parser.add_argument('--model')
     parser.add_argument('--logfile', default='.play.log')
-    parser.add_argument('--action_space', default='DISCRETE')
+    parser.add_argument('--action_space', default='ALL')
 
     emulator_settings = parser.add_argument_group('emulator settings')
     emulator_settings.add_argument('--no_render_skipped_frames', action='store_true')

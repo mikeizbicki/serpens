@@ -1,4 +1,5 @@
 from collections import OrderedDict, defaultdict
+import logging
 import numpy as np
 import gymnasium
 import torch
@@ -198,7 +199,7 @@ class KnowledgeBase:
 
     def __setitem__(self, name, val):
         if len(self.items) >= self.max_objects:
-            logging.warning('len(self.items) >= self.max_objects')
+            logging.warning(f'len(self.items) >= self.max_objects; ignoring [{name}]={val}')
         else:
             self.items[name] = val
             for k, v in val.items():

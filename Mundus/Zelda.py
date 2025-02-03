@@ -17,6 +17,10 @@ from gymnasium import spaces
 from Mundus.Object import *
 from Mundus.util import *
 
+# load font for writing to image
+from PIL import Image, ImageDraw, ImageFont
+pil_font = ImageFont.load_default()
+
 
 def make_zelda_env(
         action_space='all',
@@ -372,6 +376,7 @@ class ZeldaWrapper(RetroWithRam):
         self.frames_without_attack = 0
         self.max_frames_without_attack = 0
         self.skipped_frames = 0
+        self.mouse = None
         obs, info = super().reset(**kwargs)
 
         # reset map/link/enemy location
@@ -451,6 +456,8 @@ class ZeldaWrapper(RetroWithRam):
 
         # render the environment
         if self.render_kb:
+            
+            # draw bounding box around objects
             for k, v in kb.items.items():
                 if k != 'mouse':
                     # NOTE: we apply min/max to all values;
@@ -470,6 +477,19 @@ class ZeldaWrapper(RetroWithRam):
                     ymin = max(0, min(223, v['y'] - 4))
                     ymax = max(0, min(223, v['y'] + 4))
                     self.env.img[ymin:ymax+1, xmin:xmax+1] = [255, 0, 255]
+
+            # write the task to the screen
+            img_pil = Image.fromarray(self.env.img)
+            draw = ImageDraw.Draw(img_pil)
+            draw.text(
+                [0,0],
+                self.episode_task,
+                font=pil_font,
+                fill=(255, 0, 255),
+                antialiasing=False,
+                )
+            self.env.img = np.array(img_pil)
+
         if render_mode == 'human':
             self.env.render()
 

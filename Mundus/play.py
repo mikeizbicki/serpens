@@ -248,7 +248,7 @@ def main():
     # parse command line args
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--task', default='attack')
+    parser.add_argument('--task_regex', default='attack')
     parser.add_argument('--state', default='spiders_lowhealth_01*.state')
     parser.add_argument('--model')
     parser.add_argument('--logfile', default='.play.log')
@@ -291,7 +291,7 @@ def main():
             debug_assert=True,
             no_render_skipped_frames=args.no_render_skipped_frames,
             skip_boring_frames=not args.allframes,
-            task=args.task,
+            task_regex=args.task_regex,
             )
     env = Interactive(env)
     if not args.noaudio:

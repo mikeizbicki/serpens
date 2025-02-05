@@ -6,7 +6,6 @@ import numpy as np
 import os
 import pprint
 import pyglet
-import random
 import re
 import time
 
@@ -14,12 +13,9 @@ import torch
 import retro
 import gymnasium
 from gymnasium import spaces
+from Mundus.Retro import *
 from Mundus.Object import *
 from Mundus.util import *
-
-# load font for writing to image
-from PIL import Image, ImageDraw, ImageFont
-pil_font = ImageFont.load_default()
 
 
 def make_zelda_env(
@@ -69,54 +65,7 @@ def make_zelda_env(
     return env
 
 
-class RetroWithRam(gymnasium.Wrapper):
-    '''
-    The .get_ram() function is relatively expensive.
-    The only purpose of this wrapper is to store the result of .get_ram() in an attribute
-    to prevent multiple calls.
-    '''
-
-    class _IntLookup():
-        '''
-        By default, self.ram is a np.array with dtype=uint8.
-        This can result in overflow/underflows which are obnoxious to debug.
-        This class converts all results to integers before returning to avoid these bugs.
-        '''
-        def __init__(self, ram):
-            self.ram = ram
-            self.mouse = None
-
-        def __getitem__(self, key):
-            if isinstance(key, slice):
-                return self.ram[key]
-            elif isinstance(key, int):
-                return int(self.ram[key])
-            else:
-                raise ValueError(f'IntegerLookup; type={type(key)}, value={key} ')
-
-
-    def __init__(self, env):
-        super().__init__(env)
-        self.ram2 = None
-        self.ram = self._IntLookup(self.env.get_ram())
-
-    def _update_ram(self):
-        self.ram2 = self.ram
-        self.ram = self._IntLookup(self.env.get_ram())
-
-    def step(self, action):
-        self._update_ram()
-        return super().step(action)
-
-    def reset(self, **kwargs):
-        self.ram = self.env.get_ram()
-        obs, info = super().reset(**kwargs)
-        self.ram2 = None
-        self.ram = self.env.get_ram()
-        return obs, info
-
-
-class ZeldaWrapper(RetroWithRam):
+class ZeldaWrapper(RetroKB):
     '''
     Wrapper for extracting useful info from the RAM of original NES Zelda.
     '''
@@ -346,31 +295,16 @@ class ZeldaWrapper(RetroWithRam):
     def __init__(
             self,
             env,
-            stdout_debug=False,
-            debug_assert=False,
             use_subtiles=False,
-            no_render_skipped_frames=True,
-            skip_boring_frames=True,
-            render_kb=True,
-            task='attack',
-            seed=None,
             reset_method='link enemy map',
             frames_without_attack_threshold=None,
             fast_termination=False,
+            **kwargs,
             ):
 
         # bookkeeping
-        super().__init__(env)
-        self.stdout_debug = stdout_debug
-        self.debug_assert = debug_assert
+        super().__init__(env, **kwargs)
         self.use_subtiles = use_subtiles
-        self.no_render_skipped_frames=no_render_skipped_frames
-        self.skip_boring_frames = skip_boring_frames 
-        self.render_kb = render_kb
-        self.seed = seed
-        self.random = None
-        self.random_reset = random.Random(self.seed)
-        self.mouse = None
         self.reset_method = reset_method
         self.fast_termination = fast_termination
         if frames_without_attack_threshold is None:
@@ -378,34 +312,10 @@ class ZeldaWrapper(RetroWithRam):
         else:
             self.frames_without_attack_threshold = frames_without_attack_threshold
 
-        # self.valid_tasks contains all the tasks that match the task glob
-        self.task = task
-        pattern = re.compile(self.task)
-        self.valid_tasks = sorted([task for task in self.tasks.keys() if pattern.match(task)])
-
-        # create a new observation space
-        kb = generate_knowledge_base(self.ram, self.ram2)
-        self.observation_space = kb.get_observation_space()
-        self.observation_space['rewards'] = self.observation_space['events']
-        logging.info(f'self.observation_space.shape={self.observation_space.shape}')
-        logging.info(f"self.observation_space.keys()={self.observation_space.keys()}")
-        for k in self.observation_space:
-            logging.info(f"self.observation_space[k].shape={self.observation_space[k].shape}")
-
     def reset(self, **kwargs):
-        self.random = random.Random(self.random_reset.randint(0, 2**30))
-        self.episode_event_multiset = MultiSet()
-        self.episode_reward_multiset = MultiSet()
-        self.episode_pseudoreward_multiset = MultiSet()
-        self.episode_reward = 0
-        self.episode_pseudoreward = 0
-        self.episode_task = self.random.choice(self.valid_tasks)
-        self.stepcount = 0
+        obs, info = super().reset(**kwargs)
         self.frames_without_attack = 0
         self.max_frames_without_attack = 0
-        self.skipped_frames = 0
-        self.mouse = None
-        obs, info = super().reset(**kwargs)
 
         # reset map/link/enemy location
         valid_coords = []
@@ -434,26 +344,7 @@ class ZeldaWrapper(RetroWithRam):
         return self.observation_space.sample(), info
 
     def step(self, action):
-        self.stepcount += 1
-
-        # step the emulator
-        render_mode = self.env.render_mode
-        self.env.render_mode = 'rgb_array'
         observation, reward, terminated, truncated, info = super().step(action)
-        self.env.render_mode = render_mode
-
-        # compute the task information
-        self.ram.mouse = self.mouse # FIXME: this should be in only one spot
-        kb = generate_knowledge_base(self.ram, self.ram2)
-        kb_obs = kb.to_observation()
-        task = self.tasks[self.episode_task]
-
-        kb_obs['rewards'] = np.array([task['reward'].get(k, 0) for k in sorted(kb.events)])
-
-        terminated = any([globals()[fname](self.ram) for fname in task['terminated']])
-        info['is_success'] = any([globals()[fname](self.ram) for fname in task['is_success']])
-        if 'step' in task:
-            task['step'](self, kb)
 
         # potentially end task early if we're going too long
         if _ramstate_all_enemies_health(self.ram) == _ramstate_all_enemies_health(self.ram2) and _ramstate_hearts(self.ram) == _ramstate_hearts(self.ram2):
@@ -468,74 +359,6 @@ class ZeldaWrapper(RetroWithRam):
             truncated = True
             info['misc_truncated_noattack'] = 1
 
-        # compute logging information
-        event_multiset = MultiSet(kb.events)
-        reward_multiset = MultiSet({k: v * event_multiset[k] for k, v in task['reward'].items()})
-        pseudoreward_multiset = MultiSet({k: v * event_multiset[k] for k, v in task['pseudoreward'].items()})
-        reward = sum(reward_multiset.values())
-        pseudoreward = sum(pseudoreward_multiset.values())
-        self.episode_reward += reward
-        self.episode_pseudoreward += pseudoreward
-        self.episode_event_multiset += event_multiset
-        self.episode_reward_multiset += reward_multiset
-        for k in event_multiset.keys():
-            info['event_' + k] = self.episode_event_multiset[k]
-            info['reward_' + k] = self.episode_reward_multiset[k]
-            info['reward_' + k] = self.episode_pseudoreward_multiset[k]
-
-        info['task_success_' + self.episode_task] = info['is_success']
-        info['task_count_' + self.episode_task] = 1
-
-        # render the environment
-        if self.render_kb:
-            
-            # draw bounding box around objects
-            for k, v in kb.items.items():
-                if k != 'mouse':
-                    # NOTE: we apply min/max to all values;
-                    # some objects can be located off screen,
-                    # and trying to render them directly crashes without clipping
-                    xmin = max(0, min(239, v['x'] - 8))
-                    xmax = max(0, min(239, v['x'] + 8))
-                    ymin = max(0, min(223, v['y'] - 8))
-                    ymax = max(0, min(223, v['y'] + 8))
-                    self.env.img[ymin:ymax+1, xmin] = 255
-                    self.env.img[ymin:ymax+1, xmax] = 255
-                    self.env.img[ymin, xmin:xmax+1] = 255
-                    self.env.img[ymax, xmin:xmax+1] = 255
-                else:
-                    xmin = max(0, min(239, v['x'] - 4))
-                    xmax = max(0, min(239, v['x'] + 4))
-                    ymin = max(0, min(223, v['y'] - 4))
-                    ymax = max(0, min(223, v['y'] + 4))
-                    self.env.img[ymin:ymax+1, xmin:xmax+1] = [255, 0, 255]
-
-            # write the task to the screen
-            img_pil = Image.fromarray(self.env.img)
-            draw = ImageDraw.Draw(img_pil)
-            draw.text(
-                [0,0],
-                self.episode_task,
-                font=pil_font,
-                fill=(255, 0, 255),
-                antialiasing=False,
-                )
-            self.env.img = np.array(img_pil)
-
-        if render_mode == 'human':
-            self.env.render()
-
-        if self.stdout_debug:
-            text = ''
-            text += kb.display()
-            #text += kb.info['mapstr']
-            text += f'\n{format_dict_pretty(self.episode_event_multiset)}'
-            text += f'\n'
-            text += f'\nepisode_reward = {self.episode_reward:0.4f}'
-            text += f'\nterminated = {terminated}'
-            text += f'\nmap_coord = {hex(self.ram[0xEB])}'
-            print(text)
-
         # skip the boring frames
         if not (self.fast_termination and (terminated or truncated)) and self.skip_boring_frames:
             while any([
@@ -546,7 +369,6 @@ class ZeldaWrapper(RetroWithRam):
                 _ramstate_hearts(self.ram) <= 0,
                 _ramstate_is_openning_scene(self.ram),
                 ]):
-                self.skipped_frames += 1
                 # NOTE:
                 # but if link has died, we need to press the "continue" button;
                 # to do this, we alternate between no action and pressing "start" every frame
@@ -558,22 +380,10 @@ class ZeldaWrapper(RetroWithRam):
                 skipbuttons = []
                 if _ramstate_hearts(self.ram) <= 0 and self.skipped_frames%2 == 0:
                     skipbuttons = ['START']
-                self._set_buttons(skipbuttons)
-
-                self.env.em.step()
-                self.env.data.update_ram()
-                self._update_ram()
-                ob = self.env._update_obs()
-                if self.env.render_mode == "human" and not self.no_render_skipped_frames:
-                    self.env.render()
-
-        info['misc_step'] = self.stepcount
-        info['misc_skipped_frames'] = self.skipped_frames
-        info['misc_episode_reward'] = self.episode_reward
-        info['misc_episode_pseudoreward'] = self.episode_pseudoreward
+                self._step_silent(skipbuttons)
 
         # return step results
-        return kb_obs, reward + pseudoreward, terminated, truncated, info
+        return observation, reward, terminated, truncated, info
 
     ########################################
     # MARK: debug code
@@ -602,34 +412,6 @@ class ZeldaWrapper(RetroWithRam):
     ########################################
     # MARK: change game state
     ########################################
-
-    def _set_mem(self, assignment_dict):
-        '''
-        Change the values of memory.
-        The input `assignment_dict` has keys as memory addresses and values as integers between 0-255.
-        '''
-        offset = 93
-        i0 = 0
-        chunks = []
-        state = self.env.em.get_state()
-        for k, v in sorted(assignment_dict.items()):
-            assert v >= 0 and v <= 255
-            i = k + offset
-            chunks.append(state[i0:i] + bytes([v]))
-            i0 = i + 1
-        chunks.append(state[i0:])
-        state1 = b''.join(chunks)
-        self.env.em.set_state(state1)
-
-        if self.debug_assert:
-            state = self.env.em.get_state()
-            for k, v in assignment_dict.items():
-                assert state[k+offset] == v
-
-    def _set_buttons(self, buttons):
-        mask = [1 if button in buttons else 0 for button in self.unwrapped.buttons]
-        masp = np.array(mask, dtype=np.uint8)
-        self.unwrapped.em.set_button_mask(mask, 0)
 
     def _set_map_coordinates_eb(self, eb):
         '''
@@ -689,16 +471,11 @@ class ZeldaWrapper(RetroWithRam):
 
         # walk through edge
         for i in range(10):
-            self._set_buttons([direction])
-            self.env.em.step()
-            self.env.data.update_ram()
-            self._update_ram()
+            self._step_silent([direction], force_norender=True)
 
         # skip until frame transition done
         while _ramstate_is_screen_scrolling(self.ram):
-            self.env.em.step()
-            self.env.data.update_ram()
-            self._update_ram()
+            self._step_silent([direction], force_norender=True)
 
         # after switching screens, link might be inside a wall;
         # so we move him to a random position

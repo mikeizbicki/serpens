@@ -227,7 +227,7 @@ def main():
     hyperparameters.add_argument('--policy', choices=['ObjectCnn', 'EventExtractor', 'ContinuousEventExtractor'], default='ObjectCnn')
     hyperparameters.add_argument('--pooling', choices=['lstm', 'mean', 'max'], default='mean')
     hyperparameters.add_argument('--alg', choices=['ppo', 'dqn'], default='ppo')
-    hyperparameters.add_argument('--task', default='')
+    hyperparameters.add_argument('--task_regex', default='')
     hyperparameters.add_argument('--net_arch', type=int, nargs='*', default=[])
     hyperparameters.add_argument('--features_dim', type=int, default=256)
     hyperparameters.add_argument('--lr', type=float, default=3e-4)
@@ -268,7 +268,7 @@ def main():
                 action_space=args.action_space,
                 render_mode=args.render_mode,
                 skip_boring_frames=True,
-                task=args.task,
+                task_regex=args.task_regex,
                 seed=seed,
                 frames_without_attack_threshold=args.fwat,
                 fast_termination=True,

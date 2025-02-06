@@ -195,8 +195,8 @@ class RetroKB(RetroWithRam):
             info['reward_' + k] = self.episode_reward_multiset[k]
             info['reward_' + k] = self.episode_pseudoreward_multiset[k]
 
-        info['task_success_' + self.episode_task] = info['is_success']
-        info['task_count_' + self.episode_task] = 1
+        info['episode_task'] = self.episode_task
+        info['event__success'] = info['is_success']
 
         info['misc_episode_reward'] = self.episode_reward
         info['misc_episode_pseudoreward'] = self.episode_pseudoreward

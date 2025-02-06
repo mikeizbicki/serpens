@@ -156,6 +156,7 @@ class TensorboardCallback(BaseCallback):
         # each entry will count the total number of episodes for that environment
         if self.num_episodes is None:
             self.num_episodes = [0] * len(self.locals['dones'])
+            self.task_counters = [Counter() for env in self.locals['dones']]
 
         # if self.screens is a list,
         # then we are currently recording the screens of the first environment
@@ -168,6 +169,11 @@ class TensorboardCallback(BaseCallback):
             if done:
                 self.num_episodes[i] += 1
                 sum_num_episodes = sum(self.num_episodes)
+
+                episode_task = self.locals['infos'][i]['episode_task']
+                self.task_counters[i][episode_task] += 1
+                num_tasks = sum(self.task_counters, start=Counter())
+                num_episodes_with_current_task = num_tasks[episode_task]
 
                 # special screen recording processing for the first environment only
                 if self.record_every is not None and i == 0:
@@ -185,28 +191,22 @@ class TensorboardCallback(BaseCallback):
                     if self.num_episodes[i] % self.record_every == 0:
                         self.screens = []
 
-                # record all of the "event_*" keys within the info dict
+                # record the info dict to tensorboard
                 def record_prefix(prefix):
                     keys = [key for key in self.locals['infos'][i].keys() if key.startswith(prefix)]
                     prefixmod = prefix.strip('_')
                     for key in keys:
                         keymod = key[len(prefix):]
                         self.logger.record_mean('step_' + prefixmod+'/'+keymod, self.locals['infos'][i][key], exclude=('stdout',))
-                        self.my_writer.add_scalar('episode_' + prefixmod+'/'+keymod, self.locals['infos'][i][key], sum_num_episodes)
+                        self.my_writer.add_scalar('episode_' + prefixmod + '_' +episode_task + '/'+keymod, self.locals['infos'][i][key], num_episodes_with_current_task)
 
                 record_prefix('event_')
-                record_prefix('reward_')
-                record_prefix('task_success_')
                 record_prefix('misc_')
-                #record_prefix('task_count_')
 
-                prefix = 'task_count_'
-                keys = [key for key in self.locals['infos'][i].keys() if key.startswith(prefix)]
-                prefixmod = prefix.strip('_')
-                for key in keys:
-                    keymod = key[len(prefix):]
-                    self.num_tasks[keymod] += 1
-                    self.my_writer.add_scalar('episode_' + prefixmod+'/'+keymod, self.num_tasks[keymod], sum_num_episodes)
+                self.my_writer.add_scalar('_rewards/'+episode_task, self.locals['infos'][i]['misc_episode_reward'], num_episodes_with_current_task)
+                self.my_writer.add_scalar('_pseudorewards/'+episode_task, self.locals['infos'][i]['misc_episode_pseudoreward'], num_episodes_with_current_task)
+                self.my_writer.add_scalar('_success/'+episode_task, self.locals['infos'][i]['event__success'], num_episodes_with_current_task)
+                self.my_writer.add_scalar('_step/'+episode_task, self.locals['infos'][i]['misc_step'], num_episodes_with_current_task)
 
                 self.logger.record('step_misc/num_episodes', sum(self.num_episodes))
         return True

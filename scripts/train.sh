@@ -15,12 +15,12 @@ if [ "$pids" != "" ]; then
 fi
 
 # start the new scripts
-common="--comment=$commit" 
+common="--comment=$commit --policy=ContinuousEventExtractor" 
 
-CUDA_VISIBLE_DEVICES=0 nohup python3 Mundus/train.py $common --warmstart=46ca002c --policy=EventExtractor > nohup/nohup.0 &
-CUDA_VISIBLE_DEVICES=1 nohup python3 Mundus/train.py $common --warmstart=f5fb2371 --policy=ContinuousEventExtractor > nohup/nohup.1 &
-CUDA_VISIBLE_DEVICES=2 nohup python3 Mundus/train.py $common --policy=EventExtractor > nohup/nohup.2 &
-CUDA_VISIBLE_DEVICES=3 nohup python3 Mundus/train.py $common --policy=ContinuousEventExtractor > nohup/nohup.3 &
+CUDA_VISIBLE_DEVICES=0 nohup python3 Mundus/train.py $common --task_regex='' > nohup/nohup.0 &
+CUDA_VISIBLE_DEVICES=1 nohup python3 Mundus/train.py $common --task_regex='^attack$' > nohup/nohup.1 &
+CUDA_VISIBLE_DEVICES=2 nohup python3 Mundus/train.py $common --task_regex='onmouse' > nohup/nohup.2 &
+CUDA_VISIBLE_DEVICES=3 nohup python3 Mundus/train.py $common --task_regex='screen' > nohup/nohup.3 &
 
 sleep 1
 tail -f nohup/nohup.?

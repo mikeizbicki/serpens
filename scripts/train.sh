@@ -1,5 +1,7 @@
 #!/bin/sh
 
+. venv/bin/activate
+
 set -ex
 commit=$(sh scripts/get_sane_commit_hash.sh)
 

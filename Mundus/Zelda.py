@@ -218,6 +218,10 @@ class ZeldaWrapper(RetroKB):
         'screen_cave': -2,
         }
     tasks['onmouse_enemy']['step'] = _step_onmouse_enemy
+    tasks['onmouse_enemy']['is_success'] = [
+        '_ramstate_link_onmouse',
+        '_ramstate_all_enemies_dead',
+        ]
 
     ####################
     # screen change tasks

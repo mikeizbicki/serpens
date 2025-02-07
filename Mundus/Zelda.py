@@ -243,8 +243,8 @@ class ZeldaWrapper(RetroKB):
         'screen_scrolling_north': 4,
         }
     tasks['screen_north']['pseudoreward'] = {
-        'link_l1dist_decrease' : 0.01,
-        'link_l1dist_increase' : -0.01,
+        'link_l1dist_decrease_y' : 0.01,
+        'link_l1dist_increase_y' : -0.01,
         }
     tasks['screen_north']['is_valid'] = lambda ram: _isscreen_changeable(ram, 'NORTH')
     tasks['screen_north']['step'] = lambda self, kb: self._step_screen(kb, 'NORTH')
@@ -257,8 +257,8 @@ class ZeldaWrapper(RetroKB):
         'screen_scrolling_south': 4,
         }
     tasks['screen_south']['pseudoreward'] = {
-        'link_l1dist_decrease' : 0.01,
-        'link_l1dist_increase' : -0.01,
+        'link_l1dist_decrease_y' : 0.01,
+        'link_l1dist_increase_y' : -0.01,
         }
     tasks['screen_south']['is_valid'] = lambda ram: _isscreen_changeable(ram, 'SOUTH')
     tasks['screen_south']['step'] = lambda self, kb: self._step_screen(kb, 'SOUTH')
@@ -271,8 +271,8 @@ class ZeldaWrapper(RetroKB):
         'screen_scrolling_east': 4,
         }
     tasks['screen_east']['pseudoreward'] = {
-        'link_l1dist_decrease' : 0.01,
-        'link_l1dist_increase' : -0.01,
+        'link_l1dist_decrease_x' : 0.01,
+        'link_l1dist_increase_x' : -0.01,
         }
     tasks['screen_east']['is_valid'] = lambda ram: _isscreen_changeable(ram, 'EAST')
     tasks['screen_east']['step'] = lambda self, kb: self._step_screen(kb, 'EAST')
@@ -285,8 +285,8 @@ class ZeldaWrapper(RetroKB):
         'screen_scrolling_west': 4,
         }
     tasks['screen_west']['pseudoreward'] = {
-        'link_l1dist_decrease' : 0.01,
-        'link_l1dist_increase' : -0.01,
+        'link_l1dist_decrease_x' : 0.01,
+        'link_l1dist_increase_x' : -0.01,
         }
     tasks['screen_west']['is_valid'] = lambda ram: _isscreen_changeable(ram, 'WEST')
     tasks['screen_west']['step'] = lambda self, kb: self._step_screen(kb, 'WEST')
@@ -318,22 +318,25 @@ class ZeldaWrapper(RetroKB):
         self.max_frames_without_attack = 0
 
         # reset map/link/enemy location
-        valid_coords = []
-        if 'map' in self.reset_method:
-            valid_map_coords = [
-                0x1e, 0x1f, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x38, 0x3a, 0x3b, 0x3d, 0x3e, 0x3f, 0x48, 0x49, 0x4a, 0x4c, 0x4d, 0x4e, 0x4f, 0x51, 0x52, 0x53, 0x5d, 0x58, 0x59, 0x5a, 0x5b, 0x5b, 0x5e, 0x5f, 0x61, 0x63, 0x63, 0x64, 0x65, 0x66, 0x67, 0x69, 0x6a, 0x6b, 0x6f, 0x70, 0x71, 0x73, 0x73, 0x76, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d
-                ]
-            hard_coords = [0x10, 0x11, 0x20, 0x12, 0x13, 0x14, 0x15, 0x25, 0x26, 0x70, 0x50, 0x60]
-            valid_coords += valid_map_coords
-        if 'spider' in self.reset_method:
-            valid_coords += [0x76, 0x79, 0x7a, 0x4a, 0x2c]
-        if 'octo' in self.reset_method:
-            valid_coords += [0x68, 0x78, 0x58, 0x57, 0x67, 0x66, 0x49, 0x64]
-        if valid_coords != []:
-            new_coord = self.random.choice(valid_coords)
-            self._set_map_coordinates_eb(new_coord)
+        for i in range(10):
+            valid_coords = []
+            if 'map' in self.reset_method:
+                valid_map_coords = [
+                    0x1e, 0x1f, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x38, 0x3a, 0x3b, 0x3d, 0x3e, 0x3f, 0x48, 0x49, 0x4a, 0x4c, 0x4d, 0x4e, 0x4f, 0x51, 0x52, 0x53, 0x5d, 0x58, 0x59, 0x5a, 0x5b, 0x5b, 0x5e, 0x5f, 0x61, 0x63, 0x63, 0x64, 0x65, 0x66, 0x67, 0x69, 0x6a, 0x6b, 0x6f, 0x70, 0x71, 0x73, 0x73, 0x76, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d
+                    ]
+                hard_coords = [0x10, 0x11, 0x20, 0x12, 0x13, 0x14, 0x15, 0x25, 0x26, 0x70, 0x50, 0x60]
+                valid_coords += valid_map_coords
+            if 'spider' in self.reset_method:
+                valid_coords += [0x76, 0x79, 0x7a, 0x4a, 0x2c]
+            if 'octo' in self.reset_method:
+                valid_coords += [0x68, 0x78, 0x58, 0x57, 0x67, 0x66, 0x49, 0x64]
+            if valid_coords != []:
+                new_coord = self.random.choice(valid_coords)
+                self._set_map_coordinates_eb(new_coord)
 
-        isvalid = self.tasks[self.episode_task].get('is_valid', lambda ram:True)(self.ram)
+            isvalid = self.tasks[self.episode_task].get('is_valid', lambda ram:True)(self.ram)
+            if isvalid:
+                break
         if not isvalid:
             self.episode_task = 'attack'
 
@@ -899,29 +902,51 @@ def _event_enemy_killed(ram, ram2):
 def _event_link_onmouse(ram, ram2):
     return int(_ramstate_link_onmouse(ram) and not _ramstate_link_onmouse(ram2))
 
-def _event_link_l1dist_decrease(ram, ram2):
+def _event_link_l1dist_decrease_x(ram, ram2):
     if ram.mouse is None or not hasattr(ram2, 'mouse') or ram2.mouse is None:
         return 0
     else:
         x1 = ram[112]
-        y1 = ram[132]
-        l1dist1 = abs(ram.mouse['x'] - x1) + abs(ram.mouse['y'] - y1)
+        l1dist1 = abs(ram.mouse['x'] - x1)
         x2 = ram2[112]
-        y2 = ram2[132]
-        l1dist2 = abs(ram2.mouse['x'] - x2) + abs(ram2.mouse['y'] - y2)
+        l1dist2 = abs(ram2.mouse['x'] - x2)
         return min(max(l1dist2 - l1dist1, 0), 1)
 
-def _event_link_l1dist_increase(ram, ram2):
+def _event_link_l1dist_decrease_y(ram, ram2):
+    if ram.mouse is None or not hasattr(ram2, 'mouse') or ram2.mouse is None:
+        return 0
+    else:
+        y1 = ram[132]
+        l1dist1 = abs(ram.mouse['y'] - y1)
+        y2 = ram2[132]
+        l1dist2 = abs(ram2.mouse['y'] - y2)
+        return min(max(l1dist2 - l1dist1, 0), 1)
+
+def _event_link_l1dist_decrease(ram, ram2):
+    return _event_link_l1dist_decrease_x(ram, ram2) or _event_link_l1dist_decrease_y(ram, ram2)
+
+def _event_link_l1dist_increase_x(ram, ram2):
     if ram.mouse is None or not hasattr(ram2, 'mouse') or ram2.mouse is None:
         return 0
     else:
         x1 = ram[112]
-        y1 = ram[132]
-        l1dist1 = abs(ram.mouse['x'] - x1) + abs(ram.mouse['y'] - y1)
+        l1dist1 = abs(ram.mouse['x'] - x1)
         x2 = ram2[112]
-        y2 = ram2[132]
-        l1dist2 = abs(ram2.mouse['x'] - x2) + abs(ram2.mouse['y'] - y2)
+        l1dist2 = abs(ram2.mouse['x'] - x2)
         return min(max(l1dist1 - l1dist2, 0), 1)
+
+def _event_link_l1dist_increase_y(ram, ram2):
+    if ram.mouse is None or not hasattr(ram2, 'mouse') or ram2.mouse is None:
+        return 0
+    else:
+        y1 = ram[132]
+        l1dist1 = abs(ram.mouse['y'] - y1)
+        y2 = ram2[132]
+        l1dist2 = abs(ram2.mouse['y'] - y2)
+        return min(max(l1dist1 - l1dist2, 0), 1)
+
+def _event_link_l1dist_increase(ram, ram2):
+    return _event_link_l1dist_increase_x(ram, ram2) or _event_link_l1dist_increase_y(ram, ram2)
 
 def _event_button_push(ram, ram2):
     return min(1, abs(ram[0xfa] - ram2[0xfa]))

@@ -244,6 +244,7 @@ class RetroKB(RetroWithRam):
             text += f'\n{format_dict_pretty(self.episode_event_multiset)}'
             text += f'\n'
             text += f'\nepisode_reward = {self.episode_reward:0.4f}'
+            text += f'\nepisode_pseudoreward = {self.episode_pseudoreward:0.4f}'
             text += f'\nterminated = {terminated}'
             text += f'\nmap_coord = {hex(self.ram[0xEB])}'
             print(text)

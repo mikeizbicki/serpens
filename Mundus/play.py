@@ -77,17 +77,45 @@ class Interactive(gymnasium.Wrapper):
             assert zelda_env.env is not None
             zelda_env = env.env
 
-        def on_mouse_motion(x, y, dx, dy):
-            zelda_env.mouse = {}
-            zelda_env.mouse['x'] = int(x / self.unwrapped.viewer.window.width * 240)
-            zelda_env.mouse['y'] = int((self.unwrapped.viewer.window.height - y) / self.unwrapped.viewer.window.height * 224)
+        def on_mouse_press(x, y, dx, dy):
+            if 'step' in zelda_env.tasks['onmouse_enemy']:
+                del zelda_env.tasks['onmouse_enemy']['step']
+            edge_size = 16
+
             # NOTE:
-            # the values above are hardcoded for zelda;
+            # the values here are hardcoded for zelda;
             # 240 is the y resolution,
             # and 60 is the height of the black bar
-        self.unwrapped.viewer.window.push_handlers(on_mouse_motion)
+            newx = int(x / self.unwrapped.viewer.window.width * 240)
+            newy = int((self.unwrapped.viewer.window.height - y) / self.unwrapped.viewer.window.height * 224)
+            if (zelda_env.ram.mouse is not None and
+                'x' in zelda_env.ram.mouse and
+                -edge_size <= zelda_env.ram.mouse['x'] - newx <= edge_size and
+                -edge_size <= zelda_env.ram.mouse['y'] - newy <= edge_size ):
+                    zelda_env.episode_task = 'attack'
+                    zelda_env.mouse = None
+            else:
+                zelda_env.episode_task = 'onmouse_enemy'
+
+                zelda_env.mouse = {}
+                zelda_env.mouse['x'] = newx
+                zelda_env.mouse['y'] = newy
+                if zelda_env.mouse['x'] < edge_size:
+                    zelda_env.mouse['x'] = -edge_size
+                    zelda_env.episode_task = 'screen_west'
+                if zelda_env.mouse['x'] > 240 - edge_size:
+                    zelda_env.mouse['x'] = 240 + edge_size
+                    zelda_env.episode_task = 'screen_east'
+                if zelda_env.mouse['y'] < 60 + edge_size:
+                    zelda_env.mouse['y'] = 60 - edge_size
+                    zelda_env.episode_task = 'screen_north'
+                if zelda_env.mouse['y'] > 224 - edge_size:
+                    zelda_env.mouse['y'] = 224 + edge_size
+                    zelda_env.episode_task = 'screen_south'
+        self.unwrapped.viewer.window.push_handlers(on_mouse_press)
 
         def on_mouse_leave(x, y):
+            print('asd')
             self.unwrapped.mouse = None
         self.unwrapped.viewer.window.push_handlers(on_mouse_leave)
 
@@ -295,7 +323,7 @@ def main():
             )
     env = Interactive(env)
     if not args.noaudio:
-        env = PlayAudio(env)
+        env = PlayAudio2(env)
     #env = StochasticFrameSkip(env, 4, 0.25)
     env = RandomStateReset(env, path='custom_integrations/Zelda-Nes', globstr=args.state)
     #env = Whisper(env)

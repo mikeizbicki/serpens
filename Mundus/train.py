@@ -227,9 +227,11 @@ def main():
     hyperparameters.add_argument('--policy', choices=['ObjectCnn', 'EventExtractor', 'ContinuousEventExtractor'], default='ObjectCnn')
     hyperparameters.add_argument('--pooling', choices=['lstm', 'mean', 'max'], default='mean')
     hyperparameters.add_argument('--alg', choices=['ppo', 'dqn'], default='ppo')
-    hyperparameters.add_argument('--task_regex', default='')
+    hyperparameters.add_argument('--task_regex', default='^attack$')
     hyperparameters.add_argument('--net_arch', type=int, nargs='*', default=[])
     hyperparameters.add_argument('--features_dim', type=int, default=256)
+    hyperparameters.add_argument('--events_dim', type=int, default=32)
+    hyperparameters.add_argument('--rewards_dim', type=int, default=32)
     hyperparameters.add_argument('--lr', type=float, default=3e-4)
     hyperparameters.add_argument('--gamma', type=float, default=0.9)
     hyperparameters.add_argument('--n_env', type=int, default=128)
@@ -310,6 +312,8 @@ def main():
                 'pooling': args.pooling,
                 'features_dim': args.features_dim,
                 },
+            'events_dim': args.events_dim,
+            'rewards_dim': args.rewards_dim,
             }
 
 

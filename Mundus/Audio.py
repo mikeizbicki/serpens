@@ -49,12 +49,12 @@ class PlayAudio2(gymnasium.Wrapper):
                 logging.warning('PlayAudio: buffer underrun')
                 return (b'\x00' * frame_count * 4, pyaudio.paContinue)  # 4 bytes per frame (2 channels * 2 bytes per sample)
 
-        logging.info(f"env.em.get_audio_rate()={env.em.get_audio_rate()}")
+        logging.info(f"env.unwrapped.em.get_audio_rate()={env.unwrapped.em.get_audio_rate()}")
         self.p = pyaudio.PyAudio()
         self.stream = self.p.open(
                 format=pyaudio.paInt16,
                 channels=2,
-                rate=32000, #int(env.em.get_audio_rate()),
+                rate=32000, #int(env.unwrapped.em.get_audio_rate()),
                 output=True,
                 stream_callback=playing_callback,
                 frames_per_buffer=128,
@@ -64,7 +64,7 @@ class PlayAudio2(gymnasium.Wrapper):
         self.stream.start_stream()
 
     def step(self, actions):
-        data = self.env.em.get_audio().astype('int16')
+        data = self.env.unwrapped.em.get_audio().astype('int16')
         self.PlayAudio_buffer = np.concatenate([self.PlayAudio_buffer, data])
         if len(self.PlayAudio_buffer) > 32000:
             self.PlayAudio_buffer = np.zeros([0,2], dtype='int16')

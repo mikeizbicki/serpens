@@ -32,6 +32,104 @@ for name in dir(keycodes):
         pass
 
 
+import tkinter as tk
+from PIL import Image, ImageTk
+class ImageViewer:
+    def __init__(self):
+        self.width = 1080
+        self.height = 600
+        self._create_window()
+
+    def _create_window(self):
+        self.isopen = True
+        self.window = tk.Tk()
+        self.window.title('Zelda')
+        
+        # Prevent window resizing
+        #self.window.resizable(False, False)
+
+        # Center the window and set exact size
+        screen_width = self.window.winfo_screenwidth()
+        screen_height = self.window.winfo_screenheight()
+        x = (screen_width - self.width) // 2
+        y = (screen_height - self.height) // 2
+        self.window.geometry(f"{self.width}x{self.height}+{x}+{y}")
+
+        # Calculate new image dimensions maintaining aspect ratio
+        original_ratio = 256 / 240  # Original NES aspect ratio
+        self.image_height = self.height
+        self.image_width = int(self.image_height * original_ratio)
+
+        # Create and configure frames
+        image_frame = tk.Frame(self.window, width=self.image_width, height=self.image_height)
+        image_frame.pack(side=tk.LEFT, fill=tk.BOTH)
+        image_frame.pack_propagate(False)
+
+        textbox_frame = tk.Frame(self.window)
+        textbox_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Create and configure image label
+        image = Image.new('RGB', (256, 240), color=(73, 109, 137))
+        image = image.resize((self.image_width, self.image_height), Image.Resampling.LANCZOS)
+        image_tk = ImageTk.PhotoImage(image)
+
+        self.image_label = tk.Label(image_frame, image=image_tk)
+        self.image_label.image = image_tk
+        self.image_label.pack(fill=tk.BOTH, expand=True)
+
+        # Create and configure textbox
+        textbox = tk.Text(textbox_frame)
+        textbox.pack(fill=tk.BOTH, expand=True)
+        textbox.config(state="disabled")
+
+        textbox.config(state="normal")
+        textbox.insert(tk.END, "This is blue text\n", "blue")
+        textbox.tag_config("blue", foreground="blue")
+        textbox.insert(tk.END, "This is red text\n", "red")
+        textbox.tag_config("red", foreground="red")
+        textbox.config(state="disabled")
+
+        def on_resize(event):
+            self.width = self.window.winfo_width()
+            self.height = self.window.winfo_height()
+            self.image_height = self.height
+            original_ratio = 256 / 240  # Original NES aspect ratio
+            self.image_width = int(self.image_height * original_ratio)
+            image_frame.config(width=self.image_width, height=self.image_height)
+            image = Image.new('RGB', (256, 240), color=(73, 109, 137))
+            image = image.resize((self.image_width, self.image_height), Image.Resampling.LANCZOS)
+            image_tk = ImageTk.PhotoImage(image)
+            self.image_label.config(image=image_tk)
+            self.image_label.image = image_tk
+        self.window.bind('<Configure>', on_resize)
+        self.window.attributes("-fullscreen", True)
+
+        self.window.update_idletasks()
+
+    def imshow(self, arr):
+        assert len(arr.shape) == 3, "You passed in an image with the wrong number shape"
+        new_image = Image.fromarray(arr)
+        new_image = new_image.resize((int(self.height * 256/240), self.height), Image.Resampling.NEAREST)
+        new_image_tk = ImageTk.PhotoImage(new_image)
+
+        # Update the image attribute of the Label widget
+        self.image_label.config(image=new_image_tk)
+        self.image_label.image = new_image_tk  # Keep a reference to the new image
+
+        # Update the image attribute of the App instance
+        self.image = new_image
+        self.image_tk = new_image_tk
+        self.window.update()
+
+    def close(self):
+        sys.exit(0)
+        #self.window.destroy()
+        self.isopen = False
+
+    def __del__(self):
+        self.close()
+
+
 class Interactive(gymnasium.Wrapper):
     def __init__(self, env, maxfps=60):
         super().__init__(env)
@@ -61,12 +159,12 @@ class Interactive(gymnasium.Wrapper):
         # self.render() is needed to create the self.unwrapped.viewer object;
         # we need this to interact with the pyglet window
         # and register the handlers
-        self.render() 
+        self.unwrapped.viewer = ImageViewer()
 
         # setup the key handler
         self._key_previous_states = {}
         self._key_handler = pyglet.window.key.KeyStateHandler()
-        self.unwrapped.viewer.window.push_handlers(self._key_handler)
+        #self.unwrapped.viewer.window.push_handlers(self._key_handler)
 
         # NOTE:
         # the mouse handler requires direct access to ZeldaWrapper
@@ -77,7 +175,9 @@ class Interactive(gymnasium.Wrapper):
             assert zelda_env.env is not None
             zelda_env = env.env
 
-        def on_mouse_press(x, y, dx, dy):
+        def on_mouse_press(event):
+            x = event.x
+            y = event.y
             if 'step' in zelda_env.tasks['onmouse_enemy']:
                 del zelda_env.tasks['onmouse_enemy']['step']
             edge_size = 16
@@ -86,8 +186,8 @@ class Interactive(gymnasium.Wrapper):
             # the values here are hardcoded for zelda;
             # 240 is the y resolution,
             # and 60 is the height of the black bar
-            newx = int(x / self.unwrapped.viewer.window.width * 240)
-            newy = int((self.unwrapped.viewer.window.height - y) / self.unwrapped.viewer.window.height * 224)
+            newx = int(x / self.unwrapped.viewer.image_width * 240)
+            newy = 224 - int((self.unwrapped.viewer.image_height - y) / self.unwrapped.viewer.image_height * 224)
             if (zelda_env.ram.mouse is not None and
                 'x' in zelda_env.ram.mouse and
                 -edge_size <= zelda_env.ram.mouse['x'] - newx <= edge_size and
@@ -112,12 +212,7 @@ class Interactive(gymnasium.Wrapper):
                 if zelda_env.mouse['y'] > 224 - edge_size:
                     zelda_env.mouse['y'] = 224 + edge_size
                     zelda_env.episode_task = 'screen_south'
-        self.unwrapped.viewer.window.push_handlers(on_mouse_press)
-
-        def on_mouse_leave(x, y):
-            print('asd')
-            self.unwrapped.mouse = None
-        self.unwrapped.viewer.window.push_handlers(on_mouse_leave)
+        self.unwrapped.viewer.window.bind("<Button-1>", on_mouse_press)
 
     def reset(self, **kwargs):
         self.frames_since_log = 0
@@ -324,10 +419,6 @@ def main():
     env = Interactive(env)
     if not args.noaudio:
         env = PlayAudio2(env)
-    #env = StochasticFrameSkip(env, 4, 0.25)
-    env = RandomStateReset(env, path='custom_integrations/Zelda-Nes', globstr=args.state)
-    #env = Whisper(env)
-    #env = ConsoleWrapper(env)
 
     # NOTE:
     # loading the models can cause a large number of warnings;

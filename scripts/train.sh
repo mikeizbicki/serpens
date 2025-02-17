@@ -19,10 +19,10 @@ commit=$(sh scripts/get_sane_commit_hash.sh)
 # start the new scripts
 common="--comment=$commit --policy=ContinuousEventExtractor" 
 
-CUDA_VISIBLE_DEVICES=0 nohup python3 Mundus/train.py $common --net_arch 64 64 > nohup/nohup.0 &
-CUDA_VISIBLE_DEVICES=1 nohup python3 Mundus/train.py $common --net_arch 64 > nohup/nohup.1 &
-CUDA_VISIBLE_DEVICES=2 nohup python3 Mundus/train.py $common --features_dim=32 > nohup/nohup.2 &
-CUDA_VISIBLE_DEVICES=3 nohup python3 Mundus/train.py $common --features_dim=8 --rewards_dim=8 --events_dim=8 > nohup/nohup.3 &
+CUDA_VISIBLE_DEVICES=0 nohup python3 Mundus/train.py $common --net_arch 64 64 --warmstart=f5e6d8f9 --task_regex='' > nohup/nohup.0 &
+CUDA_VISIBLE_DEVICES=1 nohup python3 Mundus/train.py $common --net_arch 64 --warmstart=1d6558b7 --task_regex='' > nohup/nohup.1 &
+CUDA_VISIBLE_DEVICES=2 nohup python3 Mundus/train.py $common --features_dim=32 --warmstart=e9e4af1e --task_regex='' > nohup/nohup.2 &
+#CUDA_VISIBLE_DEVICES=3 nohup python3 Mundus/train.py $common --features_dim=8 --rewards_dim=8 --events_dim=8 > nohup/nohup.3 &
 
 sleep 1
 tail -f nohup/nohup.?

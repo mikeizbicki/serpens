@@ -32,6 +32,33 @@ for name in dir(keycodes):
         pass
 
 
+from OpenGL import GL
+from pyopengltk import OpenGLFrame
+class GLFrame(OpenGLFrame):
+    def initgl(self):
+        self.texture_id = GL.glGenTextures(1)
+        GL.glEnable(GL.GL_TEXTURE_2D)
+
+    def redraw(self, array=None):
+        if array is not None:
+            GL.glBindTexture(GL.GL_TEXTURE_2D, self.texture_id)
+            GL.glTexImage2D(GL.GL_TEXTURE_2D, 0, GL.GL_RGB, array.shape[1], array.shape[0],
+                           0, GL.GL_RGB, GL.GL_UNSIGNED_BYTE, array)
+            GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_NEAREST)
+
+        GL.glClear(GL.GL_COLOR_BUFFER_BIT)
+        GL.glLoadIdentity()
+        self._draw_texture()
+        self.tkSwapBuffers()
+
+    def _draw_texture(self):
+        GL.glBegin(GL.GL_QUADS)
+        GL.glTexCoord2f(0, 1); GL.glVertex2f(-1, -1)
+        GL.glTexCoord2f(1, 1); GL.glVertex2f(1, -1)
+        GL.glTexCoord2f(1, 0); GL.glVertex2f(1, 1)
+        GL.glTexCoord2f(0, 0); GL.glVertex2f(-1, 1)
+        GL.glEnd()
+
 import tkinter as tk
 from PIL import Image, ImageTk
 class ImageViewer:
@@ -61,21 +88,12 @@ class ImageViewer:
         self.image_width = int(self.image_height * original_ratio)
 
         # Create and configure frames
-        image_frame = tk.Frame(self.window, width=self.image_width, height=self.image_height)
-        image_frame.pack(side=tk.LEFT, fill=tk.BOTH)
-        image_frame.pack_propagate(False)
+        self.image_frame = GLFrame(self.window, width=self.image_width, height=self.image_height)
+        self.image_frame.pack(side=tk.LEFT, fill=tk.BOTH)
+        self.image_frame.pack_propagate(False)
 
         textbox_frame = tk.Frame(self.window)
         textbox_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-        # Create and configure image label
-        image = Image.new('RGB', (256, 240), color=(73, 109, 137))
-        image = image.resize((self.image_width, self.image_height), Image.Resampling.LANCZOS)
-        image_tk = ImageTk.PhotoImage(image)
-
-        self.image_label = tk.Label(image_frame, image=image_tk)
-        self.image_label.image = image_tk
-        self.image_label.pack(fill=tk.BOTH, expand=True)
 
         # Create and configure textbox
         self.textbox = tk.Text(textbox_frame)
@@ -95,30 +113,14 @@ class ImageViewer:
             self.image_height = self.height
             original_ratio = 256 / 240  # Original NES aspect ratio
             self.image_width = int(self.image_height * original_ratio)
-            image_frame.config(width=self.image_width, height=self.image_height)
-            image = Image.new('RGB', (256, 240), color=(73, 109, 137))
-            image = image.resize((self.image_width, self.image_height), Image.Resampling.LANCZOS)
-            image_tk = ImageTk.PhotoImage(image)
-            self.image_label.config(image=image_tk)
-            self.image_label.image = image_tk
+            self.image_frame.config(width=self.image_width, height=self.image_height)
         self.window.bind('<Configure>', on_resize)
-        #self.window.attributes("-fullscreen", True)
-
+        self.window.attributes("-fullscreen", True)
         self.window.update_idletasks()
 
     def imshow(self, arr):
-        assert len(arr.shape) == 3, "You passed in an image with the wrong number shape"
-        new_image = Image.fromarray(arr)
-        new_image = new_image.resize((int(self.height * 256/240), self.height), Image.Resampling.NEAREST)
-        new_image_tk = ImageTk.PhotoImage(new_image)
-
-        # Update the image attribute of the Label widget
-        self.image_label.config(image=new_image_tk)
-        self.image_label.image = new_image_tk  # Keep a reference to the new image
-
-        # Update the image attribute of the App instance
-        self.image = new_image
-        self.image_tk = new_image_tk
+        self.image_frame.redraw(arr)
+        self.image_frame.update()
         self.window.update()
 
     def register_text(self, text, color="blue"):

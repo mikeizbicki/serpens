@@ -11,6 +11,12 @@ import pyaudio
 import gymnasium
 import simpleaudio as sa
 
+from elevenlabs.client import ElevenLabs
+from elevenlabs import play
+import elevenlabs
+from io import BytesIO
+from pydub import AudioSegment
+import threading
 
 class PlayAudio(gymnasium.Wrapper):
     '''
@@ -25,17 +31,74 @@ class PlayAudio(gymnasium.Wrapper):
     def step(self, actions):
         data = self.unwrapped.em.get_audio().astype('int16')
         sa.play_buffer(data, 2, 2, 32000)
-        return super().step(actions)
 
 
-class PlayAudio2(gymnasium.Wrapper):
+class PlayAudio_ElevenLabs(gymnasium.Wrapper):
+    def __init__(self, env, ignore_ALSA_warnings=True):
+        super().__init__(env)
+        self.text_audio = None
+        self.audio_env = self.env
+        self.elevenlabs = ElevenLabs()
+        self.cache_dir = '.audio_cache'
+        os.makedirs(self.cache_dir, exist_ok=True)
+
+    def register_text(self, text):
+        time_start = time.time()
+        try:
+            with open(os.path.join(self.cache_dir, text), 'rb') as fin:
+                self.audio_env.text_audio = np.repeat(np.frombuffer(fin.read(), dtype=np.int16), 2)
+                self.audio_env.text_audio_pos = 0
+        except FileNotFoundError:
+            def thread_function():
+                response = self.elevenlabs.text_to_speech.convert(
+                    text=text,
+                    voice_id="JBFqnCBsd6RMkjVDRZzb",
+                    model_id="eleven_turbo_v2_5",
+                    output_format="pcm_16000",
+                    voice_settings=elevenlabs.VoiceSettings(
+                        stability=0.0,
+                        similarity_boost=1.0,
+                        style=0.0,
+                        use_speaker_boost=True,
+                    ),
+                )
+                lag = time.time() - time_start
+                logging.info(f"API lag={lag}")
+                audio_stream = BytesIO()
+                for i, chunk in enumerate(response):
+                    lag = time.time() - time_start
+                    if i == 0:
+                        logging.info(f"for loop: lag={lag}")
+                    if chunk:
+                        audio_stream.write(chunk)
+                audio_stream.seek(0)
+                self.audio_env.text_audio = np.repeat(np.frombuffer(audio_stream.read(), dtype=np.int16), 2)
+                self.audio_env.text_audio_pos = 0
+                lag = time.time() - time_start
+                logging.info(f"mp3 convert; lag={lag}")
+                with open(os.path.join(self.cache_dir, text), 'wb') as fout:
+                    audio_stream.seek(0)
+                    fout.write(audio_stream.read())
+            thread = threading.Thread(target=thread_function)
+            thread.start()
+
+        return self._recursive_register_text(self.env, text)
+
+    def _recursive_register_text(self, env, text):
+        if hasattr(env, 'register_text'):
+            return env.register_text(text)
+        if isinstance(env, gymnasium.Wrapper):
+            return self._recursive_register_text(env.env, text)
+
+
+class PlayAudio_pyaudio(gymnasium.Wrapper):
     '''
-    FIXME:
-    The playback of this audio is smooth, but it's delayed 1-2 seconds for some reason.
+    This wrapper uses pyaudio to play the sound of the NES stable-retro environment.
     '''
     def __init__(self, env, ignore_ALSA_warnings=True):
         super().__init__(env)
         self.PlayAudio_buffer = np.zeros([0,2], dtype='int16')
+        self.text_audio = None
     
         # create the audio stream
         def playing_callback(in_data, frame_count, time_info, status):
@@ -46,7 +109,7 @@ class PlayAudio2(gymnasium.Wrapper):
                 #logging.info(f"self.PlayAudio_buffer.shape={self.PlayAudio_buffer.shape}")
                 return (data.tobytes(), pyaudio.paContinue)
             else:
-                logging.warning('PlayAudio: buffer underrun')
+                #logging.warning('PlayAudio: buffer underrun')
                 return (b'\x00' * frame_count * 4, pyaudio.paContinue)  # 4 bytes per frame (2 channels * 2 bytes per sample)
 
         logging.info(f"env.unwrapped.em.get_audio_rate()={env.unwrapped.em.get_audio_rate()}")
@@ -65,10 +128,19 @@ class PlayAudio2(gymnasium.Wrapper):
 
     def step(self, actions):
         data = self.env.unwrapped.em.get_audio().astype('int16')
+        #if self.mpg123_handle is not None:
+            #text_chunk = self.mpg123_handle.read(len(data))
+        if self.text_audio is not None:
+            text_chunk = self.text_audio[self.text_audio_pos:self.text_audio_pos + len(data)]
+            if len(text_chunk) > 0:
+                self.text_audio_pos += len(data)
+                text_chunk = np.pad(text_chunk, (0, len(data)-len(text_chunk)))
+                data += text_chunk[:, np.newaxis]
+            else:
+                self.text_audio = None
         self.PlayAudio_buffer = np.concatenate([self.PlayAudio_buffer, data])
         if len(self.PlayAudio_buffer) > 32000:
             self.PlayAudio_buffer = np.zeros([0,2], dtype='int16')
-            #logging.info(f"len(self.PlayAudio_buffer)={len(self.PlayAudio_buffer)}")
         return super().step(actions)
 
     def close(self):

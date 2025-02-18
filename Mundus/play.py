@@ -46,7 +46,7 @@ class ImageViewer:
         self.window.title('Zelda')
         
         # Prevent window resizing
-        #self.window.resizable(False, False)
+        self.window.resizable(False, False)
 
         # Center the window and set exact size
         screen_width = self.window.winfo_screenwidth()
@@ -78,16 +78,16 @@ class ImageViewer:
         self.image_label.pack(fill=tk.BOTH, expand=True)
 
         # Create and configure textbox
-        textbox = tk.Text(textbox_frame)
-        textbox.pack(fill=tk.BOTH, expand=True)
-        textbox.config(state="disabled")
+        self.textbox = tk.Text(textbox_frame)
+        self.textbox.pack(fill=tk.BOTH, expand=True)
+        self.textbox.config(state="disabled")
 
-        textbox.config(state="normal")
-        textbox.insert(tk.END, "This is blue text\n", "blue")
-        textbox.tag_config("blue", foreground="blue")
-        textbox.insert(tk.END, "This is red text\n", "red")
-        textbox.tag_config("red", foreground="red")
-        textbox.config(state="disabled")
+        self.textbox.config(state="normal")
+        self.textbox.insert(tk.END, "This is blue text\n", "blue")
+        self.textbox.tag_config("blue", foreground="blue")
+        self.textbox.insert(tk.END, "This is red text\n", "red")
+        self.textbox.tag_config("red", foreground="red")
+        self.textbox.config(state="disabled")
 
         def on_resize(event):
             self.width = self.window.winfo_width()
@@ -102,7 +102,7 @@ class ImageViewer:
             self.image_label.config(image=image_tk)
             self.image_label.image = image_tk
         self.window.bind('<Configure>', on_resize)
-        self.window.attributes("-fullscreen", True)
+        #self.window.attributes("-fullscreen", True)
 
         self.window.update_idletasks()
 
@@ -119,6 +119,15 @@ class ImageViewer:
         # Update the image attribute of the App instance
         self.image = new_image
         self.image_tk = new_image_tk
+        self.window.update()
+
+    def register_text(self, text, color="blue"):
+        tag_name = color
+        self.textbox.config(state="normal")
+        self.textbox.insert(tk.END, text + "\n", tag_name)
+        if not self.textbox.tag_config(tag_name):
+            self.textbox.tag_config(tag_name, foreground=color)
+        self.textbox.config(state="disabled")
         self.window.update()
 
     def close(self):
@@ -173,9 +182,12 @@ class Interactive(gymnasium.Wrapper):
         zelda_env = self.env
         while not isinstance(zelda_env, ZeldaWrapper):
             assert zelda_env.env is not None
-            zelda_env = env.env
+            zelda_env = zelda_env.env
 
         def on_mouse_press(event):
+            text = random.choice(['I will go there', 'Hi Evan', 'Attack!!!', 'Kill the monsters', 'I will do whatever you say', 'Your wish is my command'])
+            self.register_text(text)
+
             x = event.x
             y = event.y
             if 'step' in zelda_env.tasks['onmouse_enemy']:
@@ -214,11 +226,22 @@ class Interactive(gymnasium.Wrapper):
                     zelda_env.episode_task = 'screen_south'
         self.unwrapped.viewer.window.bind("<Button-1>", on_mouse_press)
 
+    def register_text(self, text):
+        self.unwrapped.viewer.register_text(text)
+        return self._recursive_register_text(self.env, text)
+
+    def _recursive_register_text(self, env, text):
+        if hasattr(env, 'register_text'):
+            return env.register_text(text)
+        if isinstance(env, gymnasium.Wrapper):
+            return self._recursive_register_text(env.env, text)
+
     def reset(self, **kwargs):
         self.frames_since_log = 0
         self.last_log_time = time.time()
         self.last_log_reward = 0
         self.this_log_reward = 0
+        self.this_log_sleeptime = 0
         self.log_every = 1.0
         self.total_reward = 0
         return super().reset(**kwargs)
@@ -326,6 +349,7 @@ class Interactive(gymnasium.Wrapper):
         # sleep to adjust the fps
         steptime = time.time() - self.laststep
         sleeptime = 1.0/self.get_maxfps() - steptime
+        self.this_log_sleeptime += sleeptime
         time.sleep(max(0, sleeptime))
         self.laststep = time.time()
 
@@ -333,10 +357,11 @@ class Interactive(gymnasium.Wrapper):
         time_diff = time.time() - self.last_log_time
         self.frames_since_log += 1
         if time_diff >= self.log_every:
-            logging.debug(f'fps={self.frames_since_log} reward_diff={self.this_log_reward:+0.4f} total_reward={self.total_reward:+0.4f}')
+            logging.debug(f'fps={self.frames_since_log} reward_diff={self.this_log_reward:+0.4f} total_reward={self.total_reward:+0.4f} sleep_percent={self.this_log_sleeptime/self.log_every:0.4f}')
             self.last_log_time = time.time()
             self.frames_since_log = 0
             self.this_log_reward = 0
+            self.this_log_sleeptime = 0
 
         return results
 
@@ -389,7 +414,7 @@ def main():
     # set logging level
     import logging
     logging.basicConfig(
-        filename=args.logfile,
+        #filename=args.logfile,
         level=logging.DEBUG,
         format='%(asctime)s.%(msecs)03d - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
@@ -416,9 +441,11 @@ def main():
             skip_boring_frames=not args.allframes,
             task_regex=args.task_regex,
             )
-    env = Interactive(env)
+
     if not args.noaudio:
-        env = PlayAudio2(env)
+        env = PlayAudio_pyaudio(env)
+        env = PlayAudio_ElevenLabs(env)
+    env = Interactive(env)
 
     # NOTE:
     # loading the models can cause a large number of warnings;
@@ -449,19 +476,20 @@ def main():
             print('\u001B[?1049l')
         atexit.register(exit_alternate_screen)
 
-    # if python crashes, we want the exception printed to the main screen
-    # and not the alternate screen
-    def crash_handler(type, value, tb):
-        env.close()
-        print("\033[?1049l")  # exit alternate screen
-        if type == KeyboardInterrupt:
-            sys.exit(0)
-        else:
-            sys.__excepthook__(type, value, tb)
-    sys.excepthook = crash_handler
+        # if python crashes, we want the exception printed to the main screen
+        # and not the alternate screen
+        def crash_handler(type, value, tb):
+            env.close()
+            print("\033[?1049l")  # exit alternate screen
+            if type == KeyboardInterrupt:
+                sys.exit(0)
+            else:
+                sys.__excepthook__(type, value, tb)
+        sys.excepthook = crash_handler
 
     logging.info('begin main loop')
     env.reset()
+
     while True:
         # clear the screen
         if not args.no_alternate_screen:

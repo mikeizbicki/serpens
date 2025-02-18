@@ -60,6 +60,11 @@ class RetroWithRam(gymnasium.Wrapper):
 
 
 class RetroKB(RetroWithRam):
+    def __getattr__(self, name):
+        if name == "register_text":
+            return self.register_text
+        return super().__getattr__(name)
+
     def __init__(
             self,
             env,
@@ -253,6 +258,13 @@ class RetroKB(RetroWithRam):
             self.env.render()
 
         return kb_obs, reward + pseudoreward, terminated, truncated, info
+
+    ########################################
+    # MARK: functions to be overwritten by derived classes
+    ########################################
+
+    def register_text(self, text):
+        logging.info(f'register_text: {text}')
 
     ########################################
     # MARK: change game state

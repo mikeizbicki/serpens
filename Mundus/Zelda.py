@@ -21,6 +21,7 @@ from Mundus.util import *
 def make_zelda_env(
         action_space='all',
         render_mode='human',
+        fork_emulator=False,
         **kwargs):
     '''
     Create a Zelda environment.
@@ -53,6 +54,8 @@ def make_zelda_env(
             render_mode=render_mode,
             use_restricted_actions=use_restricted_actions,
             )
+    if fork_emulator:
+        env = ForkedRetroEnv(env)
     env = ZeldaWrapper(env, **kwargs)
 
     # apply zelda-specific action space

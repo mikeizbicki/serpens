@@ -1,5 +1,19 @@
-import atexit
+#!/usr/bin/env python3
+
+# set logging level
 import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs)03d - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)  # log level for current project
+logging = logger
+
+logging.debug('import stdlib')
+import atexit
 import numpy as np
 import os
 import pprint
@@ -7,13 +21,18 @@ import random
 import sys
 import time
 
+logging.debug('import pyglet')
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pyglet
+logging.debug('import pygame')
 import pygame
+logging.debug('import gymnasium')
 import gymnasium
 from  gymnasium.wrappers import *
+logging.debug('import retro')
 import retro
 
+logging.debug('import .*')
 from Mundus.Audio import *
 from Mundus.Wrappers import *
 from Mundus.Zelda import *
@@ -31,7 +50,7 @@ for name in dir(keycodes):
     except TypeError:
         pass
 
-
+logging.debug('import OpenGL')
 from OpenGL import GL
 from pyopengltk import OpenGLFrame
 class GLFrame(OpenGLFrame):
@@ -412,15 +431,6 @@ def main():
     emulator_settings.add_argument('--doresets', action='store_true')
 
     args = parser.parse_args()
-
-    # set logging level
-    import logging
-    logging.basicConfig(
-        #filename=args.logfile,
-        level=logging.DEBUG,
-        format='%(asctime)s.%(msecs)03d - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
 
     # convert warnings to errors
     import warnings

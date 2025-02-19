@@ -4,6 +4,7 @@ import re
 
 import numpy as np
 import gymnasium
+import retro
 
 # load font for writing to image
 from PIL import Image, ImageDraw, ImageFont
@@ -15,31 +16,36 @@ from .util import *
 from multiprocessing import Queue, Process
 import queue
 
-class RetroWithRam(gymnasium.Wrapper):
+
+class ForkedRetroEnv(gymnasium.Wrapper):
     '''
-    The .get_ram() function is relatively expensive.
-    The only purpose of this wrapper is to store the result of .get_ram() in an attribute
-    to prevent multiple calls.
+    This class is used for parallelizing evaluation of the environment.
+    It creates a child process that runs only the emulator
+    so that the parent process can run non-emulator tasks.
+    The class was designed for mobile hardware that has several slow CPUs.
+    An individual CPU was not powerful enough to handle the entire play pipeline,
+    so this class can be used to offload the emulation work to one CPU
+    while another CPU handles the non-emulation work.
+
+    NOTE:
+    An unavoidable consequence of the parallelism is that
+    the parent process will always be one frame behind the child process.
+    So any agent (human/AI) will necessarily have a one frame lag to their inputs.
+    Human players won't notice the lag,
+    but overfit AIs might experience problems.
+
+    NOTE:
+    There is a lot of black magic in the implementation here,
+    and the code is only lightly tested.
+    There are probably subtle bugs.
+    It should be fine for interactive use of the emulator,
+    but might (or might not!) cause weird problems with training.
+
+    FIXME:
+    Currently, this Wrapper must be run directly on the RetroEnv instance.
+    It should be possible to make it a bit more generic so that it can work
+    on any wrapper.
     '''
-
-    class _IntLookup():
-        '''
-        By default, self.ram is a np.array with dtype=uint8.
-        This can result in overflow/underflows which are obnoxious to debug.
-        This class converts all results to integers before returning to avoid these bugs.
-        '''
-        def __init__(self, ram):
-            self.ram = ram
-            self.mouse = None
-
-        def __getitem__(self, key):
-            if isinstance(key, slice):
-                return self.ram[key]
-            elif isinstance(key, int):
-                return int(self.ram[key])
-            else:
-                raise ValueError(f'IntegerLookup; type={type(key)}, value={key} ')
-
     def __init__(self, env):
         super().__init__(env)
         
@@ -74,26 +80,52 @@ class RetroWithRam(gymnasium.Wrapper):
         p = Process(target=emulator_worker)
         p.start()
 
-        # these variables store the main process's record of
-        # the previous step of the emulator
-        self.ram = self._IntLookup(self.env.get_ram())
-        self.ram2 = None
-        self.audio = np.array([])
-
         # NOTE:
-        # .get_audio is a read-only attribute of em;
-        # we want to overwrite it so that any downstream use of the emulator sees the audio
-        # from the worker emulator and not the main process emulator;
-        # the main process emulator will always have empty audio because it is not being stepped;
-        # the following black magic is how we can set a read-only attribute in python
-        self.env.unwrapped.em.__class__.get_audio = property(lambda x: lambda : self.audio)
+        # the code below tries to provide a backwards-compatible interface
+        # to the original environment and emulator;
+        # FIXME
+        # the code below does not support the full RetroEnv interface,
+        # only those that I have needed for my downstream tasks
+        oldenv = self.env
+        
+        # the ._internal_XXX properties store internal states of the emulator;
+        # these will be updated by the ._update_state() method
+        # when we poll the emulator worker for the current state
+        self._internal_ram = oldenv.get_ram()
+        self._internal_audio = np.array([])
+        self._internal_audio_rate = oldenv.em.get_audio_rate()
+
+        # we don't want the downstream users of our wrapper to have to interact
+        # with the ._internal_XXX properties directly,
+        # so we replicate the interface provided by RetroEnv here
+        self.env = type('FakeRetroEnv', (), {})()
+        self.__dict__['unwrapped'] = self.env
+        self.env.__dict__['unwrapped'] = self.env
+        self.env.action_space = oldenv.action_space
+        self.env.buttons = oldenv.buttons
+        self.env.em = type('FakeEmulator', (), {})()
+        self.env.em.get_audio_rate = lambda: self._internal_audio_rate
+        self.env.render_mode = oldenv.render_mode
+        self.env.viewer = oldenv.viewer
+        self.env.render = lambda: retro.RetroEnv.render(self.env)
+        self.env.get_ram = lambda: self._internal_ram
+        self.env.em.get_audio = lambda: self._internal_audio
+
+        # delete the old environment;
+        # this frees resources and ensures that we don't accidentally interact
+        # with the original emulator instead of the worker process
+        del oldenv
+
+
+    def _update_state(self, message_out):
+        self.env.img = message_out['img']
+        self._internal_ram = message_out['ram']
+        self._internal_audio = message_out['audio']
 
     def step(self, action):
         # update the main process with the previous state of the emulator
         message_out = self.qout.get()
-        self.ram = self._IntLookup(message_out['ram'])
-        self.env.img = message_out['img']
-        self.audio = message_out['audio']
+        self._update_state(message_out)
 
         # ask the emulator to compute another step
         message_in = {
@@ -104,7 +136,8 @@ class RetroWithRam(gymnasium.Wrapper):
         return message_out['return']
 
     def reset(self, **kwargs):
-        # empty the queues
+        # empty the queues;
+        # this ensures that the worker process is ready for new commands
         try:
             self.qin.get_nowait()
         except queue.Empty:
@@ -125,9 +158,7 @@ class RetroWithRam(gymnasium.Wrapper):
         # wait for the emulator to complete the reset,
         # and store the resulting state
         message_out = self.qout.get()
-        self.ram = self._IntLookup(message_out['ram'])
-        self.env.img = message_out['img']
-        self.audio = message_out['audio']
+        self._update_state(message_out)
 
         # send a step command to emulator_worker;
         # this initial step will not have any action taken;
@@ -138,6 +169,53 @@ class RetroWithRam(gymnasium.Wrapper):
             }
         self.qin.put(message_in)
         return message_out['return']
+
+
+class RetroWithRam(gymnasium.Wrapper):
+    '''
+    The .get_ram() method is relatively expensive.
+    The purpose of this wrapper is to:
+    1. store the result of .get_ram() in an attribute to prevent multiple calls.
+    2. track a history of the ram state
+    '''
+
+    class _IntLookup():
+        '''
+        By default, self.ram is a np.array with dtype=uint8.
+        This can result in overflow/underflows which are obnoxious to debug.
+        This class converts all results to integers before returning to avoid these bugs.
+        '''
+        def __init__(self, ram):
+            self.ram = ram
+            self.mouse = None
+
+        def __getitem__(self, key):
+            if isinstance(key, slice):
+                return self.ram[key]
+            elif isinstance(key, int):
+                return int(self.ram[key])
+            else:
+                raise ValueError(f'IntegerLookup; type={type(key)}, value={key} ')
+
+    def __init__(self, env):
+        super().__init__(env)
+        self.ram = None
+        self._update_ram()
+
+    def _update_ram(self):
+        self.ram2 = self.ram
+        self.ram = self._IntLookup(self.unwrapped.get_ram())
+
+    def step(self, action):
+        self._update_ram()
+        return super().step(action)
+
+    def reset(self, **kwargs):
+        self.ram = self.unwrapped.get_ram()
+        obs, info = super().reset(**kwargs)
+        self.ram2 = None
+        self.ram = self.unwrapped.get_ram()
+        return obs, info
 
 
 class RetroKB(RetroWithRam):
@@ -240,9 +318,9 @@ class RetroKB(RetroWithRam):
         # we do not render here, but render later if desired;
         # this allows us to write to the screen if we need to
         render_mode = self.env.render_mode
-        self.env.render_mode = 'rgb_array'
+        self.unwrapped.render_mode = 'rgb_array'
         observation, reward, terminated, truncated, info = super().step(action)
-        self.env.render_mode = render_mode
+        self.unwrapped.render_mode = render_mode
 
         # record step counts
         self.stepcount += 1
@@ -296,18 +374,22 @@ class RetroKB(RetroWithRam):
                     xmax = max(0, min(239, v['x'] + 8))
                     ymin = max(0, min(223, v['y'] - 8))
                     ymax = max(0, min(223, v['y'] + 8))
-                    self.env.img[ymin:ymax+1, xmin] = 255
-                    self.env.img[ymin:ymax+1, xmax] = 255
-                    self.env.img[ymin, xmin:xmax+1] = 255
-                    self.env.img[ymax, xmin:xmax+1] = 255
+                    self.unwrapped.img[ymin:ymax+1, xmin] = 255
+                    self.unwrapped.img[ymin:ymax+1, xmax] = 255
+                    self.unwrapped.img[ymin, xmin:xmax+1] = 255
+                    self.unwrapped.img[ymax, xmin:xmax+1] = 255
                 else:
                     xmin = max(0, min(239, v['x'] - 4))
                     xmax = max(0, min(239, v['x'] + 4))
                     ymin = max(0, min(223, v['y'] - 4))
                     ymax = max(0, min(223, v['y'] + 4))
-                    self.env.img[ymin:ymax+1, xmin:xmax+1] = [255, 0, 255]
+                    self.unwrapped.img[ymin:ymax+1, xmin:xmax+1] = [255, 0, 255]
 
+            '''
             # write the task to the screen
+            # FIXME:
+            # the code below is useful for debugging, but very slow
+            # it takes about as much CPU as a single step of the emulator!
             img_pil = Image.fromarray(self.env.img)
             draw = ImageDraw.Draw(img_pil)
             draw.text(
@@ -318,6 +400,7 @@ class RetroKB(RetroWithRam):
                 antialiasing=False,
                 )
             self.env.img = np.array(img_pil)
+            '''
 
         if self.stdout_debug:
             text = ''

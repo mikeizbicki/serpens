@@ -12,6 +12,9 @@ pil_font = ImageFont.load_default()
 from .util import *
 
 
+from multiprocessing import Queue, Process
+import queue
+
 class RetroWithRam(gymnasium.Wrapper):
     '''
     The .get_ram() function is relatively expensive.
@@ -37,34 +40,107 @@ class RetroWithRam(gymnasium.Wrapper):
             else:
                 raise ValueError(f'IntegerLookup; type={type(key)}, value={key} ')
 
-
     def __init__(self, env):
         super().__init__(env)
-        self.ram = None
-        self._update_ram()
+        
+        # qin stores messages that go to the worker;
+        # qout stores messages that come from the worker;
+        # they are of size 1 to ensure syncronization between the worker and parent process;
+        # if one process gets ahead of the other process,
+        # it will block trying to add a second entry into the queue
+        self.qin = Queue(maxsize=1)
+        self.qout = Queue(maxsize=1)
 
-    def _update_ram(self):
-        self.ram2 = self.ram
+        # start the emulator process
+        def emulator_worker():
+            # disable rendering in the worker environement
+            # to ensure that multiple rendering windows do not get opened
+            env.render_mode = 'rgb_array'
+
+            # the worker will loop forever;
+            # it blocks on the qin.get() line waiting for a new command;
+            # then it runs the specified command and places the resulting emulator state in qout
+            while True:
+                message_in = self.qin.get()
+                message_out = {}
+                if message_in['method'] == 'step':
+                    message_out['return'] = env.step(message_in['action'])
+                elif message_in['method'] == 'reset':
+                    message_out['return'] = env.reset()
+                message_out['ram'] = env.get_ram()
+                message_out['img'] = env.img
+                message_out['audio'] = self.env.unwrapped.em.get_audio()
+                self.qout.put(message_out)
+        p = Process(target=emulator_worker)
+        p.start()
+
+        # these variables store the main process's record of
+        # the previous step of the emulator
         self.ram = self._IntLookup(self.env.get_ram())
+        self.ram2 = None
+        self.audio = np.array([])
+
+        # NOTE:
+        # .get_audio is a read-only attribute of em;
+        # we want to overwrite it so that any downstream use of the emulator sees the audio
+        # from the worker emulator and not the main process emulator;
+        # the main process emulator will always have empty audio because it is not being stepped;
+        # the following black magic is how we can set a read-only attribute in python
+        self.env.unwrapped.em.__class__.get_audio = property(lambda x: lambda : self.audio)
 
     def step(self, action):
-        self._update_ram()
-        return super().step(action)
+        # update the main process with the previous state of the emulator
+        message_out = self.qout.get()
+        self.ram = self._IntLookup(message_out['ram'])
+        self.env.img = message_out['img']
+        self.audio = message_out['audio']
+
+        # ask the emulator to compute another step
+        message_in = {
+            'method': 'step',
+            'action': action,
+            }
+        self.qin.put(message_in)
+        return message_out['return']
 
     def reset(self, **kwargs):
-        self.ram = self.env.get_ram()
-        obs, info = super().reset(**kwargs)
-        self.ram2 = None
-        self.ram = self.env.get_ram()
-        return obs, info
+        # empty the queues
+        try:
+            self.qin.get_nowait()
+        except queue.Empty:
+            pass
+
+        try:
+            self.qout.get_nowait()
+        except queue.Empty:
+            pass
+
+        # send reset command to emulator_worker
+        message_in = {
+            'method': 'reset',
+            'kwargs': kwargs,
+            }
+        self.qin.put(message_in)
+
+        # wait for the emulator to complete the reset,
+        # and store the resulting state
+        message_out = self.qout.get()
+        self.ram = self._IntLookup(message_out['ram'])
+        self.env.img = message_out['img']
+        self.audio = message_out['audio']
+
+        # send a step command to emulator_worker;
+        # this initial step will not have any action taken;
+        # the worker will run the step while the main process continues
+        message_in = {
+            'method': 'step',
+            'action': self.env.action_space.sample() * 0,
+            }
+        self.qin.put(message_in)
+        return message_out['return']
 
 
 class RetroKB(RetroWithRam):
-    def __getattr__(self, name):
-        if name == "register_text":
-            return self.register_text
-        return super().__getattr__(name)
-
     def __init__(
             self,
             env,
@@ -145,6 +221,7 @@ class RetroKB(RetroWithRam):
         where the entries are the names of the buttons to pass to the emulator;
         this is a universal format that doesn't depend on the action space
         '''
+        asd
         self.skipped_frames += 1
         self._set_buttons(buttons)
         self.env.em.step()

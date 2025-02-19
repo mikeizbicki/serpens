@@ -321,40 +321,44 @@ class ZeldaWrapper(RetroKB):
         self.frames_without_attack = 0
         self.max_frames_without_attack = 0
 
-        # reset map/link/enemy location
-        for i in range(10):
-            valid_coords = []
-            if 'map' in self.reset_method:
-                valid_map_coords = [
-                    0x1e, 0x1f, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x38, 0x3a, 0x3b, 0x3d, 0x3e, 0x3f, 0x48, 0x49, 0x4a, 0x4c, 0x4d, 0x4e, 0x4f, 0x51, 0x52, 0x53, 0x5d, 0x58, 0x59, 0x5a, 0x5b, 0x5b, 0x5e, 0x5f, 0x61, 0x63, 0x63, 0x64, 0x65, 0x66, 0x67, 0x69, 0x6a, 0x6b, 0x6f, 0x70, 0x71, 0x73, 0x73, 0x76, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d
-                    ]
-                hard_coords = [0x10, 0x11, 0x20, 0x12, 0x13, 0x14, 0x15, 0x25, 0x26, 0x70, 0x50, 0x60]
-                valid_coords += valid_map_coords
-            if 'spider' in self.reset_method:
-                valid_coords += [0x76, 0x79, 0x7a, 0x4a, 0x2c]
-            if 'octo' in self.reset_method:
-                valid_coords += [0x68, 0x78, 0x58, 0x57, 0x67, 0x66, 0x49, 0x64]
-            if valid_coords != []:
-                new_coord = self.random.choice(valid_coords)
-                self._set_map_coordinates_eb(new_coord)
+        if self.reset_method != 'None':
+            # reset map/link/enemy location
+            for i in range(10):
+                valid_coords = []
+                if 'map' in self.reset_method:
+                    valid_map_coords = [
+                        0x1e, 0x1f, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x38, 0x3a, 0x3b, 0x3d, 0x3e, 0x3f, 0x48, 0x49, 0x4a, 0x4c, 0x4d, 0x4e, 0x4f, 0x51, 0x52, 0x53, 0x5d, 0x58, 0x59, 0x5a, 0x5b, 0x5b, 0x5e, 0x5f, 0x61, 0x63, 0x63, 0x64, 0x65, 0x66, 0x67, 0x69, 0x6a, 0x6b, 0x6f, 0x70, 0x71, 0x73, 0x73, 0x76, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d
+                        ]
+                    hard_coords = [0x10, 0x11, 0x20, 0x12, 0x13, 0x14, 0x15, 0x25, 0x26, 0x70, 0x50, 0x60]
+                    valid_coords += valid_map_coords
+                if 'spider' in self.reset_method:
+                    valid_coords += [0x76, 0x79, 0x7a, 0x4a, 0x2c]
+                if 'octo' in self.reset_method:
+                    valid_coords += [0x68, 0x78, 0x58, 0x57, 0x67, 0x66, 0x49, 0x64]
+                if valid_coords != []:
+                    new_coord = self.random.choice(valid_coords)
+                    self._set_map_coordinates_eb(new_coord)
 
-            isvalid = self.tasks[self.episode_task].get('is_valid', lambda ram:True)(self.ram)
-            if isvalid:
-                break
-        if not isvalid:
-            self.episode_task = 'attack'
+                isvalid = self.tasks[self.episode_task].get('is_valid', lambda ram:True)(self.ram)
+                if isvalid:
+                    break
+            if not isvalid:
+                self.episode_task = 'attack'
 
-        if 'link' in self.reset_method:
-            self._set_random_link_position()
-        if 'enemy' in self.reset_method:
-            self._set_random_enemy_positions()
+            if 'link' in self.reset_method:
+                self._set_random_link_position()
+            if 'enemy' in self.reset_method:
+                self._set_random_enemy_positions()
         return self.observation_space.sample(), info
 
     def step(self, action):
         observation, reward, terminated, truncated, info = super().step(action)
 
         # potentially end task early if we're going too long
-        if _ramstate_all_enemies_health(self.ram) == _ramstate_all_enemies_health(self.ram2) and _ramstate_hearts(self.ram) == _ramstate_hearts(self.ram2):
+        if (self.ram is not None and
+            self.ram2 is not None and
+            _ramstate_all_enemies_health(self.ram) == _ramstate_all_enemies_health(self.ram2) and
+            _ramstate_hearts(self.ram) == _ramstate_hearts(self.ram2)):
             self.frames_without_attack += 1
         else:
             self.frames_without_attack = 0

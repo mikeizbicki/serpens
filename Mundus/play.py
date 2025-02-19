@@ -115,7 +115,7 @@ class ImageViewer:
             self.image_width = int(self.image_height * original_ratio)
             self.image_frame.config(width=self.image_width, height=self.image_height)
         self.window.bind('<Configure>', on_resize)
-        self.window.attributes("-fullscreen", True)
+        #self.window.attributes("-fullscreen", True)
         self.window.update_idletasks()
 
     def imshow(self, arr):
@@ -442,6 +442,7 @@ def main():
             no_render_skipped_frames=args.no_render_skipped_frames,
             skip_boring_frames=not args.allframes,
             task_regex=args.task_regex,
+            reset_method='None',
             )
 
     if not args.noaudio:

@@ -14,12 +14,16 @@ logging = logger
 
 logging.debug('import stdlib')
 import atexit
-import numpy as np
+import multiprocessing
 import os
 import pprint
+import queue
 import random
 import sys
 import time
+
+logging.debug('import numpy')
+import numpy as np
 
 logging.debug('import pyglet')
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
@@ -453,30 +457,13 @@ def main():
             skip_boring_frames=not args.allframes,
             task_regex=args.task_regex,
             reset_method='None',
+            fork_emulator=True,
             )
 
     if not args.noaudio:
         env = PlayAudio_pyaudio(env)
         env = PlayAudio_ElevenLabs(env)
     env = Interactive(env)
-
-    # NOTE:
-    # loading the models can cause a large number of warnings;
-    # this with block prevents those warnings from being displayed
-    logging.info('loading model')
-    model = None
-    if args.model:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            from stable_baselines3 import PPO
-            custom_objects = {
-                'observation_space': env.observation_space,
-                'action_space': env.action_space,
-                }
-            model = PPO.load(args.model, custom_objects=custom_objects)
-
-    # set the default action
-    action = env.action_space.sample() * 0
 
     # switch the terminal to the alternate screen
     if not args.no_alternate_screen:
@@ -503,23 +490,76 @@ def main():
     logging.info('begin main loop')
     env.reset()
 
+    # qin stores messages that go to the worker;
+    # qout stores messages that come from the worker;
+    # they are of size 1 to ensure syncronization between the worker and parent process;
+    # if one process gets ahead of the other process,
+    # it will block trying to add a second entry into the queue
+    qin = multiprocessing.Queue(maxsize=1)
+    qout = multiprocessing.Queue(maxsize=1)
+    qout_lock = multiprocessing.Lock()
+
+    # start the emulator process
+    def model_worker():
+        # NOTE:
+        # loading the models can cause a large number of warnings;
+        # this with block prevents those warnings from being displayed
+        logging.info('loading model')
+        model = None
+        if args.model:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                from stable_baselines3 import PPO
+                custom_objects = {
+                    'observation_space': env.observation_space,
+                    'action_space': env.action_space,
+                    }
+                model = PPO.load(args.model, custom_objects=custom_objects)
+
+        # the worker will loop forever;
+        # it blocks on the qin.get() line waiting for a new observation;
+        # then it puts the appropriate action in the queue
+        while True:
+            observation = qin.get()
+            action, _states = model.predict(observation, deterministic=True)
+            with qout_lock:
+                qout.get()
+                qout.put(action)
+    p = Process(target=model_worker)
+    p.start()
+
+    # set the first action to be empty
+    action = env.action_space.sample() * 0
+    qout.put(action)
+
     while True:
         # clear the screen
         if not args.no_alternate_screen:
             print('\x1b[2J', end='')
+
+        # get the next action from the model
+        # (which is the action from the previous iteration's observation)
+        with qout_lock:
+            action = qout.get()
+            qout.put(action)
 
         # step the environment
         observation, reward, terminated, truncated, info = env.step(action)
         if args.doresets and (terminated or truncated):
             env.reset()
 
-        # select the next action;
-        if model is not None:
-            action, _states = model.predict(observation, deterministic=True)
-            
-            # ensure that the model does not press start/select
-            #action[2] = 0
-            #action[3] = 0
+        # send the observation to the model_worker process
+        # if there is already an observation,
+        # that means the model is running slowly and falling behind the main process;
+        # this happens when the model is larger than the hardware can run at 60fps;
+        # we overwrite the existing observation with the latest observation
+        # so that the model will always make decision on the latest observation
+        # even if it has to skip frames
+        try:
+            qin.get_nowait()
+        except queue.Empty:
+            pass
+        qin.put(observation)
 
 
 if __name__ == "__main__":

@@ -15,7 +15,6 @@ from elevenlabs.client import ElevenLabs
 from elevenlabs import play
 import elevenlabs
 from io import BytesIO
-from pydub import AudioSegment
 import threading
 
 class PlayAudio(gymnasium.Wrapper):

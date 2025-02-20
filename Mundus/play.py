@@ -3,14 +3,19 @@
 # set logging level
 import logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s.%(msecs)03d - %(levelname)s - %(message)s',
+    level=logging.DEBUG,
+    format='%(asctime)s.%(msecs)03d [pid=%(process)d] %(levelname)s: %(message)s',
+    #format='%(asctime)s.%(msecs)03d - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)  # log level for current project
-logging = logger
+# use only 1 CPU for model inference
+import os
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['NUMPY_NUM_THREADS'] = '1'
+
+import setproctitle
+setproctitle.setproctitle(f'serpens')
 
 logging.debug('import stdlib')
 import atexit
@@ -31,8 +36,8 @@ import pyglet
 logging.debug('import pygame')
 import pygame
 logging.debug('import gymnasium')
-import gymnasium
-from  gymnasium.wrappers import *
+#import gymnasium
+#from  gymnasium.wrappers import *
 logging.debug('import retro')
 import retro
 
@@ -54,8 +59,10 @@ for name in dir(keycodes):
     except TypeError:
         pass
 
+
 logging.debug('import OpenGL')
 from OpenGL import GL
+'''
 from pyopengltk import OpenGLFrame
 class GLFrame(OpenGLFrame):
     def initgl(self):
@@ -81,6 +88,95 @@ class GLFrame(OpenGLFrame):
         GL.glTexCoord2f(1, 0); GL.glVertex2f(1, 1)
         GL.glTexCoord2f(0, 0); GL.glVertex2f(-1, 1)
         GL.glEnd()
+'''
+
+import pygame
+import tkinter as tk
+from tkinter import Frame
+
+class GLFrameOG(Frame):
+    def __init__(self, master, width, height):
+        super().__init__(master, width=width, height=height)
+        os.environ['SDL_WINDOWID'] = '0'
+        pygame.init()
+        pygame.display.init()
+        self.width = width
+        self.height = height
+        self.bind('<Map>', self._on_map)
+        self.bind('<Map>', self._on_map)
+
+        # Pre-create surface and array
+        self.scaled_size = (width, height)
+        self.screen = None
+        self.scaled_surface = pygame.Surface(self.scaled_size)
+        #pygame.display.set_hwsurface(True)
+        #pygame.display.set_doublebuf(True)
+
+    def _on_configure(self, event):
+        # Update dimensions when frame is resized
+        self.width = event.width
+        self.height = event.height
+        self.scaled_size = (self.width, self.height)
+        if self.screen:
+            self.screen = pygame.display.set_mode(self.scaled_size, pygame.HWACCEL | pygame.DOUBLEBUF)
+            self.scaled_surface = pygame.Surface(self.scaled_size)
+
+    def _on_map(self, event):
+        os.environ['SDL_WINDOWID'] = str(self.winfo_id())
+        self.screen = pygame.display.set_mode(self.scaled_size, pygame.HWACCEL | pygame.DOUBLEBUF)
+
+    def redraw(self, array=None):
+        if array is not None and self.screen:
+            # Convert array directly to surface using buffer protocol
+            surface = pygame.surfarray.make_surface(array.swapaxes(0,1))
+            pygame.transform.scale(surface, self.scaled_size, self.screen)
+            pygame.display.flip()
+
+
+class GLFrame(Frame):
+    def __init__(self, master, width, height):
+        super().__init__(master, width=width, height=height)
+        os.environ['SDL_WINDOWID'] = '0'
+        pygame.init()
+        pygame.display.init()
+        self.width = width
+        self.height = height
+        self.bind('<Map>', self._on_map)
+        self.bind('<Configure>', self._on_configure)
+        self.bind('<Visibility>', self._on_visibility)
+
+        self.scaled_size = (width, height)
+        self.screen = None
+        self.scaled_surface = pygame.Surface(self.scaled_size)
+
+    def _on_visibility(self, event):
+        if self.screen:
+            # Force realignment when window becomes visible
+            self.update_pygame_window()
+
+    def update_pygame_window(self):
+        os.environ['SDL_WINDOWID'] = str(self.winfo_id())
+        self.screen = pygame.display.set_mode(self.scaled_size, pygame.HWACCEL | pygame.DOUBLEBUF)
+        self.scaled_surface = pygame.Surface(self.scaled_size)
+
+    def _on_configure(self, event):
+        self.width = event.width
+        self.height = event.height
+        self.scaled_size = (self.width, self.height)
+        if self.screen:
+            self.update_pygame_window()
+
+    def _on_map(self, event):
+        self.update_pygame_window()
+
+    def redraw(self, array=None):
+        if array is not None and self.screen:
+            surface = pygame.surfarray.make_surface(array.swapaxes(0,1))
+            scaled_surface = pygame.Surface(self.scaled_size)
+            pygame.transform.scale(surface, self.scaled_size, scaled_surface)
+            self.screen.blit(scaled_surface, (0, 0))
+            pygame.display.flip()
+
 
 import tkinter as tk
 from PIL import Image, ImageTk
@@ -88,15 +184,17 @@ class ImageViewer:
     def __init__(self):
         self.width = 1080
         self.height = 600
+        #self.width = 400
+        #self.height = 240
         self._create_window()
 
     def _create_window(self):
         self.isopen = True
         self.window = tk.Tk()
         self.window.title('Zelda')
-        
+
         # Prevent window resizing
-        self.window.resizable(False, False)
+        #self.window.resizable(False, False)
 
         # Center the window and set exact size
         screen_width = self.window.winfo_screenwidth()
@@ -138,13 +236,20 @@ class ImageViewer:
             self.image_width = int(self.image_height * original_ratio)
             self.image_frame.config(width=self.image_width, height=self.image_height)
         self.window.bind('<Configure>', on_resize)
-        #self.window.attributes("-fullscreen", True)
+        self.window.attributes("-fullscreen", True)
         self.window.update_idletasks()
 
+        self.framecount = 0
+
     def imshow(self, arr):
-        self.image_frame.redraw(arr)
-        self.image_frame.update()
-        self.window.update()
+        self.framecount += 1
+        # FIXME:
+        # this is a dirty hack to speed up rendering by rendering
+        # only some frames
+        if self.framecount %3 == 0:
+            self.image_frame.redraw(arr)
+            self.image_frame.update()
+            self.window.update()
 
     def register_text(self, text, color="blue"):
         tag_name = color
@@ -231,6 +336,8 @@ class Interactive(gymnasium.Wrapper):
                 -edge_size <= zelda_env.ram.mouse['y'] - newy <= edge_size ):
                     zelda_env.episode_task = 'attack'
                     zelda_env.mouse = None
+                    text = random.choice(['attack', 'kill them all', 'kill all the monsters'])
+                    self.register_text(text)
             else:
                 zelda_env.episode_task = 'onmouse_enemy'
 
@@ -276,6 +383,7 @@ class Interactive(gymnasium.Wrapper):
         
     def step(self, action):
         
+        """
         # register any pygame events
         for event in pygame.event.get():
             if event.type == pygame.JOYDEVICEADDED:
@@ -366,8 +474,9 @@ class Interactive(gymnasium.Wrapper):
             self.action_override = False
         if self.action_override:
             action = self.keys_to_act(keys_pressed)
+        """
         observation, reward, terminated, truncated, info = super().step(action)
-        results = observation, reward + manual_reward, terminated, truncated, info
+        results = observation, reward, terminated, truncated, info
         self.this_log_reward += reward
         self.total_reward += reward
 
@@ -501,6 +610,9 @@ def main():
 
     # start the emulator process
     def model_worker():
+        #current_name = multiprocessing.current_process().name
+        #setproctitle.setproctitle(f'{current_name}: model_worker')
+
         # NOTE:
         # loading the models can cause a large number of warnings;
         # this with block prevents those warnings from being displayed
@@ -516,21 +628,27 @@ def main():
                     }
                 model = PPO.load(args.model, custom_objects=custom_objects)
 
+        # set the first action to be empty;
+        # we must do this after the model is loaded
+        # so that the main loop doesn't start playing before the model is loaded
+        action = env.action_space.sample() * 0
+        qout.put(action)
+
         # the worker will loop forever;
         # it blocks on the qin.get() line waiting for a new observation;
         # then it puts the appropriate action in the queue
+        logging.info('entering model_worker main loop')
         while True:
             observation = qin.get()
-            action, _states = model.predict(observation, deterministic=True)
+            if model is not None:
+                action, _states = model.predict(observation, deterministic=True)
+            else:
+                action = env.action_space.sample() * 0
             with qout_lock:
                 qout.get()
                 qout.put(action)
-    p = Process(target=model_worker)
+    p = Process(name='serpens: model_worker', target=model_worker)
     p.start()
-
-    # set the first action to be empty
-    action = env.action_space.sample() * 0
-    qout.put(action)
 
     while True:
         # clear the screen

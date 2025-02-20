@@ -56,6 +56,7 @@ def make_zelda_env(
             )
     if fork_emulator:
         env = ForkedRetroEnv(env)
+    #env = RetroKB(env)
     env = ZeldaWrapper(env, **kwargs)
 
     # apply zelda-specific action space
@@ -357,21 +358,22 @@ class ZeldaWrapper(RetroKB):
     def step(self, action):
         observation, reward, terminated, truncated, info = super().step(action)
 
-        # potentially end task early if we're going too long
-        if (self.ram is not None and
-            self.ram2 is not None and
-            _ramstate_all_enemies_health(self.ram) == _ramstate_all_enemies_health(self.ram2) and
-            _ramstate_hearts(self.ram) == _ramstate_hearts(self.ram2)):
-            self.frames_without_attack += 1
-        else:
-            self.frames_without_attack = 0
-        self.max_frames_without_attack = max(self.max_frames_without_attack, self.frames_without_attack)
+        if False:
+            # potentially end task early if we're going too long
+            if (self.ram is not None and
+                self.ram2 is not None and
+                _ramstate_all_enemies_health(self.ram) == _ramstate_all_enemies_health(self.ram2) and
+                _ramstate_hearts(self.ram) == _ramstate_hearts(self.ram2)):
+                self.frames_without_attack += 1
+            else:
+                self.frames_without_attack = 0
+            self.max_frames_without_attack = max(self.max_frames_without_attack, self.frames_without_attack)
 
-        info['misc_max_frames_without_attack'] = self.max_frames_without_attack
-        info['misc_truncated_noattack'] = 0
-        if self.frames_without_attack >= self.frames_without_attack_threshold:
-            truncated = True
-            info['misc_truncated_noattack'] = 1
+            info['misc_max_frames_without_attack'] = self.max_frames_without_attack
+            info['misc_truncated_noattack'] = 0
+            if self.frames_without_attack >= self.frames_without_attack_threshold:
+                truncated = True
+                info['misc_truncated_noattack'] = 1
 
         # skip the boring frames
         if not (self.fast_termination and (terminated or truncated)) and self.skip_boring_frames:

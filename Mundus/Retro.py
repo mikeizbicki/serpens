@@ -59,6 +59,10 @@ class ForkedRetroEnv(gymnasium.Wrapper):
 
         # start the emulator process
         def emulator_worker():
+            #import setproctitle
+            #current_name = multiprocessing.current_process().name
+            #setproctitle.setproctitle(f'{current_name}: emulator_worker')
+
             # disable rendering in the worker environement
             # to ensure that multiple rendering windows do not get opened
             env.render_mode = 'rgb_array'
@@ -77,7 +81,7 @@ class ForkedRetroEnv(gymnasium.Wrapper):
                 message_out['img'] = env.img
                 message_out['audio'] = self.env.unwrapped.em.get_audio()
                 self.qout.put(message_out)
-        p = Process(target=emulator_worker)
+        p = Process(name='serpens: emulator_worker', target=emulator_worker)
         p.start()
 
         # NOTE:
@@ -219,6 +223,19 @@ class RetroWithRam(gymnasium.Wrapper):
 
 
 class RetroKB(RetroWithRam):
+
+    tasks = {}
+    tasks['attack'] = {
+        'terminated': [
+            ],
+        'is_success': [
+            ],
+        'reward': {
+            },
+        'pseudoreward': {
+            }
+        }
+
     def __init__(
             self,
             env,
@@ -330,36 +347,38 @@ class RetroKB(RetroWithRam):
         # compute the task information
         self.ram.mouse = self.mouse # FIXME: this should be in only one spot
         kb = self.generate_knowledge_base(self.ram, self.ram2)
+        pseudoreward = 0
         kb_obs = kb.to_observation()
         task = self.tasks[self.episode_task]
-
         kb_obs['rewards'] = np.array([task['reward'].get(k, 0) for k in sorted(kb.events)])
 
-        terminated = any([getattr(self.game_module, fname)(self.ram) for fname in task['terminated']])
-        info['is_success'] = any([getattr(self.game_module, fname)(self.ram) for fname in task['is_success']])
-        if 'step' in task:
-            task['step'](self, kb)
+        if False:
 
-        # compute logging information
-        event_multiset = MultiSet(kb.events)
-        reward_multiset = MultiSet({k: v * event_multiset[k] for k, v in task['reward'].items()})
-        pseudoreward_multiset = MultiSet({k: v * event_multiset[k] for k, v in task['pseudoreward'].items()})
-        reward = sum(reward_multiset.values())
-        pseudoreward = sum(pseudoreward_multiset.values())
-        self.episode_reward += reward
-        self.episode_pseudoreward += pseudoreward
-        self.episode_event_multiset += event_multiset
-        self.episode_reward_multiset += reward_multiset
-        for k in event_multiset.keys():
-            info['event_' + k] = self.episode_event_multiset[k]
-            info['reward_' + k] = self.episode_reward_multiset[k]
-            info['reward_' + k] = self.episode_pseudoreward_multiset[k]
+            terminated = any([getattr(self.game_module, fname)(self.ram) for fname in task['terminated']])
+            info['is_success'] = any([getattr(self.game_module, fname)(self.ram) for fname in task['is_success']])
+            if 'step' in task:
+                task['step'](self, kb)
 
-        info['episode_task'] = self.episode_task
-        info['event__success'] = info['is_success']
+            # compute logging information
+            event_multiset = MultiSet(kb.events)
+            reward_multiset = MultiSet({k: v * event_multiset[k] for k, v in task['reward'].items()})
+            pseudoreward_multiset = MultiSet({k: v * event_multiset[k] for k, v in task['pseudoreward'].items()})
+            reward = sum(reward_multiset.values())
+            pseudoreward = sum(pseudoreward_multiset.values())
+            self.episode_reward += reward
+            self.episode_pseudoreward += pseudoreward
+            self.episode_event_multiset += event_multiset
+            self.episode_reward_multiset += reward_multiset
+            for k in event_multiset.keys():
+                info['event_' + k] = self.episode_event_multiset[k]
+                info['reward_' + k] = self.episode_reward_multiset[k]
+                info['reward_' + k] = self.episode_pseudoreward_multiset[k]
 
-        info['misc_episode_reward'] = self.episode_reward
-        info['misc_episode_pseudoreward'] = self.episode_pseudoreward
+            info['episode_task'] = self.episode_task
+            info['event__success'] = info['is_success']
+
+            info['misc_episode_reward'] = self.episode_reward
+            info['misc_episode_pseudoreward'] = self.episode_pseudoreward
 
         # render the environment
         if self.render_kb:
@@ -402,7 +421,7 @@ class RetroKB(RetroWithRam):
             self.env.img = np.array(img_pil)
             '''
 
-        if self.stdout_debug:
+        if False: #self.stdout_debug:
             text = ''
             text += kb.display()
             #text += kb.info['mapstr']

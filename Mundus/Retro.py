@@ -70,11 +70,20 @@ class ForkedRetroEnv(gymnasium.Wrapper):
             # the worker will loop forever;
             # it blocks on the qin.get() line waiting for a new command;
             # then it runs the specified command and places the resulting emulator state in qout
+            last_step_result = None
             while True:
                 message_in = self.qin.get()
                 message_out = {}
                 if message_in['method'] == 'step':
-                    message_out['return'] = env.step(message_in['action'])
+                    last_step_result = env.step(message_in['action'])
+                    message_out['return'] = last_step_result
+                elif message_in['method'] == 'em.step':
+                    a, b = message_in['button_mask']
+                    env.em.set_button_mask(a, b)
+                    message_out['return'] = last_step_result
+                    env.em.step()
+                    env.data.update_ram()
+                    env.img = env.em.get_screen()
                 elif message_in['method'] == 'reset':
                     message_out['return'] = env.reset()
                 message_out['ram'] = env.get_ram()
@@ -107,13 +116,24 @@ class ForkedRetroEnv(gymnasium.Wrapper):
         self.env.__dict__['unwrapped'] = self.env
         self.env.action_space = oldenv.action_space
         self.env.buttons = oldenv.buttons
+        self.env.data = type('FakeData', (), {})()
         self.env.em = type('FakeEmulator', (), {})()
+        self.env.em.get_audio = lambda: self._internal_audio
         self.env.em.get_audio_rate = lambda: self._internal_audio_rate
+        self.env.get_ram = lambda: self._internal_ram
+        self.env.render = lambda: retro.RetroEnv.render(self.env)
         self.env.render_mode = oldenv.render_mode
         self.env.viewer = oldenv.viewer
-        self.env.render = lambda: retro.RetroEnv.render(self.env)
-        self.env.get_ram = lambda: self._internal_ram
-        self.env.em.get_audio = lambda: self._internal_audio
+
+        def _set_button_mask(a, b):
+            self._internal_button_mask = (a, b)
+        self.env.em.set_button_mask = _set_button_mask
+        def _em_step():
+            message_out = self.qout.get()
+            self.qin.put({'method': 'em.step', 'button_mask': self._internal_button_mask})
+            self._update_state(message_out)
+        self.env.em.step = _em_step
+        self.env.data.update_ram = lambda: None
 
         # delete the old environment;
         # this frees resources and ensures that we don't accidentally interact
@@ -316,13 +336,12 @@ class RetroKB(RetroWithRam):
         where the entries are the names of the buttons to pass to the emulator;
         this is a universal format that doesn't depend on the action space
         '''
-        asd
         self.skipped_frames += 1
         self._set_buttons(buttons)
-        self.env.em.step()
-        self.env.data.update_ram()
+        self.unwrapped.em.step()
+        self.unwrapped.data.update_ram()
         self._update_ram()
-        ob = self.env._update_obs()
+        #ob = self.env._update_obs()
         if (self.env.render_mode == "human" 
                 and not self.no_render_skipped_frames
                 and not force_norender

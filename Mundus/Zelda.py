@@ -55,7 +55,6 @@ def make_zelda_env(
             )
     if fork_emulator:
         env = ForkedRetroEnv(env)
-    #env = RetroKB(env)
     env = ZeldaWrapper(env, **kwargs)
 
     # apply zelda-specific action space

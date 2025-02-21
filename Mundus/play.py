@@ -191,12 +191,22 @@ class ImageViewer:
         self._create_window()
 
     def _create_window(self):
-        self.isopen = True
         self.window = tk.Tk()
         self.window.title('Zelda')
 
+        # NOTE:
+        # the RetroEnv class expects this variable to exist,
+        # but we don't actually use it at all
+        self.isopen = True
+
         # Prevent window resizing
-        #self.window.resizable(False, False)
+        self.window.resizable(False, False)
+
+        # Add window close handler
+        def on_closing():
+            self.window.destroy()
+            os._exit(0)
+        self.window.protocol("WM_DELETE_WINDOW", on_closing)
 
         # Center the window and set exact size
         screen_width = self.window.winfo_screenwidth()

@@ -9,7 +9,6 @@ import pyglet
 import re
 import time
 
-import torch
 import retro
 import gymnasium
 from gymnasium import spaces

@@ -1,10 +1,12 @@
 import logging
+import multiprocessing
 import random
 import re
 
 import numpy as np
 import gymnasium
 import retro
+import setproctitle
 
 # load font for writing to image
 from PIL import Image, ImageDraw, ImageFont
@@ -59,9 +61,7 @@ class ForkedRetroEnv(gymnasium.Wrapper):
 
         # start the emulator process
         def emulator_worker():
-            #import setproctitle
-            #current_name = multiprocessing.current_process().name
-            #setproctitle.setproctitle(f'{current_name}: emulator_worker')
+            setproctitle.setproctitle(f'serpens: emulator_worker')
 
             # disable rendering in the worker environement
             # to ensure that multiple rendering windows do not get opened

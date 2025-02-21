@@ -25,6 +25,7 @@ import pprint
 import queue
 import random
 import sys
+import signal
 import time
 
 logging.debug('import numpy')
@@ -36,14 +37,15 @@ import pyglet
 logging.debug('import pygame')
 import pygame
 logging.debug('import gymnasium')
-#import gymnasium
-#from  gymnasium.wrappers import *
+import gymnasium
 logging.debug('import retro')
 import retro
 
-logging.debug('import .*')
+logging.debug('import .Audio')
 from Mundus.Audio import *
+logging.debug('import .Wrappers')
 from Mundus.Wrappers import *
+logging.debug('import .Zelda')
 from Mundus.Zelda import *
 
 
@@ -148,6 +150,8 @@ class GLFrame(Frame):
         self.scaled_size = (width, height)
         self.screen = None
         self.scaled_surface = pygame.Surface(self.scaled_size)
+        array_size = (240, 224)
+        self.array_surface = pygame.Surface(array_size, pygame.HWSURFACE)
 
     def _on_visibility(self, event):
         if self.screen:
@@ -156,7 +160,7 @@ class GLFrame(Frame):
 
     def update_pygame_window(self):
         os.environ['SDL_WINDOWID'] = str(self.winfo_id())
-        self.screen = pygame.display.set_mode(self.scaled_size, pygame.HWACCEL | pygame.DOUBLEBUF)
+        self.screen = pygame.display.set_mode(self.scaled_size, pygame.HWACCEL | pygame.DOUBLEBUF | pygame.SCALED)
         self.scaled_surface = pygame.Surface(self.scaled_size)
 
     def _on_configure(self, event):
@@ -171,10 +175,8 @@ class GLFrame(Frame):
 
     def redraw(self, array=None):
         if array is not None and self.screen:
-            surface = pygame.surfarray.make_surface(array.swapaxes(0,1))
-            scaled_surface = pygame.Surface(self.scaled_size)
-            pygame.transform.scale(surface, self.scaled_size, scaled_surface)
-            self.screen.blit(scaled_surface, (0, 0))
+            pygame.surfarray.blit_array(self.array_surface, array.swapaxes(0,1))
+            pygame.transform.scale(self.array_surface, self.scaled_size, self.screen)
             pygame.display.flip()
 
 
@@ -236,7 +238,7 @@ class ImageViewer:
             self.image_width = int(self.image_height * original_ratio)
             self.image_frame.config(width=self.image_width, height=self.image_height)
         self.window.bind('<Configure>', on_resize)
-        self.window.attributes("-fullscreen", True)
+        #self.window.attributes("-fullscreen", True)
         self.window.update_idletasks()
 
         self.framecount = 0
@@ -260,14 +262,6 @@ class ImageViewer:
         self.textbox.config(state="disabled")
         self.window.update()
 
-    def close(self):
-        sys.exit(0)
-        #self.window.destroy()
-        self.isopen = False
-
-    def __del__(self):
-        self.close()
-
 
 class Interactive(gymnasium.Wrapper):
     def __init__(self, env, maxfps=60):
@@ -276,13 +270,7 @@ class Interactive(gymnasium.Wrapper):
         self.action_override = False
         self.maxfps0 = maxfps
         self.maxfps_multiplier = 0
-        self.laststep = time.time()
-        self.frames_since_log = 0
-        self.last_log_time = time.time()
-        self.last_log_reward = 0
-        self.this_log_reward = 0
         self.log_every = 1.0
-        self.total_reward = 0
 
         # initialize pygame joysticks
         # NOTE:
@@ -372,10 +360,9 @@ class Interactive(gymnasium.Wrapper):
         self.frames_since_log = 0
         self.last_log_time = time.time()
         self.last_log_reward = 0
-        self.this_log_reward = 0
         self.this_log_sleeptime = 0
-        self.log_every = 1.0
-        self.total_reward = 0
+        self.this_log_frames = 0
+        self.laststep_time = time.time()
         return super().reset(**kwargs)
 
     def get_maxfps(self):
@@ -477,24 +464,21 @@ class Interactive(gymnasium.Wrapper):
         """
         observation, reward, terminated, truncated, info = super().step(action)
         results = observation, reward, terminated, truncated, info
-        self.this_log_reward += reward
-        self.total_reward += reward
 
         # sleep to adjust the fps
-        steptime = time.time() - self.laststep
-        sleeptime = 1.0/self.get_maxfps() - steptime
+        steptime = time.time() - self.laststep_time
+        sleeptime = max(0, 1.0/self.get_maxfps() - steptime)
         self.this_log_sleeptime += sleeptime
-        time.sleep(max(0, sleeptime))
-        self.laststep = time.time()
+        time.sleep(sleeptime)
+        self.laststep_time = time.time()
 
         # report debugging info
-        time_diff = time.time() - self.last_log_time
         self.frames_since_log += 1
-        if time_diff >= self.log_every:
-            logging.debug(f'fps={self.frames_since_log} reward_diff={self.this_log_reward:+0.4f} total_reward={self.total_reward:+0.4f} sleep_percent={self.this_log_sleeptime/self.log_every:0.4f}')
+        time_since_log = time.time() - self.last_log_time
+        if time_since_log >= self.log_every:
+            logging.debug(f'fps={self.frames_since_log/self.log_every:0.1f} sleep_fraction={self.this_log_sleeptime/self.log_every:0.4f}')
             self.last_log_time = time.time()
             self.frames_since_log = 0
-            self.this_log_reward = 0
             self.this_log_sleeptime = 0
 
         return results
@@ -610,8 +594,8 @@ def main():
 
     # start the emulator process
     def model_worker():
-        #current_name = multiprocessing.current_process().name
-        #setproctitle.setproctitle(f'{current_name}: model_worker')
+        current_name = multiprocessing.current_process().name
+        setproctitle.setproctitle(f'{current_name}: model_worker')
 
         # NOTE:
         # loading the models can cause a large number of warnings;
@@ -634,6 +618,11 @@ def main():
         action = env.action_space.sample() * 0
         qout.put(action)
 
+        # set this process to have the lowest priority;
+        # the user won't notice if this process lags,
+        # but they will notice if this process interrupts the emulator or main processes
+        os.nice(19)
+
         # the worker will loop forever;
         # it blocks on the qin.get() line waiting for a new observation;
         # then it puts the appropriate action in the queue
@@ -647,6 +636,12 @@ def main():
             with qout_lock:
                 qout.get()
                 qout.put(action)
+            # wait before selecting another action;
+            # in the meantime, the same action will remain in qout,
+            # and so the main loop will just repeat the action;
+            # this should have minimal adverse effects on model performance;
+            # the purpose of waiting is to reduce CPU load for low-resource devices;
+            time.sleep(1/60)
     p = Process(name='serpens: model_worker', target=model_worker)
     p.start()
 

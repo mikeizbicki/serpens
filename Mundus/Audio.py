@@ -1,22 +1,23 @@
-import subprocess
+import fcntl
+import io
 import logging
 import os
-import time
-import fcntl
 import re
+import subprocess
+import threading
+import time
 import time
 
 import numpy as np
 import pyaudio
 import gymnasium
-import simpleaudio as sa
 
 from elevenlabs.client import ElevenLabs
 from elevenlabs import play
 import elevenlabs
-from io import BytesIO
-import threading
 
+"""
+import simpleaudio as sa
 class PlayAudio(gymnasium.Wrapper):
     '''
     FIXME:
@@ -30,6 +31,7 @@ class PlayAudio(gymnasium.Wrapper):
     def step(self, actions):
         data = self.unwrapped.em.get_audio().astype('int16')
         sa.play_buffer(data, 2, 2, 32000)
+"""
 
 
 class PlayAudio_ElevenLabs(gymnasium.Wrapper):
@@ -63,7 +65,7 @@ class PlayAudio_ElevenLabs(gymnasium.Wrapper):
                 )
                 lag = time.time() - time_start
                 logging.info(f"API lag={lag}")
-                audio_stream = BytesIO()
+                audio_stream = io.BytesIO()
                 for i, chunk in enumerate(response):
                     lag = time.time() - time_start
                     if i == 0:

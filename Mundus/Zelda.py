@@ -21,6 +21,7 @@ def make_zelda_env(
         action_space='all',
         render_mode='human',
         fork_emulator=False,
+        state='overworld_07',
         **kwargs):
     '''
     Create a Zelda environment.
@@ -49,7 +50,7 @@ def make_zelda_env(
     env = retro.make(
             game='Zelda-Nes',
             inttype=retro.data.Integrations.ALL,
-            state='overworld_07',
+            state=state,
             render_mode=render_mode,
             use_restricted_actions=use_restricted_actions,
             )
@@ -225,6 +226,52 @@ class ZeldaWrapper(RetroKB):
         '_ramstate_all_enemies_dead',
         ]
 
+    def _step_interactive_onmouse(self, kb):
+        # extract the list of enemies
+        enemies = []
+        for k in kb.items:
+            if 'enemy' in k:
+                enemies.append(kb.items[k])
+
+        # if a monster is within this many pixels of a mouse click,
+        # then self.mouse will automatically track the monster
+        min_l1dist0 = 16
+
+        # find the enemy closest to the mouse position,
+        # and move self.mouse on top of this enemy
+        oldmouse = kb.items['mouse']
+        if 'x' not in oldmouse: oldmouse['x'] = 0
+        if 'y' not in oldmouse: oldmouse['y'] = 0
+        min_l1dist = min_l1dist0
+        newmouse = None
+        for enemy in enemies:
+            enemy_l1dist = abs(enemy['x'] - oldmouse['x']) + abs(enemy['y'] - oldmouse['y'])
+            if enemy_l1dist < min_l1dist:
+                min_l1dist = enemy_l1dist
+                newmouse = {
+                    'x': enemy['x'],
+                    'y': enemy['y'],
+                    }
+        if newmouse is not None:
+            self.mouse = newmouse
+            self.ram.mouse = newmouse
+
+        # if we did not move the mouse,
+        # but link is close to the mouse,
+        # then we should change tasks to attack
+        # and delete the mouse
+        if min_l1dist == min_l1dist0:
+            link = kb.items['link']
+            link_l1dist = abs(link['x'] - oldmouse['x']) + abs(link['y'] - oldmouse['y'])
+            if link_l1dist <= 8:
+                self._set_episode_task('attack')
+                self.mouse = None
+                self.ram.mouse = None
+                del kb.items['mouse']
+
+    tasks['interactive_onmouse'] = copy.deepcopy(tasks['onmouse_enemy'])
+    tasks['interactive_onmouse']['step'] = _step_interactive_onmouse
+
     ####################
     # screen change tasks
     ####################
@@ -395,6 +442,14 @@ class ZeldaWrapper(RetroKB):
                 if _ramstate_hearts(self.ram) <= 0 and self.skipped_frames%2 == 0:
                     skipbuttons = ['START']
                 self._step_silent(skipbuttons)
+
+                # FIXME:
+                # when playing interactively,
+                # we want link's task to reset when he enters a new screen;
+                # the code below is a hacky way to achieve this effect
+                self._set_episode_task('attack')
+                self.mouse = None
+                self.ram.mouse = None
 
         # return step results
         return observation, reward, terminated, truncated, info
@@ -687,6 +742,11 @@ def generate_knowledge_base(ram, ram2, include_background=True, use_subtiles=Fal
         else:
             item['health'] = rawhealth//16
         if item['type'] > 0:
+            # FIXME:
+            # this sets all monster types to be octorocs,
+            # this is a hack to force us to be able to attack any monster
+            item['type'] = 7
+            item['health'] = max(1, item['health'])
             kb[f'enemy_{i}'] = item
 
     # projectile info

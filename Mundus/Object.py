@@ -1,4 +1,4 @@
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict, defaultdict, Counter
 import logging
 import numpy as np
 import gymnasium
@@ -183,6 +183,14 @@ class ContinuousEventExtractor(BaseFeaturesExtractor):
                 self.extractors['rewards'](observations['rewards']),
             ]
         return torch.cat(encoded_tensor_list, dim=1)
+
+
+class History:
+    def __init__(self):
+        self.event_counts = Counter()
+
+    def register_KnowledgeBase(self, step, kb):
+        self.event_counts += kb.events
 
 
 class KnowledgeBase:

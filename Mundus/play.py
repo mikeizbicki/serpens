@@ -18,7 +18,6 @@ import setproctitle
 setproctitle.setproctitle(f'serpens')
 
 logging.debug('import stdlib')
-import atexit
 import multiprocessing
 import os
 import pprint
@@ -205,7 +204,8 @@ class ImageViewer:
         # Add window close handler
         def on_closing():
             self.window.destroy()
-            os._exit(0)
+            sys.exit(0)
+            #os._exit(0)
         self.window.protocol("WM_DELETE_WINDOW", on_closing)
 
         # Center the window and set exact size
@@ -230,13 +230,14 @@ class ImageViewer:
 
         # Create and configure textbox
         self.textbox = tk.Text(textbox_frame)
-        self.textbox.pack(fill=tk.BOTH, expand=True)
-        self.textbox.config(state="disabled")
+        self.scrollbar = tk.Scrollbar(textbox_frame)
+        self.textbox.config(yscrollcommand=self.scrollbar.set)
+        self.scrollbar.config(command=self.textbox.yview)
+        self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.textbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        self.textbox.config(state="normal")
-        self.textbox.insert(tk.END, "This is blue text\n", "blue")
+        self.textbox.tag_config("black", foreground="black")
         self.textbox.tag_config("blue", foreground="blue")
-        self.textbox.insert(tk.END, "This is red text\n", "red")
         self.textbox.tag_config("red", foreground="red")
         self.textbox.config(state="disabled")
 
@@ -263,12 +264,24 @@ class ImageViewer:
             self.image_frame.update()
             self.window.update()
 
-    def register_text(self, text, color="blue"):
-        tag_name = color
+    def register_text(self, text_info, color="blue"):
+        # calculate elapsed time
+        if not hasattr(self, 'first_text_time'):
+            self.first_text_time = time.time()
+        elapsed_time = time.time() - self.first_text_time
+
+        # format elapsed time
+        minutes, seconds = divmod(elapsed_time, 60)
+        hours, minutes = divmod(minutes, 60)
+        timestamp = f"{int(hours):02d}:{int(minutes):02d}:{seconds:05.2f}"
+
+        # insert text
         self.textbox.config(state="normal")
-        self.textbox.insert(tk.END, text + "\n", tag_name)
-        if not self.textbox.tag_config(tag_name):
-            self.textbox.tag_config(tag_name, foreground=color)
+        self.textbox.insert(tk.END, timestamp + " ", 'black')
+        self.textbox.insert(tk.END, text_info['text'] + "\n", color)
+        if not self.textbox.tag_config(color):
+            self.textbox.tag_config(color, foreground=color)
+        self.textbox.yview(tk.END)
         self.textbox.config(state="disabled")
         self.window.update()
 
@@ -293,10 +306,12 @@ class Interactive(gymnasium.Wrapper):
         self.joysticks = {}
 
         # NOTE:
-        # self.render() is needed to create the self.unwrapped.viewer object;
-        # we need this to interact with the pyglet window
-        # and register the handlers
+        # The RetroEnv class comes with a built-in object for rendering images.
+        # It is the SimpleImageViewer class and created automatically.
+        # Here, we overwrite that with our own ImageViewer defined above.
+        # (To allow for inputs and other outputs besides just the screen.)
         self.unwrapped.viewer = ImageViewer()
+        self.unwrapped.RetroKB.add_text_callback(lambda text: self.unwrapped.viewer.register_text(text))
 
         # setup the key handler
         self._key_previous_states = {}
@@ -313,13 +328,8 @@ class Interactive(gymnasium.Wrapper):
             zelda_env = zelda_env.env
 
         def on_mouse_press(event):
-            text = random.choice(['I will go there', 'Hi Evan', 'Attack!!!', 'Kill the monsters', 'I will do whatever you say', 'Your wish is my command'])
-            self.register_text(text)
-
             x = event.x
             y = event.y
-            if 'step' in zelda_env.tasks['onmouse_enemy']:
-                del zelda_env.tasks['onmouse_enemy']['step']
             edge_size = 16
 
             # NOTE:
@@ -328,43 +338,25 @@ class Interactive(gymnasium.Wrapper):
             # and 60 is the height of the black bar
             newx = int(x / self.unwrapped.viewer.image_width * 240)
             newy = 224 - int((self.unwrapped.viewer.image_height - y) / self.unwrapped.viewer.image_height * 224)
-            if (zelda_env.ram.mouse is not None and
-                'x' in zelda_env.ram.mouse and
-                -edge_size <= zelda_env.ram.mouse['x'] - newx <= edge_size and
-                -edge_size <= zelda_env.ram.mouse['y'] - newy <= edge_size ):
-                    zelda_env.episode_task = 'attack'
-                    zelda_env.mouse = None
-                    text = random.choice(['attack', 'kill them all', 'kill all the monsters'])
-                    self.register_text(text)
+            zelda_env.mouse = {}
+            zelda_env.mouse['x'] = newx
+            zelda_env.mouse['y'] = newy
+            if zelda_env.mouse['x'] < edge_size:
+                zelda_env.mouse['x'] = -edge_size
+                zelda_env._set_episode_task('screen_west')
+            elif zelda_env.mouse['x'] > 240 - edge_size:
+                zelda_env.mouse['x'] = 240 + edge_size
+                zelda_env._set_episode_task('screen_east')
+            elif zelda_env.mouse['y'] < 60 + edge_size - 16:
+                zelda_env.mouse['y'] = 60 - edge_size
+                zelda_env._set_episode_task('screen_north')
+            elif zelda_env.mouse['y'] > 224 - edge_size:
+                zelda_env.mouse['y'] = 224 + edge_size
+                zelda_env._set_episode_task('screen_south')
             else:
-                zelda_env.episode_task = 'onmouse_enemy'
+                zelda_env._set_episode_task('interactive_onmouse')
 
-                zelda_env.mouse = {}
-                zelda_env.mouse['x'] = newx
-                zelda_env.mouse['y'] = newy
-                if zelda_env.mouse['x'] < edge_size:
-                    zelda_env.mouse['x'] = -edge_size
-                    zelda_env.episode_task = 'screen_west'
-                if zelda_env.mouse['x'] > 240 - edge_size:
-                    zelda_env.mouse['x'] = 240 + edge_size
-                    zelda_env.episode_task = 'screen_east'
-                if zelda_env.mouse['y'] < 60 + edge_size:
-                    zelda_env.mouse['y'] = 60 - edge_size
-                    zelda_env.episode_task = 'screen_north'
-                if zelda_env.mouse['y'] > 224 - edge_size:
-                    zelda_env.mouse['y'] = 224 + edge_size
-                    zelda_env.episode_task = 'screen_south'
-        self.unwrapped.viewer.window.bind("<Button-1>", on_mouse_press)
-
-    def register_text(self, text):
-        self.unwrapped.viewer.register_text(text)
-        return self._recursive_register_text(self.env, text)
-
-    def _recursive_register_text(self, env, text):
-        if hasattr(env, 'register_text'):
-            return env.register_text(text)
-        if isinstance(env, gymnasium.Wrapper):
-            return self._recursive_register_text(env.env, text)
+        self.unwrapped.viewer.image_frame.bind("<Button-1>", on_mouse_press)
 
     def reset(self, **kwargs):
         self.frames_since_log = 0
@@ -524,16 +516,17 @@ def main():
     # parse command line args
     import argparse
     parser = argparse.ArgumentParser()
+    parser.add_argument('--lang', default='es')
     parser.add_argument('--task_regex', default='attack')
-    parser.add_argument('--state', default='spiders_lowhealth_01*.state')
-    parser.add_argument('--model')
+    parser.add_argument('--state', default='overworld_07')
+    parser.add_argument('--model', default='models/model.zip')
     parser.add_argument('--logfile', default='.play.log')
-    parser.add_argument('--action_space', default='ALL')
+    parser.add_argument('--action_space', default='zelda-all')
 
     emulator_settings = parser.add_argument_group('emulator settings')
     emulator_settings.add_argument('--no_render_skipped_frames', action='store_true')
     emulator_settings.add_argument('--allframes', action='store_true')
-    emulator_settings.add_argument('--no_alternate_screen', action='store_true')
+    emulator_settings.add_argument('--alt_screen', action='store_true')
     emulator_settings.add_argument('--noaudio', action='store_true')
     emulator_settings.add_argument('--doresets', action='store_true')
 
@@ -554,13 +547,15 @@ def main():
             # FIXME:
             # the action_space should be loaded automatically from the model
             action_space=args.action_space,
-            stdout_debug=not args.no_alternate_screen,
+            alt_screen=args.alt_screen,
             debug_assert=True,
+            state=args.state,
             no_render_skipped_frames=args.no_render_skipped_frames,
             skip_boring_frames=not args.allframes,
             task_regex=args.task_regex,
             reset_method='None',
             fork_emulator=True,
+            lang=args.lang,
             )
 
     if not args.noaudio:
@@ -568,27 +563,6 @@ def main():
         env = PlayAudio_ElevenLabs(env)
     env = Interactive(env)
 
-    # switch the terminal to the alternate screen
-    if not args.no_alternate_screen:
-        print('\u001B[?1049h')
-
-        # cause the program to exit the alternate screen when the program exits;
-        # the use of the atexit library ensures that we switch
-        # even when the program exits abnormally
-        def exit_alternate_screen():
-            print('\u001B[?1049l')
-        atexit.register(exit_alternate_screen)
-
-        # if python crashes, we want the exception printed to the main screen
-        # and not the alternate screen
-        def crash_handler(type, value, tb):
-            env.close()
-            print("\033[?1049l")  # exit alternate screen
-            if type == KeyboardInterrupt:
-                sys.exit(0)
-            else:
-                sys.__excepthook__(type, value, tb)
-        sys.excepthook = crash_handler
 
     logging.info('begin main loop')
     env.reset()
@@ -656,10 +630,6 @@ def main():
     p.start()
 
     while True:
-        # clear the screen
-        if not args.no_alternate_screen:
-            print('\x1b[2J', end='')
-
         # get the next action from the model
         # (which is the action from the previous iteration's observation)
         with qout_lock:

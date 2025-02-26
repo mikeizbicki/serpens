@@ -52,6 +52,16 @@ link, el, KDImLuG6RkuyuX5httC7
 link, ko, TRO4gatqxbbwLXHLDLSk
 '''
 
+def text_info_to_voice_id(text_info):
+    if text_info['lang'] == 'en':
+        return 'JBFqnCBsd6RMkjVDRZzb'
+    if text_info['lang'] == 'es':
+        return 'z3kTTwYbQrmL7ckdGcJi'
+        #return 'JBFqnCBsd6RMkjVDRZzb'
+        #return 'Nh2zY9kknu6z4pZy6FhD'
+    return 'JBFqnCBsd6RMkjVDRZzb'
+
+
 class PlayAudio_ElevenLabs(gymnasium.Wrapper):
     '''
     ElevenLabs provides an API for voice generation.
@@ -65,20 +75,24 @@ class PlayAudio_ElevenLabs(gymnasium.Wrapper):
         self.cache_dir = '.audio_cache'
         os.makedirs(self.cache_dir, exist_ok=True)
 
-    def register_text(self, text, lang='es', speaker='link'):
+        env.unwrapped.RetroKB.add_text_callback(lambda text_info: self.register_text(text_info))
+
+    def register_text(self, text_info):
+        if self.audio_env.text_audio is not None:
+            return
         time_start = time.time()
         try:
-            voice_id = 'JBFqnCBsd6RMkjVDRZzb'
-            dirname = f'{self.cache_dir}/{lang}_elevenlabs_{voice_id}'
+            voice_id = text_info_to_voice_id(text_info)
+            dirname = f'{self.cache_dir}/{text_info["lang"]}_elevenlabs_{voice_id}'
             os.makedirs(dirname, exist_ok=True)
-            filepath = f'{dirname}/{text}'
+            filepath = f'{dirname}/{text_info["text"]}'
             with open(filepath, 'rb') as fin:
                 self.audio_env.text_audio = np.repeat(np.frombuffer(fin.read(), dtype=np.int16), 2)
                 self.audio_env.text_audio_pos = 0
         except FileNotFoundError:
             def thread_function():
                 response = self.elevenlabs.text_to_speech.convert(
-                    text=text,
+                    text=text_info['text'],
                     voice_id=voice_id,
                     model_id="eleven_turbo_v2_5",
                     output_format="pcm_16000",
@@ -90,32 +104,22 @@ class PlayAudio_ElevenLabs(gymnasium.Wrapper):
                     ),
                 )
                 lag = time.time() - time_start
-                logging.info(f"API lag={lag}")
+                logging.info(f"ElevenLabs API initial response; lag={lag}")
                 audio_stream = io.BytesIO()
                 for i, chunk in enumerate(response):
                     lag = time.time() - time_start
-                    if i == 0:
-                        logging.info(f"for loop: lag={lag}")
                     if chunk:
                         audio_stream.write(chunk)
                 audio_stream.seek(0)
                 self.audio_env.text_audio = np.repeat(np.frombuffer(audio_stream.read(), dtype=np.int16), 2)
                 self.audio_env.text_audio_pos = 0
                 lag = time.time() - time_start
-                logging.info(f"mp3 convert; lag={lag}")
+                logging.info(f"saving sound file {filepath}; lag={lag}")
                 with open(filepath, 'wb') as fout:
                     audio_stream.seek(0)
                     fout.write(audio_stream.read())
             thread = threading.Thread(target=thread_function)
             thread.start()
-
-        return self._recursive_register_text(self.env, text)
-
-    def _recursive_register_text(self, env, text):
-        if hasattr(env, 'register_text'):
-            return env.register_text(text)
-        if isinstance(env, gymnasium.Wrapper):
-            return self._recursive_register_text(env.env, text)
 
 
 class PlayAudio_pyaudio(gymnasium.Wrapper):
@@ -133,7 +137,7 @@ class PlayAudio_pyaudio(gymnasium.Wrapper):
                 data = self.PlayAudio_buffer[:frame_count, :]
                 self.PlayAudio_buffer = self.PlayAudio_buffer[frame_count:, :]
                 data = data.flatten()
-                #logging.info(f"self.PlayAudio_buffer.shape={self.PlayAudio_buffer.shape}")
+                #logging.debug(f"self.PlayAudio_buffer.shape={self.PlayAudio_buffer.shape}")
                 return (data.tobytes(), pyaudio.paContinue)
             else:
                 #logging.warning('PlayAudio: buffer underrun')
@@ -145,28 +149,26 @@ class PlayAudio_pyaudio(gymnasium.Wrapper):
             self.stream = self.p.open(
                     format=pyaudio.paInt16,
                     channels=2,
-                    rate=32000, #int(env.unwrapped.em.get_audio_rate()),
+                    rate=int(env.unwrapped.em.get_audio_rate()),
                     output=True,
                     stream_callback=playing_callback,
                     frames_per_buffer=128,
                     start=False,
                     )
-            #self.stream._stream.suggestedLatency = 0.1  # Try to achieve 100ms latency
             self.stream.start_stream()
 
     def step(self, actions):
-        data = self.env.unwrapped.em.get_audio().astype('int16')
-        #if self.mpg123_handle is not None:
-            #text_chunk = self.mpg123_handle.read(len(data))
+        game_frame_audio = self.env.unwrapped.em.get_audio().astype('int16')
+        game_frame_audio //= 2
         if self.text_audio is not None:
-            text_chunk = self.text_audio[self.text_audio_pos:self.text_audio_pos + len(data)]
-            if len(text_chunk) > 0:
-                self.text_audio_pos += len(data)
-                text_chunk = np.pad(text_chunk, (0, len(data)-len(text_chunk)))
-                data += text_chunk[:, np.newaxis]
+            text_frame_audio = self.text_audio[self.text_audio_pos:self.text_audio_pos + len(game_frame_audio)]
+            if len(text_frame_audio) > 0:
+                self.text_audio_pos += len(game_frame_audio)
+                text_frame_audio = np.pad(text_frame_audio, (0, len(game_frame_audio)-len(text_frame_audio)))
+                game_frame_audio += text_frame_audio[:, np.newaxis]
             else:
                 self.text_audio = None
-        self.PlayAudio_buffer = np.concatenate([self.PlayAudio_buffer, data])
+        self.PlayAudio_buffer = np.concatenate([self.PlayAudio_buffer, game_frame_audio])
         if len(self.PlayAudio_buffer) > 32000:
             self.PlayAudio_buffer = np.zeros([0,2], dtype='int16')
         return super().step(actions)

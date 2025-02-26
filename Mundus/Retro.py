@@ -1,3 +1,5 @@
+import atexit
+import json
 import logging
 import multiprocessing
 import random
@@ -260,26 +262,64 @@ class RetroKB(RetroWithRam):
             self,
             env,
             task_regex='attack',
-            stdout_debug=False,
+            alt_screen=False,
             debug_assert=False,
             no_render_skipped_frames=True,
             skip_boring_frames=True,
             render_kb=True,
             seed=None,
+            lang='en',
             ):
         
         # bookkeeping
         super().__init__(env)
         self.seed = seed
-        self.stdout_debug = stdout_debug
+        self.alt_screen = alt_screen
         self.debug_assert = debug_assert
         self.no_render_skipped_frames=no_render_skipped_frames
         self.skip_boring_frames = skip_boring_frames 
         self.render_kb = render_kb
+        self.lang = lang
+
+        self._text_callbacks = []
+        self.unwrapped.RetroKB = self
+
+        # switch the terminal to the alternate screen
+        if alt_screen:
+            print('\u001B[?1049h')
+
+            # cause the program to exit the alternate screen when the program exits;
+            # the use of the atexit library ensures that we switch
+            # even when the program exits abnormally
+            def exit_alternate_screen():
+                print('\u001B[?1049l')
+            atexit.register(exit_alternate_screen)
+
+            # FIXME:
+            # the code above doesn't cause print the traceback to the main screen;
+            # the code below does, but it also immediately causes the program to crash for some reason;
+            # this didn't used to be the case before moving the code into this file.
+            '''
+            # if python crashes, we want the exception printed to the main screen
+            # and not the alternate screen
+            def crash_handler(type, value, tb):
+                print("\033[?1049l")  # exit alternate screen
+                if type == KeyboardInterrupt:
+                    sys.exit(0)
+                else:
+                    sys.__excepthook__(type, value, tb)
+            sys.excepthook = crash_handler
+            '''
+
+        # load *_to_text json
+        with open(f'data/events.{self.lang}.json') as fin:
+            self.event_to_text = json.load(fin)
+        with open(f'data/tasks.{self.lang}.json') as fin:
+            self.task_to_text = json.load(fin)
 
         # self._valid_tasks contains all the tasks that the reset() function might select
         pattern = re.compile(task_regex)
-        self.valid_tasks = sorted([task for task in self.tasks.keys() if pattern.match(task)])
+        self.valid_tasks = sorted([task for task in self.tasks.keys() if pattern.match(task) and 'interactive' not in task])
 
         # we have two random number generators
         # self.random should be used for generating random numbers,
@@ -323,6 +363,12 @@ class RetroKB(RetroWithRam):
         self.episode_pseudoreward = 0
         self.episode_task = self.random.choice(self.valid_tasks)
         return super().reset(**kwargs)
+
+    def _set_episode_task(self, task):
+        if task != self.episode_task:
+            self.episode_task = task
+            text = self.random.choice(self.task_to_text[task])
+            self.register_text(text)
 
     def _step_silent(self, buttons=[], force_norender=False):
         '''
@@ -371,12 +417,21 @@ class RetroKB(RetroWithRam):
         task = self.tasks[self.episode_task]
         kb_obs['rewards'] = np.array([task['reward'].get(k, 0) for k in sorted(kb.events)])
 
-        if False:
+        # register events
+        for event in kb.events:
+            if kb.events[event] != 0:
+                texts = self.event_to_text[event]
+                if len(texts) > 0:
+                    self.register_text(texts[0])
 
+        # run any task-specific operations
+        if 'step' in task:
+            task['step'](self, kb)
+
+        # FIXME:
+        if False:
             terminated = any([getattr(self.game_module, fname)(self.ram) for fname in task['terminated']])
             info['is_success'] = any([getattr(self.game_module, fname)(self.ram) for fname in task['is_success']])
-            if 'step' in task:
-                task['step'](self, kb)
 
             # compute logging information
             event_multiset = MultiSet(kb.events)
@@ -440,8 +495,8 @@ class RetroKB(RetroWithRam):
             self.env.img = np.array(img_pil)
             '''
 
-        if False: #self.stdout_debug:
-            text = ''
+        if self.alt_screen:
+            text = '\x1b[2J' # clears the screen
             text += kb.display()
             #text += kb.info['mapstr']
             text += f'\n{format_dict_pretty(self.episode_event_multiset)}'
@@ -462,7 +517,17 @@ class RetroKB(RetroWithRam):
     ########################################
 
     def register_text(self, text):
-        logging.info(f'register_text: {text}')
+        text_info = {
+            'text': text,
+            'lang': self.lang,
+            'speaker': 'Link',
+            }
+        logging.info(f'register_text: {text_info}')
+        for f in self._text_callbacks:
+            f(text_info)
+
+    def add_text_callback(self, f):
+        self._text_callbacks.append(f)
 
     ########################################
     # MARK: change game state

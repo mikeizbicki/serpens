@@ -182,14 +182,14 @@ class GLFrame(Frame):
 import tkinter as tk
 from PIL import Image, ImageTk
 class ImageViewer:
-    def __init__(self):
+    def __init__(self, fullscreen=True):
         self.width = 1080
         self.height = 600
         #self.width = 400
         #self.height = 240
-        self._create_window()
+        self._create_window(fullscreen=fullscreen)
 
-    def _create_window(self):
+    def _create_window(self, fullscreen):
         self.window = tk.Tk()
         self.window.title('Zelda')
 
@@ -249,7 +249,8 @@ class ImageViewer:
             self.image_width = int(self.image_height * original_ratio)
             self.image_frame.config(width=self.image_width, height=self.image_height)
         self.window.bind('<Configure>', on_resize)
-        #self.window.attributes("-fullscreen", True)
+        if fullscreen:
+            self.window.attributes("-fullscreen", True)
         self.window.update_idletasks()
 
         self.framecount = 0
@@ -287,7 +288,7 @@ class ImageViewer:
 
 
 class Interactive(gymnasium.Wrapper):
-    def __init__(self, env, maxfps=60):
+    def __init__(self, env, windowed, maxfps=60):
         super().__init__(env)
 
         self.action_override = False
@@ -310,7 +311,7 @@ class Interactive(gymnasium.Wrapper):
         # It is the SimpleImageViewer class and created automatically.
         # Here, we overwrite that with our own ImageViewer defined above.
         # (To allow for inputs and other outputs besides just the screen.)
-        self.unwrapped.viewer = ImageViewer()
+        self.unwrapped.viewer = ImageViewer(fullscreen = not windowed)
         self.unwrapped.RetroKB.add_text_callback(lambda text: self.unwrapped.viewer.register_text(text))
 
         # setup the key handler
@@ -522,6 +523,7 @@ def main():
     parser.add_argument('--model', default='models/model.zip')
     parser.add_argument('--logfile', default='.play.log')
     parser.add_argument('--action_space', default='zelda-all')
+    parser.add_argument('--windowed', action='store_true')
 
     emulator_settings = parser.add_argument_group('emulator settings')
     emulator_settings.add_argument('--no_render_skipped_frames', action='store_true')
@@ -561,7 +563,7 @@ def main():
     if not args.noaudio:
         env = PlayAudio_pyaudio(env)
         env = PlayAudio_ElevenLabs(env)
-    env = Interactive(env)
+    env = Interactive(env, args.windowed)
 
 
     logging.info('begin main loop')

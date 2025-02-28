@@ -670,6 +670,27 @@ def generate_knowledge_base(ram, ram2, include_background=True, use_subtiles=Fal
         'objects_continuous': ['relx', 'rely', 'x', 'y', 'dx', 'dy', 'health'],
         })
 
+    # FIXME:
+    # The NES uses the OAM region of memory $0200-$02FF for storing sprites;
+    # we could have a generic object detector just by using this region of ram
+    # see:
+    # <https://austinmorlan.com/posts/nes_rendering_overview/>
+    # <https://www.nesdev.org/wiki/PPU_OAM>
+    if False:
+        for i in range(64):
+            base_addr = 0x0200 + 4*i
+            item = {}
+            item['state'] = ram[base_addr + 2]
+            item['direction'] = 0
+            item['type'] = ram[base_addr + 1]
+            item['x'] = ram[base_addr + 3]
+            item['y'] = ram[base_addr + 0]
+            item['dx'] = ram[base_addr + 3] - ram2[base_addr + 3] if ram2 is not None else 0
+            item['dy'] = ram[base_addr + 0] - ram2[base_addr + 0] if ram2 is not None else 0
+            item['health'] = 0
+            kb[f'sprite_{i:02}'] = item
+
+
     if ram.mouse is not None:
         item = {}
         item['x'] = ram.mouse['x']

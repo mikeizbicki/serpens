@@ -456,13 +456,24 @@ class RetroKB(RetroWithRam):
 
         # render the environment
         if self.render_kb:
+
+            logging.info(f"len(kb.items.items())={len(kb.items.items())}")
             
             # draw bounding box around objects
             for k, v in kb.items.items():
-                if k != 'mouse':
-                    # NOTE: we apply min/max to all values;
-                    # some objects can be located off screen,
-                    # and trying to render them directly crashes without clipping
+                # NOTE: we apply min/max to all values;
+                # some objects can be located off screen,
+                # and trying to render them directly crashes without clipping
+                if 'sprite' in k:
+                    xmin = max(0, min(239, v['x'] - 8))
+                    xmax = max(0, min(239, v['x'] + 8))
+                    ymin = max(0, min(223, v['y'] - 8))
+                    ymax = max(0, min(223, v['y'] + 8))
+                    self.unwrapped.img[ymin:ymax+1, xmin] = [255, 0, 0]
+                    self.unwrapped.img[ymin:ymax+1, xmax] = [255, 0, 0]
+                    self.unwrapped.img[ymin, xmin:xmax+1] = [255, 0, 0]
+                    self.unwrapped.img[ymax, xmin:xmax+1] = [255, 0, 0]
+                elif k != 'mouse':
                     xmin = max(0, min(239, v['x'] - 8))
                     xmax = max(0, min(239, v['x'] + 8))
                     ymin = max(0, min(223, v['y'] - 8))

@@ -12,6 +12,7 @@ import time
 import retro
 import gymnasium
 from gymnasium import spaces
+from Mundus.AI import *
 from Mundus.Retro import *
 from Mundus.Object import *
 from Mundus.util import *
@@ -57,6 +58,8 @@ def make_zelda_env(
     if fork_emulator:
         env = ForkedRetroEnv(env)
     env = ZeldaWrapper(env, **kwargs)
+    if fork_emulator:
+        env = ZeldaAI(env)
 
     # apply zelda-specific action space
     if 'zelda-' in action_space:
@@ -365,6 +368,14 @@ class ZeldaWrapper(RetroKB):
         else:
             self.frames_without_attack_threshold = frames_without_attack_threshold
 
+    def _get_valid_tasks(self):
+        valid_tasks = []
+        for task in self.tasks:
+            if self.tasks[task].get('is_valid', lambda ram: True)(self.ram):
+                if not self.compute_for_task(task, 'terminated') and not self.compute_for_task(task, 'is_success') :
+                    valid_tasks.append(task)
+        return valid_tasks
+
     def reset(self, **kwargs):
         obs, info = super().reset(**kwargs)
         self.frames_without_attack = 0
@@ -403,22 +414,21 @@ class ZeldaWrapper(RetroKB):
     def step(self, action):
         observation, reward, terminated, truncated, info = super().step(action)
 
-        if False:
-            # potentially end task early if we're going too long
-            if (self.ram is not None and
-                self.ram2 is not None and
-                _ramstate_all_enemies_health(self.ram) == _ramstate_all_enemies_health(self.ram2) and
-                _ramstate_hearts(self.ram) == _ramstate_hearts(self.ram2)):
-                self.frames_without_attack += 1
-            else:
-                self.frames_without_attack = 0
-            self.max_frames_without_attack = max(self.max_frames_without_attack, self.frames_without_attack)
+        # potentially end task early if we're going too long
+        if (self.ram is not None and
+            self.ram2 is not None and
+            _ramstate_all_enemies_health(self.ram) == _ramstate_all_enemies_health(self.ram2) and
+            _ramstate_hearts(self.ram) == _ramstate_hearts(self.ram2)):
+            self.frames_without_attack += 1
+        else:
+            self.frames_without_attack = 0
+        self.max_frames_without_attack = max(self.max_frames_without_attack, self.frames_without_attack)
 
-            info['misc_max_frames_without_attack'] = self.max_frames_without_attack
-            info['misc_truncated_noattack'] = 0
-            if self.frames_without_attack >= self.frames_without_attack_threshold:
-                truncated = True
-                info['misc_truncated_noattack'] = 1
+        info['misc_max_frames_without_attack'] = self.max_frames_without_attack
+        info['misc_truncated_noattack'] = 0
+        if self.frames_without_attack >= self.frames_without_attack_threshold:
+            truncated = True
+            info['misc_truncated_noattack'] = 1
 
         # skip the boring frames
         if not (self.fast_termination and (terminated or truncated)) and self.skip_boring_frames:
@@ -550,15 +560,19 @@ class ZeldaWrapper(RetroKB):
         # so we move him to a random position
         self._set_random_link_position()
 
-    def _set_random_link_position(self, choice=None):
+    def _get_random_link_position(self):
         subtiles = _get_subtiles(self.ram)
         valid_positions = []
         for x in range(32):
             for y in range(1, 22):
                 if subtiles[x, y] in ignore_tile_set:
                     valid_positions.append([x*8, y*8+60-8])
+        position = self.random.choice(valid_positions)
+        return position
+
+    def _set_random_link_position(self, choice=None):
         if choice is None:
-            position = self.random.choice(valid_positions)
+            position = self._get_random_link_position()
         else:
             position = valid_positions[choice]
         self._set_mem({112: position[0], 132: position[1]})
@@ -909,9 +923,9 @@ def _isscreen_changeable(ram, direction):
         return any(np.isin(subtiles[:,0], ignore_tile_set))
     if direction == 'SOUTH':
         return any(np.isin(subtiles[:,21], ignore_tile_set))
-    if direction == 'EAST':
-        return any(np.isin(subtiles[0,:], ignore_tile_set))
     if direction == 'WEST':
+        return any(np.isin(subtiles[0,:], ignore_tile_set))
+    if direction == 'EAST':
         return any(np.isin(subtiles[31,:], ignore_tile_set))
     assert False, 'should not happen'
     

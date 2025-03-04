@@ -280,6 +280,7 @@ class RetroKB(RetroWithRam):
         self.skip_boring_frames = skip_boring_frames 
         self.render_kb = render_kb
         self.lang = lang
+        self.render_task = True
 
         self._text_callbacks = []
         self.unwrapped.RetroKB = self
@@ -362,6 +363,7 @@ class RetroKB(RetroWithRam):
         self.episode_reward = 0
         self.episode_pseudoreward = 0
         self.episode_task = self.random.choice(self.valid_tasks)
+        self._text_infos = []
         return super().reset(**kwargs)
 
     def _set_episode_task(self, task):
@@ -393,6 +395,10 @@ class RetroKB(RetroWithRam):
                 and not force_norender
                 ):
             self.env.render()
+
+    def compute_for_task(self, task, key):
+        task_dict = self.tasks[task]
+        return any([getattr(self.game_module, fname)(self.ram) for fname in task_dict['is_success']])
 
     def step(self, action):
         # step the emulator;
@@ -429,9 +435,11 @@ class RetroKB(RetroWithRam):
             task['step'](self, kb)
 
         # FIXME:
-        if False:
-            terminated = any([getattr(self.game_module, fname)(self.ram) for fname in task['terminated']])
-            info['is_success'] = any([getattr(self.game_module, fname)(self.ram) for fname in task['is_success']])
+        if True:
+            #terminated = any([getattr(self.game_module, fname)(self.ram) for fname in task['terminated']])
+            #info['is_success'] = any([getattr(self.game_module, fname)(self.ram) for fname in task['is_success']])
+            terminated = self.compute_for_task(self.episode_task, 'terminated')
+            info['is_success'] = self.compute_for_task(self.episode_task, 'is_success')
 
             # compute logging information
             event_multiset = MultiSet(kb.events)
@@ -457,8 +465,6 @@ class RetroKB(RetroWithRam):
         # render the environment
         if self.render_kb:
 
-            logging.info(f"len(kb.items.items())={len(kb.items.items())}")
-            
             # draw bounding box around objects
             for k, v in kb.items.items():
                 # NOTE: we apply min/max to all values;
@@ -489,12 +495,12 @@ class RetroKB(RetroWithRam):
                     ymax = max(0, min(223, v['y'] + 4))
                     self.unwrapped.img[ymin:ymax+1, xmin:xmax+1] = [255, 0, 255]
 
-            '''
+        if self.render_task:
             # write the task to the screen
             # FIXME:
             # the code below is useful for debugging, but very slow
             # it takes about as much CPU as a single step of the emulator!
-            img_pil = Image.fromarray(self.env.img)
+            img_pil = Image.fromarray(self.unwrapped.img)
             draw = ImageDraw.Draw(img_pil)
             draw.text(
                 [0,0],
@@ -503,8 +509,7 @@ class RetroKB(RetroWithRam):
                 fill=(255, 0, 255),
                 antialiasing=False,
                 )
-            self.env.img = np.array(img_pil)
-            '''
+            self.unwrapped.img = np.array(img_pil)
 
         if self.alt_screen:
             text = '\x1b[2J' # clears the screen
@@ -521,21 +526,36 @@ class RetroKB(RetroWithRam):
         if render_mode == 'human':
             self.env.render()
 
+        self._run_register_text_callbacks()
         return kb_obs, reward + pseudoreward, terminated, truncated, info
 
     ########################################
-    # MARK: functions to be overwritten by derived classes
+    # MARK: functions for registering text callbacks
     ########################################
 
-    def register_text(self, text):
+    def register_text(self, text, speaker='Link'):
         text_info = {
+            'step': self.stepcount,
             'text': text,
             'lang': self.lang,
-            'speaker': 'Link',
+            'speaker': speaker,
             }
         logging.info(f'register_text: {text_info}')
+        self._text_infos.append(text_info)
+        # FIXME:
+        # we don't directly run the callbacks here
+        # because register_text can be called from within a thread,
+        # and this causes the tkinter callbacks to raise an exception;
+        # the workaround is to store the text_info object
+        # to be later added by the main thread when the step() function is called;
+        # the current code isn't thread safe,
+        # but it's not clear if thread safety is worth the cognitive + runtime overhead
+
+    def _run_register_text_callbacks(self):
         for f in self._text_callbacks:
-            f(text_info)
+            for text_info in self._text_infos:
+                f(text_info)
+        self._text_infos = []
 
     def add_text_callback(self, f):
         self._text_callbacks.append(f)

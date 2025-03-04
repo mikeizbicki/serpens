@@ -4,7 +4,8 @@
 import logging
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s.%(msecs)03d [pid=%(process)d] %(levelname)s: %(message)s',
+    format='%(asctime)s.%(msecs)03d [pid=%(process)d] %(levelname)s %(name)s: %(message)s',
+    #format='%(asctime)s.%(msecs)03d [pid=%(process)d] %(levelname)s: %(message)s',
     #format='%(asctime)s.%(msecs)03d - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
@@ -39,6 +40,8 @@ logging.debug('import gymnasium')
 import gymnasium
 logging.debug('import retro')
 import retro
+logging.debug('import tkinter')
+import tkinter as tk
 
 logging.debug('import .Audio')
 from Mundus.Audio import *
@@ -46,6 +49,7 @@ logging.debug('import .Wrappers')
 from Mundus.Wrappers import *
 logging.debug('import .Zelda')
 from Mundus.Zelda import *
+from Mundus.AI import *
 
 
 # pyglet doesn't seem to have a map built-in for converting keycodes to names;
@@ -61,80 +65,7 @@ for name in dir(keycodes):
         pass
 
 
-logging.debug('import OpenGL')
-from OpenGL import GL
-'''
-from pyopengltk import OpenGLFrame
-class GLFrame(OpenGLFrame):
-    def initgl(self):
-        self.texture_id = GL.glGenTextures(1)
-        GL.glEnable(GL.GL_TEXTURE_2D)
-
-    def redraw(self, array=None):
-        if array is not None:
-            GL.glBindTexture(GL.GL_TEXTURE_2D, self.texture_id)
-            GL.glTexImage2D(GL.GL_TEXTURE_2D, 0, GL.GL_RGB, array.shape[1], array.shape[0],
-                           0, GL.GL_RGB, GL.GL_UNSIGNED_BYTE, array)
-            GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_NEAREST)
-
-        GL.glClear(GL.GL_COLOR_BUFFER_BIT)
-        GL.glLoadIdentity()
-        self._draw_texture()
-        self.tkSwapBuffers()
-
-    def _draw_texture(self):
-        GL.glBegin(GL.GL_QUADS)
-        GL.glTexCoord2f(0, 1); GL.glVertex2f(-1, -1)
-        GL.glTexCoord2f(1, 1); GL.glVertex2f(1, -1)
-        GL.glTexCoord2f(1, 0); GL.glVertex2f(1, 1)
-        GL.glTexCoord2f(0, 0); GL.glVertex2f(-1, 1)
-        GL.glEnd()
-'''
-
-import pygame
-import tkinter as tk
-from tkinter import Frame
-
-class GLFrameOG(Frame):
-    def __init__(self, master, width, height):
-        super().__init__(master, width=width, height=height)
-        os.environ['SDL_WINDOWID'] = '0'
-        pygame.init()
-        pygame.display.init()
-        self.width = width
-        self.height = height
-        self.bind('<Map>', self._on_map)
-        self.bind('<Map>', self._on_map)
-
-        # Pre-create surface and array
-        self.scaled_size = (width, height)
-        self.screen = None
-        self.scaled_surface = pygame.Surface(self.scaled_size)
-        #pygame.display.set_hwsurface(True)
-        #pygame.display.set_doublebuf(True)
-
-    def _on_configure(self, event):
-        # Update dimensions when frame is resized
-        self.width = event.width
-        self.height = event.height
-        self.scaled_size = (self.width, self.height)
-        if self.screen:
-            self.screen = pygame.display.set_mode(self.scaled_size, pygame.HWACCEL | pygame.DOUBLEBUF)
-            self.scaled_surface = pygame.Surface(self.scaled_size)
-
-    def _on_map(self, event):
-        os.environ['SDL_WINDOWID'] = str(self.winfo_id())
-        self.screen = pygame.display.set_mode(self.scaled_size, pygame.HWACCEL | pygame.DOUBLEBUF)
-
-    def redraw(self, array=None):
-        if array is not None and self.screen:
-            # Convert array directly to surface using buffer protocol
-            surface = pygame.surfarray.make_surface(array.swapaxes(0,1))
-            pygame.transform.scale(surface, self.scaled_size, self.screen)
-            pygame.display.flip()
-
-
-class GLFrame(Frame):
+class Pygame_frame(tk.Frame):
     def __init__(self, master, width, height):
         super().__init__(master, width=width, height=height)
         os.environ['SDL_WINDOWID'] = '0'
@@ -179,15 +110,17 @@ class GLFrame(Frame):
             pygame.display.flip()
 
 
-import tkinter as tk
-from PIL import Image, ImageTk
 class ImageViewer:
-    def __init__(self, fullscreen=True):
+    def __init__(self, env, fullscreen=True):
         self.width = 1080
         self.height = 600
-        #self.width = 400
-        #self.height = 240
         self._create_window(fullscreen=fullscreen)
+
+        self.env = env
+        self.ZeldaAI = env
+        while not isinstance(self.ZeldaAI, ZeldaAI):
+            assert self.ZeldaAI is not None
+            self.ZeldaAI = self.ZeldaAI.env
 
     def _create_window(self, fullscreen):
         self.window = tk.Tk()
@@ -221,12 +154,16 @@ class ImageViewer:
         self.image_width = int(self.image_height * original_ratio)
 
         # Create and configure frames
-        self.image_frame = GLFrame(self.window, width=self.image_width, height=self.image_height)
+        self.image_frame = Pygame_frame(self.window, width=self.image_width, height=self.image_height)
         self.image_frame.pack(side=tk.LEFT, fill=tk.BOTH)
         self.image_frame.pack_propagate(False)
 
         textbox_frame = tk.Frame(self.window)
         textbox_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Add a button above textbox
+        self.button = tk.Button(textbox_frame, text="Click Me", command=self.button_callback)
+        self.button.pack(side=tk.TOP, pady=5)
 
         # Create and configure textbox
         self.textbox = tk.Text(textbox_frame)
@@ -255,6 +192,11 @@ class ImageViewer:
 
         self.framecount = 0
 
+    def button_callback(self):
+        print("Button clicked!")
+        self.ZeldaAI._generate_newtask()
+        # Define what happens when button is clicked
+
     def imshow(self, arr):
         self.framecount += 1
         # FIXME:
@@ -265,13 +207,9 @@ class ImageViewer:
             self.image_frame.update()
             self.window.update()
 
-    def register_text(self, text_info, color="blue"):
-        # calculate elapsed time
-        if not hasattr(self, 'first_text_time'):
-            self.first_text_time = time.time()
-        elapsed_time = time.time() - self.first_text_time
-
+    def register_text(self, text_info):
         # format elapsed time
+        elapsed_time = text_info['step'] / 60
         minutes, seconds = divmod(elapsed_time, 60)
         hours, minutes = divmod(minutes, 60)
         timestamp = f"{int(hours):02d}:{int(minutes):02d}:{seconds:05.2f}"
@@ -279,7 +217,11 @@ class ImageViewer:
         # insert text
         self.textbox.config(state="normal")
         self.textbox.insert(tk.END, timestamp + " ", 'black')
-        self.textbox.insert(tk.END, text_info['text'] + "\n", color)
+        if text_info['speaker'] == 'Link':
+            color = 'blue'
+        else:
+            color = 'red'
+        self.textbox.insert(tk.END, f"({text_info['speaker']}) {text_info['text']}\n", color)
         if not self.textbox.tag_config(color):
             self.textbox.tag_config(color, foreground=color)
         self.textbox.yview(tk.END)
@@ -311,7 +253,7 @@ class Interactive(gymnasium.Wrapper):
         # It is the SimpleImageViewer class and created automatically.
         # Here, we overwrite that with our own ImageViewer defined above.
         # (To allow for inputs and other outputs besides just the screen.)
-        self.unwrapped.viewer = ImageViewer(fullscreen = not windowed)
+        self.unwrapped.viewer = ImageViewer(env=self, fullscreen=not windowed)
         self.unwrapped.RetroKB.add_text_callback(lambda text: self.unwrapped.viewer.register_text(text))
 
         # setup the key handler
@@ -534,6 +476,11 @@ def main():
 
     args = parser.parse_args()
 
+    # silence other loggers
+    for name in logging.root.manager.loggerDict:
+        if name != "root":
+            logging.getLogger(name).setLevel(logging.WARNING)  # or logging.ERROR
+
     # convert warnings to errors
     import warnings
     warnings.filterwarnings('always', append=True)
@@ -562,8 +509,8 @@ def main():
 
     if not args.noaudio:
         env = PlayAudio_pyaudio(env)
-        env = PlayAudio_ElevenLabs(env)
-    env = Interactive(env, args.windowed)
+        #env = PlayAudio_ElevenLabs(env)
+    env = Interactive(env, args.windowed or args.alt_screen)
 
 
     logging.info('begin main loop')

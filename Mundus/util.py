@@ -77,10 +77,10 @@ class MultiSet:
     def __iadd__(self, other):
         if isinstance(other, MultiSet):
             for key in other.data:
-                self.data[key] += other[key]
+                self.data[key] += int(other[key])
         else:
             for key in self.data:
-                self.data[key] += other
+                self.data[key] += int(other)
         return self
 
     def __isub__(self, other):

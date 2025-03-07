@@ -12,7 +12,7 @@ import time
 import retro
 import gymnasium
 from gymnasium import spaces
-from Mundus.AI import *
+from Mundus.Agent.Zelda import *
 from Mundus.Retro import *
 from Mundus.Object import *
 from Mundus.util import *
@@ -59,7 +59,9 @@ def make_zelda_env(
         env = ForkedRetroEnv(env)
     env = ZeldaWrapper(env, **kwargs)
     if fork_emulator:
-        env = ZeldaAI(env)
+        env = ZeldaInteractive(env)
+        env = UnstickLink(env)
+        env = Agent(env, SimpleNavigator)
 
     # apply zelda-specific action space
     if 'zelda-' in action_space:
@@ -69,6 +71,57 @@ def make_zelda_env(
     logging.debug(f"env.action_space={env.action_space}")
     logging.debug(f"env.action_space.n={getattr(env.action_space, 'n', None)}")
     return env
+
+
+class ZeldaInteractive(gymnasium.Wrapper):
+    def _step_interactive_onmouse(self, kb):
+        # extract the list of enemies
+        enemies = []
+        for k in kb.items:
+            if 'enemy' in k:
+                enemies.append(kb.items[k])
+
+        # if a monster is within this many pixels of a mouse click,
+        # then self.mouse will automatically track the monster
+        min_l1dist0 = 16
+
+        # find the enemy closest to the mouse position,
+        # and move self.mouse on top of this enemy
+        oldmouse = kb.items['mouse']
+        if 'x' not in oldmouse: oldmouse['x'] = 0
+        if 'y' not in oldmouse: oldmouse['y'] = 0
+        min_l1dist = min_l1dist0
+        newmouse = None
+        for enemy in enemies:
+            enemy_l1dist = abs(enemy['x'] - oldmouse['x']) + abs(enemy['y'] - oldmouse['y'])
+            if enemy_l1dist < min_l1dist:
+                min_l1dist = enemy_l1dist
+                newmouse = {
+                    'x': enemy['x'],
+                    'y': enemy['y'],
+                    }
+        if newmouse is not None:
+            self.mouse = newmouse
+            self.ram.mouse = newmouse
+
+        # if we did not move the mouse,
+        # but link is close to the mouse,
+        # then we should change tasks to attack
+        # and delete the mouse
+        if min_l1dist == min_l1dist0:
+            link = kb.items['link']
+            link_l1dist = abs(link['x'] - oldmouse['x']) + abs(link['y'] - oldmouse['y'])
+            if link_l1dist <= 8:
+                self._set_episode_task('attack')
+                self.mouse = None
+                self.ram.mouse = None
+                del kb.items['mouse']
+
+    def __init__(self, env):
+        super().__init__(env)
+        tasks = self.env.unwrapped.RetroKB.tasks
+        tasks['interactive_onmouse'] = copy.deepcopy(tasks['onmouse_enemy'])
+        tasks['interactive_onmouse']['step'] = ZeldaInteractive._step_interactive_onmouse
 
 
 class ZeldaWrapper(RetroKB):
@@ -229,52 +282,6 @@ class ZeldaWrapper(RetroKB):
         '_ramstate_all_enemies_dead',
         ]
 
-    def _step_interactive_onmouse(self, kb):
-        # extract the list of enemies
-        enemies = []
-        for k in kb.items:
-            if 'enemy' in k:
-                enemies.append(kb.items[k])
-
-        # if a monster is within this many pixels of a mouse click,
-        # then self.mouse will automatically track the monster
-        min_l1dist0 = 16
-
-        # find the enemy closest to the mouse position,
-        # and move self.mouse on top of this enemy
-        oldmouse = kb.items['mouse']
-        if 'x' not in oldmouse: oldmouse['x'] = 0
-        if 'y' not in oldmouse: oldmouse['y'] = 0
-        min_l1dist = min_l1dist0
-        newmouse = None
-        for enemy in enemies:
-            enemy_l1dist = abs(enemy['x'] - oldmouse['x']) + abs(enemy['y'] - oldmouse['y'])
-            if enemy_l1dist < min_l1dist:
-                min_l1dist = enemy_l1dist
-                newmouse = {
-                    'x': enemy['x'],
-                    'y': enemy['y'],
-                    }
-        if newmouse is not None:
-            self.mouse = newmouse
-            self.ram.mouse = newmouse
-
-        # if we did not move the mouse,
-        # but link is close to the mouse,
-        # then we should change tasks to attack
-        # and delete the mouse
-        if min_l1dist == min_l1dist0:
-            link = kb.items['link']
-            link_l1dist = abs(link['x'] - oldmouse['x']) + abs(link['y'] - oldmouse['y'])
-            if link_l1dist <= 8:
-                self._set_episode_task('attack')
-                self.mouse = None
-                self.ram.mouse = None
-                del kb.items['mouse']
-
-    tasks['interactive_onmouse'] = copy.deepcopy(tasks['onmouse_enemy'])
-    tasks['interactive_onmouse']['step'] = _step_interactive_onmouse
-
     ####################
     # screen change tasks
     ####################
@@ -381,7 +388,10 @@ class ZeldaWrapper(RetroKB):
         self.frames_without_attack = 0
         self.max_frames_without_attack = 0
 
-        if self.reset_method != 'None':
+        if self.reset_method.startswith('coords'):
+            _, coords = self.reset_method.split('_')
+            self._set_map_coordinates_eb(int(coords, 16))
+        elif self.reset_method != 'None':
             # reset map/link/enemy location
             for i in range(10):
                 valid_coords = []
@@ -780,7 +790,8 @@ def generate_knowledge_base(ram, ram2, include_background=True, use_subtiles=Fal
             # FIXME:
             # this sets all monster types to be octorocs,
             # this is a hack to force us to be able to attack any monster
-            item['type'] = 7
+            if item['type'] <= 0x3E and item['type'] != 0x2F:
+                item['type'] = 7
             item['health'] = max(1, item['health'])
             kb[f'enemy_{i}'] = item
 
@@ -1150,20 +1161,28 @@ def _ramstate_all_enemies_health(ram):
     healths = []
     for i in range(6):
         rawhealth = ram[1158+i]
-        if rawhealth > 0 and (rawhealth < 16 or rawhealth >= 128):
+        enemy_type = ram[848+i]
+        if enemy_type == 0x2F or enemy_type > 0x3E:
             healths.append(0)
         else:
-            healths.append(rawhealth//16)
+            if rawhealth > 0 and (rawhealth < 16 or rawhealth >= 128):
+                healths.append(0)
+            else:
+                healths.append(rawhealth//16)
     return sum(healths)
 
 def _ramstate_total_enemies(ram):
     healths = []
     for i in range(6):
         rawhealth = ram[1158+i]
-        if rawhealth > 0 and (rawhealth < 16 or rawhealth >= 128):
+        enemy_type = ram[848+i]
+        if enemy_type == 0x2F or enemy_type > 0x3E:
             healths.append(0)
         else:
-            healths.append(rawhealth//16)
+            if rawhealth > 0 and (rawhealth < 16 or rawhealth >= 128):
+                healths.append(0)
+            else:
+                healths.append(rawhealth//16)
     return sum([1 for health in healths if health > 0])
 
 def _ramstate_screen_change(ram):

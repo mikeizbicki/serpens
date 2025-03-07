@@ -540,7 +540,7 @@ class RetroKB(RetroWithRam):
             'lang': self.lang,
             'speaker': speaker,
             }
-        logging.info(f'register_text: {text_info}')
+        #logging.info(f'register_text: {text_info}')
         self._text_infos.append(text_info)
         # FIXME:
         # we don't directly run the callbacks here

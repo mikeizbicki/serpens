@@ -2,13 +2,49 @@
 
 # set logging level
 import logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s.%(msecs)03d [pid=%(process)d] %(levelname)s %(name)s: %(message)s',
-    #format='%(asctime)s.%(msecs)03d [pid=%(process)d] %(levelname)s: %(message)s',
-    #format='%(asctime)s.%(msecs)03d - %(levelname)s - %(message)s',
+#logging.basicConfig(
+    #level=logging.DEBUG,
+    #format='%(asctime)s.%(msecs)03d %(name)-10s [pid=%(process)d] %(levelname)s: %(message)s',
+    #datefmt='%Y-%m-%d %H:%M:%S'
+#)
+# Define custom color mapping
+COLORS = {
+    'DEBUG': '\033[90m',  # grey
+    #'INFO': '\033[36m',  # cyan
+    'WARNING': '\033[91m',  # red
+    'ERROR': '\033[91m\033[43m',  # red on yellow
+    'CRITICAL': '\033[91m\033[43m'  # red on yellow
+}
+
+class CustomFormatter(logging.Formatter):
+    def format(self, record):
+        levelname = record.levelname
+        if levelname in COLORS:
+            #levelname_color = COLORS[levelname] + levelname + '\033[0m'
+            #record.msg = record.msg
+            #record.levelname = levelname_color
+            return COLORS[levelname] + super().format(record) + '\033[0m'
+        else:
+            return super().format(record)
+
+# Create a logger and assign the custom formatter
+logger = logging.getLogger()
+handler = logging.StreamHandler()
+handler.setFormatter(CustomFormatter(
+    '%(asctime)s.%(msecs)03d %(name)-10s [pid=%(process)d] %(levelname)s: %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
-)
+))
+logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
+
+logging.getLogger('groq').setLevel(logging.WARNING)
+logging.getLogger('httpcore.connection').setLevel(logging.WARNING)
+logging.getLogger('httpcore.core').setLevel(logging.WARNING)
+logging.getLogger('httpcore.http11').setLevel(logging.WARNING)
+logging.getLogger('matplotlib').setLevel(logging.WARNING)
+
+logger_fps = logging.getLogger('root/fps')
+logger_fps.setLevel(logging.INFO)
 
 # use only 1 CPU for model inference
 import os
@@ -43,13 +79,13 @@ import retro
 logging.debug('import tkinter')
 import tkinter as tk
 
-logging.debug('import .Audio')
+logging.debug('import Mundus.Audio')
 from Mundus.Audio import *
-logging.debug('import .Wrappers')
+logging.debug('import Mundus.Wrappers')
 from Mundus.Wrappers import *
-logging.debug('import .Zelda')
+logging.debug('import Mundus.Zelda')
 from Mundus.Zelda import *
-from Mundus.AI import *
+from Mundus.Agent.Zelda import *
 
 
 # pyglet doesn't seem to have a map built-in for converting keycodes to names;
@@ -117,10 +153,10 @@ class ImageViewer:
         self._create_window(fullscreen=fullscreen)
 
         self.env = env
-        self.ZeldaAI = env
-        while not isinstance(self.ZeldaAI, ZeldaAI):
-            assert self.ZeldaAI is not None
-            self.ZeldaAI = self.ZeldaAI.env
+        self.Agent = env
+        while not isinstance(self.Agent, Agent):
+            assert self.Agent is not None
+            self.Agent = self.Agent.env
 
     def _create_window(self, fullscreen):
         self.window = tk.Tk()
@@ -194,7 +230,7 @@ class ImageViewer:
 
     def button_callback(self):
         print("Button clicked!")
-        self.ZeldaAI._generate_newtask()
+        self.Agent.generate_newtask()
         # Define what happens when button is clicked
 
     def imshow(self, arr):
@@ -421,7 +457,7 @@ class Interactive(gymnasium.Wrapper):
         self.frames_since_log += 1
         time_since_log = time.time() - self.last_log_time
         if time_since_log >= self.log_every:
-            logging.debug(f'fps={self.frames_since_log/self.log_every:0.1f} sleep_fraction={self.this_log_sleeptime/self.log_every:0.4f}')
+            logger_fps.debug(f'fps={self.frames_since_log/self.log_every:0.1f} sleep_fraction={self.this_log_sleeptime/self.log_every:0.4f}')
             self.last_log_time = time.time()
             self.frames_since_log = 0
             self.this_log_sleeptime = 0
@@ -466,6 +502,7 @@ def main():
     parser.add_argument('--logfile', default='.play.log')
     parser.add_argument('--action_space', default='zelda-all')
     parser.add_argument('--windowed', action='store_true')
+    parser.add_argument('--reset_method', default='None')
 
     emulator_settings = parser.add_argument_group('emulator settings')
     emulator_settings.add_argument('--no_render_skipped_frames', action='store_true')
@@ -475,11 +512,6 @@ def main():
     emulator_settings.add_argument('--doresets', action='store_true')
 
     args = parser.parse_args()
-
-    # silence other loggers
-    for name in logging.root.manager.loggerDict:
-        if name != "root":
-            logging.getLogger(name).setLevel(logging.WARNING)  # or logging.ERROR
 
     # convert warnings to errors
     import warnings
@@ -502,7 +534,7 @@ def main():
             no_render_skipped_frames=args.no_render_skipped_frames,
             skip_boring_frames=not args.allframes,
             task_regex=args.task_regex,
-            reset_method='None',
+            reset_method=args.reset_method,
             fork_emulator=True,
             lang=args.lang,
             )

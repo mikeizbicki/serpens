@@ -394,7 +394,7 @@ class ZeldaWrapper(RetroKB):
             self._set_map_coordinates_eb(int(coords, 16))
 
         # randomly spawn at any coordinate in the overworld
-        elif self.reset_method != 'None':
+        if 'spider' in self.reset_method or 'octo' in self.reset_method or 'map' in self.reset_method:
             # reset map/link/enemy location
             for i in range(10):
                 valid_coords = []
@@ -418,10 +418,12 @@ class ZeldaWrapper(RetroKB):
             if not isvalid:
                 self.episode_task = 'attack'
 
-            if 'link' in self.reset_method:
-                self._set_random_link_position()
-            if 'enemy' in self.reset_method:
-                self._set_random_enemy_positions()
+        # randomize link/enemy positions
+        if 'link' in self.reset_method:
+            self._set_random_link_position()
+        if 'enemy' in self.reset_method:
+            self._set_random_enemy_positions()
+
         return self.observation_space.sample(), info
 
     def step(self, action):

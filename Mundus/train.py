@@ -250,10 +250,6 @@ def main():
 
     args = parser.parse_args()
 
-    # modify args based on other args
-    if args.reset_state is not None:
-        args.reset_method = 'None'
-
     # set logging level
     import logging
     logging.basicConfig()

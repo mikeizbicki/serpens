@@ -388,9 +388,12 @@ class ZeldaWrapper(RetroKB):
         self.frames_without_attack = 0
         self.max_frames_without_attack = 0
 
+        # force spawn at a specific coordinate
         if self.reset_method.startswith('coords'):
             _, coords = self.reset_method.split('_')
             self._set_map_coordinates_eb(int(coords, 16))
+
+        # randomly spawn at any coordinate in the overworld
         elif self.reset_method != 'None':
             # reset map/link/enemy location
             for i in range(10):

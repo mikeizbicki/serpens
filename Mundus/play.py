@@ -197,9 +197,15 @@ class ImageViewer:
         textbox_frame = tk.Frame(self.window)
         textbox_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        # Add a button above textbox
-        self.button = tk.Button(textbox_frame, text="Click Me", command=self.button_callback)
-        self.button.pack(side=tk.TOP, pady=5)
+        # Add buttons above textbox
+        button_frame = tk.Frame(textbox_frame)
+        button_frame.pack(side=tk.TOP)
+
+        self.button_task = tk.Button(button_frame, text="New Task", command=self.button_task_callback)
+        self.button_task.pack(side=tk.LEFT, pady=5)
+
+        self.button_objective = tk.Button(button_frame, text="New Objective", command=self.button_objective_callback)
+        self.button_objective.pack(side=tk.LEFT, pady=5)
 
         # Create and configure textbox
         self.textbox = tk.Text(textbox_frame)
@@ -228,10 +234,11 @@ class ImageViewer:
 
         self.framecount = 0
 
-    def button_callback(self):
-        print("Button clicked!")
+    def button_objective_callback(self):
+        self.Agent.objective = self.Agent.objective_selector.select_objective()
+
+    def button_task_callback(self):
         self.Agent.generate_newtask()
-        # Define what happens when button is clicked
 
     def imshow(self, arr):
         self.framecount += 1

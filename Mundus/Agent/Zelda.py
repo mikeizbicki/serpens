@@ -2,6 +2,7 @@ import json
 import os
 import random
 import re
+import time
 import traceback
 
 import gymnasium
@@ -35,14 +36,25 @@ class UnstickLink(gymnasium.Wrapper):
         self.ZeldaWrapper = env
 
     def reset(self, **kwargs):
+        ret = super().reset(**kwargs)
         self.link_xy = {}
         self.link_xy_nochange_count = 0
-        return super().reset(**kwargs)
+        self.same_screen_count = 0
+        self.prev_ram_EB = self.ZeldaWrapper.ram[0xEB]
+        return ret
 
     def step(self, action):
         result = super().step(action)
 
-        # count how long link has remained in the same place
+        # count how long link has been in the same screen
+        ram_EB = self.ZeldaWrapper.ram[0xEB]
+        if self.prev_ram_EB == ram_EB:
+            self.same_screen_count += 1
+        else:
+            self.same_screen_count = 0
+            self.prev_ram_EB = ram_EB
+
+        # count how long link has been stuck at the same pixels
         new_link_xy = {
             'x': self.ZeldaWrapper.ram[112],
             'y': self.ZeldaWrapper.ram[132],
@@ -59,13 +71,18 @@ class UnstickLink(gymnasium.Wrapper):
             logger.info(f'UnstickLink: frames_without_attack={self.ZeldaWrapper.frames_without_attack}')
             change_task = True
             self.ZeldaWrapper.register_text("I'm confused")
-        elif self.link_xy_nochange_count > 60:
+
+        elif self.link_xy_nochange_count >= 60 and self.link_xy_nochange_count % 20 == 0:
             logger.info(f'UnstickLink: link_xy_nochange_count={self.link_xy_nochange_count}')
             change_task = True
             self.ZeldaWrapper.register_text("I'm stuck")
 
+        elif self.same_screen_count >= 30*60 and self.same_screen_count % 5*60 == 0:
+            logger.info(f'UnstickLink: same_screen_count={self.same_screen_count}')
+            change_task = True
+            self.ZeldaWrapper.register_text("I'm stuck")
+
         if change_task:
-            self.next_task = self.ZeldaWrapper.episode_task
             self.ZeldaWrapper._set_episode_task('interactive_onmouse')
             x, y = self.ZeldaWrapper._get_random_link_position()
             self.ZeldaWrapper.mouse = {'x': x, 'y': y}
@@ -167,15 +184,13 @@ class ChessCoords():
 
 class Agent(gymnasium.Wrapper):
 
-    def __init__(self, env, task_selector):
+    def __init__(self, env, task_selector, objective_selector):
         super().__init__(env)
 
         # track agent state/history
-        self.objective = 'D8'
-        self.objective_history = []
-        self.task_history = []
         self.coords_history = []
         self.task_selector = task_selector(self)
+        self.objective_selector = objective_selector(self)
 
         # find the ZeldaWrapper environment
         env = self.env
@@ -201,15 +216,21 @@ class Agent(gymnasium.Wrapper):
         logger.debug(f'setting newtask={newtask}, selected from valid_tasks={valid_tasks}')
         if newtask is not None:
             self.ZeldaWrapper._set_episode_task(newtask)
-            self.task_history.append(newtask)
 
     def reset(self, **kwargs):
-        self.next_task = None
+        ret = super().reset(**kwargs)
+        self.objective = self.objective_selector.select_objective()
+        coords = self.get_current_coords()
+        self.coords_history.append(coords)
+        self.task = self.generate_newtask()
         self.is_success_count = 0
-        return super().reset(**kwargs)
+        return ret
 
     def step(self, action):
         observation, reward, terminated, truncated, info = super().step(action)
+
+        if self.objective_selector.is_objective_complete():
+            self.objective = self.objective_selector.select_objective()
 
         # FIXME:
         # sometimes is_success can "incorrectly" be set on a single frame
@@ -222,11 +243,9 @@ class Agent(gymnasium.Wrapper):
 
         # update history of map coordinates
         coords = self.get_current_coords()
-        if len(self.coords_history) == 0:
-            self.coords_history.append(coords)
-        elif self.coords_history[-1] != coords:
+        if self.coords_history[-1] != coords:
             self.coords_history.append(coords) 
-            logging.debug(f'coords={coords}, ram[0xEB]={self.ZeldaWrapper.ram[0xEB]}')
+            logging.debug(f'objetive={self.objective}, coords={coords}, ram[0xEB]={self.ZeldaWrapper.ram[0xEB]}')
 
         # we should only ever consider setting the task by AI
         # if the task is not a manually generated task
@@ -238,15 +257,35 @@ class Agent(gymnasium.Wrapper):
                 if self.ZeldaWrapper.episode_task != 'attack':
                     logger.info(f'previous task={self.ZeldaWrapper.episode_task} succeeded; new task=attack')
                     self.ZeldaWrapper._set_episode_task('attack')
-                    self.next_task = None
                 else:
                     self.generate_newtask()
-                    if self.next_task is None:
-                        self.next_task = None
-                    else:
-                        self.ZeldaWrapper._set_episode_task(self.next_task)
 
         return observation, reward, terminated, truncated, info
+
+
+################################################################################
+# ObjecticeSelectors
+################################################################################
+
+
+class RandomObjective():
+    def __init__(self, agent, seed=None):
+        self.agent = agent
+        if seed is None:
+            seed = time.time()
+        self.random = random.Random(seed)
+
+    def select_objective(self):
+        y = self.random.choice('ABCDEFGH')
+        x = str(self.random.randint(1, 16))
+        coords = y + x
+        logging.info(f'select_objective: {coords}')
+        return coords
+
+    def is_objective_complete(self):
+        # FIXME:
+        # we should change this interface to be more functional
+        return self.agent.objective == self.agent.coords_history[-1]
 
 
 ################################################################################
@@ -357,7 +396,6 @@ Do not provide any explanations.
             newtask = json_response['task']
             logger.debug(f'setting newtask={newtask}, selected from valid_tasks={valid_tasks}')
             self.agent.ZeldaWrapper._set_episode_task(newtask)
-            self.agent.task_history.append(json_response)
         self.llm.run_llm_callback(callback, callback_debug=callback_debug, threaded=self.threaded, prompt=prompt)
 
 

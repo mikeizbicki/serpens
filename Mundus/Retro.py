@@ -436,8 +436,6 @@ class RetroKB(RetroWithRam):
 
         # FIXME:
         if True:
-            #terminated = any([getattr(self.game_module, fname)(self.ram) for fname in task['terminated']])
-            #info['is_success'] = any([getattr(self.game_module, fname)(self.ram) for fname in task['is_success']])
             terminated = self.compute_for_task(self.episode_task, 'terminated')
             info['is_success'] = self.compute_for_task(self.episode_task, 'is_success')
 

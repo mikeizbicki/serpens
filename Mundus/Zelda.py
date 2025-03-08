@@ -61,7 +61,7 @@ def make_zelda_env(
     if fork_emulator:
         env = ZeldaInteractive(env)
         env = UnstickLink(env)
-        env = Agent(env, SimpleNavigator)
+        env = Agent(env, SimpleNavigator, RandomObjective)
 
     # apply zelda-specific action space
     if 'zelda-' in action_space:
@@ -790,9 +790,9 @@ def generate_knowledge_base(ram, ram2, include_background=True, use_subtiles=Fal
             # FIXME:
             # this sets all monster types to be octorocs,
             # this is a hack to force us to be able to attack any monster
-            if item['type'] <= 0x3E and item['type'] != 0x2F:
-                item['type'] = 7
-            item['health'] = max(1, item['health'])
+            #if item['type'] <= 0x3E and item['type'] != 0x2F:
+                #item['type'] = 7
+            #item['health'] = max(1, item['health'])
             kb[f'enemy_{i}'] = item
 
     # projectile info
@@ -1155,7 +1155,7 @@ def _ramstate_hearts(ram):
     return link_full_hearts + link_partial_hearts
 
 def _ramstate_all_enemies_dead(ram):
-    return all([ram[848+i] == 0 for i in range(6)])
+    return all([ram[848+i] == 0 or ram[848+i] == 0x2F for i in range(6)])
 
 def _ramstate_all_enemies_health(ram):
     healths = []
@@ -1190,7 +1190,7 @@ def _ramstate_screen_change(ram):
 
 
 ################################################################################
-# FIXME:
+# NOTE:
 # This class was taken from another open source project;
 # it reduces the action space to speed up training;
 # I need to incorporate this trick and lookup the cite

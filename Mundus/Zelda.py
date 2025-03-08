@@ -16,13 +16,14 @@ from Mundus.Agent.Zelda import *
 from Mundus.Retro import *
 from Mundus.Object import *
 from Mundus.util import *
+from Mundus.Wrappers import *
 
 
 def make_zelda_env(
         action_space='all',
         render_mode='human',
         fork_emulator=False,
-        state='overworld_07',
+        reset_state=None,
         **kwargs):
     '''
     Create a Zelda environment.
@@ -33,6 +34,10 @@ def make_zelda_env(
     This style doesn't follow the standard for stable-retro,
     and could probably be improved.
     '''
+    if 'seed' in kwargs:
+        seed = kwargs['seed']
+    else:
+        seed = 0
 
     # set the folder where retro.make() looks for ROMs
     custom_path = os.path.join(os.getcwd(), 'custom_integrations')
@@ -51,7 +56,7 @@ def make_zelda_env(
     env = retro.make(
             game='Zelda-Nes',
             inttype=retro.data.Integrations.ALL,
-            state=state,
+            state='overworld_07',
             render_mode=render_mode,
             use_restricted_actions=use_restricted_actions,
             )
@@ -62,6 +67,10 @@ def make_zelda_env(
         env = ZeldaInteractive(env)
         env = UnstickLink(env)
         env = Agent(env, SimpleNavigator, RandomObjective)
+
+    if reset_state is not None:
+        path = 'custom_integrations/Zelda-Nes'
+        env = RandomStateReset(env, path, reset_state, seed)
 
     # apply zelda-specific action space
     if 'zelda-' in action_space:

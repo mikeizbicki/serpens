@@ -216,10 +216,10 @@ class RetroWithRam(gymnasium.Wrapper):
             self.mouse = None
 
         def __getitem__(self, key):
-            if isinstance(key, slice):
-                return self.ram[key]
-            elif isinstance(key, int):
+            if isinstance(key, int):
                 return int(self.ram[key])
+            elif isinstance(key, slice):
+                return self.ram[key].astype(np.int64)
             else:
                 raise ValueError(f'IntegerLookup; type={type(key)}, value={key} ')
 
@@ -237,10 +237,10 @@ class RetroWithRam(gymnasium.Wrapper):
         return super().step(action)
 
     def reset(self, **kwargs):
-        self.ram = self.unwrapped.get_ram()
+        self.ram = self._IntLookup(self.unwrapped.get_ram())
         obs, info = super().reset(**kwargs)
         self.ram2 = None
-        self.ram = self.unwrapped.get_ram()
+        self.ram = self._IntLookup(self.unwrapped.get_ram())
         return obs, info
 
 

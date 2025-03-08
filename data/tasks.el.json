@@ -1,0 +1,9 @@
+{
+"attack":               ["Ἐπίθεση!", "Ἀποκτείνατε τὰ θηρία!"],
+"screen_north":         ["Πορεύω ὧδε", "Ἀναβαίνω"],
+"screen_south":         ["Πορεύω κάτω", "Καταβαίνω"],
+"screen_east":          ["Πορεύω ἀνατολῆς", "Πορεύω δεξιὸν"],
+"screen_west":          ["Πορεύω δύσης", "Πορεύω ἀριστερὸν"],
+"interactive_onmouse":  ["Πορεύω ἐκεῖ", "Ναὶ κύριε!"],
+"translation_notes": "# Translation Notes\n* Verbs have been conjugated in the 1st person singular for the 'screen' directions to maintain simplicity and clarity.\n* For 'interactive_onmouse', the phrase 'Ναὶ κύριε' has been used, which literally means 'Yes sir', to convey a sense of affirmation and obedience.\n* The word 'Ἐπίθεση' has been used for 'attack', which is a more formal or official term, while 'Ἀποκτείνατε' is used for 'kill', which is in the imperative mood, to convey a sense of urgency and command." 
+}

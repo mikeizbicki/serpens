@@ -9,10 +9,10 @@ import pyglet
 import re
 import time
 
-import torch
 import retro
 import gymnasium
 from gymnasium import spaces
+from Mundus.Agent.Zelda import *
 from Mundus.Retro import *
 from Mundus.Object import *
 from Mundus.util import *
@@ -21,6 +21,8 @@ from Mundus.util import *
 def make_zelda_env(
         action_space='all',
         render_mode='human',
+        fork_emulator=False,
+        state='overworld_07',
         **kwargs):
     '''
     Create a Zelda environment.
@@ -49,11 +51,17 @@ def make_zelda_env(
     env = retro.make(
             game='Zelda-Nes',
             inttype=retro.data.Integrations.ALL,
-            state='overworld_07',
+            state=state,
             render_mode=render_mode,
             use_restricted_actions=use_restricted_actions,
             )
+    if fork_emulator:
+        env = ForkedRetroEnv(env)
     env = ZeldaWrapper(env, **kwargs)
+    if fork_emulator:
+        env = ZeldaInteractive(env)
+        env = UnstickLink(env)
+        env = Agent(env, SimpleNavigator, RandomObjective)
 
     # apply zelda-specific action space
     if 'zelda-' in action_space:
@@ -63,6 +71,57 @@ def make_zelda_env(
     logging.debug(f"env.action_space={env.action_space}")
     logging.debug(f"env.action_space.n={getattr(env.action_space, 'n', None)}")
     return env
+
+
+class ZeldaInteractive(gymnasium.Wrapper):
+    def _step_interactive_onmouse(self, kb):
+        # extract the list of enemies
+        enemies = []
+        for k in kb.items:
+            if 'enemy' in k:
+                enemies.append(kb.items[k])
+
+        # if a monster is within this many pixels of a mouse click,
+        # then self.mouse will automatically track the monster
+        min_l1dist0 = 16
+
+        # find the enemy closest to the mouse position,
+        # and move self.mouse on top of this enemy
+        oldmouse = kb.items['mouse']
+        if 'x' not in oldmouse: oldmouse['x'] = 0
+        if 'y' not in oldmouse: oldmouse['y'] = 0
+        min_l1dist = min_l1dist0
+        newmouse = None
+        for enemy in enemies:
+            enemy_l1dist = abs(enemy['x'] - oldmouse['x']) + abs(enemy['y'] - oldmouse['y'])
+            if enemy_l1dist < min_l1dist:
+                min_l1dist = enemy_l1dist
+                newmouse = {
+                    'x': enemy['x'],
+                    'y': enemy['y'],
+                    }
+        if newmouse is not None:
+            self.mouse = newmouse
+            self.ram.mouse = newmouse
+
+        # if we did not move the mouse,
+        # but link is close to the mouse,
+        # then we should change tasks to attack
+        # and delete the mouse
+        if min_l1dist == min_l1dist0:
+            link = kb.items['link']
+            link_l1dist = abs(link['x'] - oldmouse['x']) + abs(link['y'] - oldmouse['y'])
+            if link_l1dist <= 8:
+                self._set_episode_task('attack')
+                self.mouse = None
+                self.ram.mouse = None
+                del kb.items['mouse']
+
+    def __init__(self, env):
+        super().__init__(env)
+        tasks = self.env.unwrapped.RetroKB.tasks
+        tasks['interactive_onmouse'] = copy.deepcopy(tasks['onmouse_enemy'])
+        tasks['interactive_onmouse']['step'] = ZeldaInteractive._step_interactive_onmouse
 
 
 class ZeldaWrapper(RetroKB):
@@ -316,45 +375,60 @@ class ZeldaWrapper(RetroKB):
         else:
             self.frames_without_attack_threshold = frames_without_attack_threshold
 
+    def _get_valid_tasks(self):
+        valid_tasks = []
+        for task in self.tasks:
+            if self.tasks[task].get('is_valid', lambda ram: True)(self.ram):
+                if not self.compute_for_task(task, 'terminated') and not self.compute_for_task(task, 'is_success') :
+                    valid_tasks.append(task)
+        return valid_tasks
+
     def reset(self, **kwargs):
         obs, info = super().reset(**kwargs)
         self.frames_without_attack = 0
         self.max_frames_without_attack = 0
 
-        # reset map/link/enemy location
-        for i in range(10):
-            valid_coords = []
-            if 'map' in self.reset_method:
-                valid_map_coords = [
-                    0x1e, 0x1f, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x38, 0x3a, 0x3b, 0x3d, 0x3e, 0x3f, 0x48, 0x49, 0x4a, 0x4c, 0x4d, 0x4e, 0x4f, 0x51, 0x52, 0x53, 0x5d, 0x58, 0x59, 0x5a, 0x5b, 0x5b, 0x5e, 0x5f, 0x61, 0x63, 0x63, 0x64, 0x65, 0x66, 0x67, 0x69, 0x6a, 0x6b, 0x6f, 0x70, 0x71, 0x73, 0x73, 0x76, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d
-                    ]
-                hard_coords = [0x10, 0x11, 0x20, 0x12, 0x13, 0x14, 0x15, 0x25, 0x26, 0x70, 0x50, 0x60]
-                valid_coords += valid_map_coords
-            if 'spider' in self.reset_method:
-                valid_coords += [0x76, 0x79, 0x7a, 0x4a, 0x2c]
-            if 'octo' in self.reset_method:
-                valid_coords += [0x68, 0x78, 0x58, 0x57, 0x67, 0x66, 0x49, 0x64]
-            if valid_coords != []:
-                new_coord = self.random.choice(valid_coords)
-                self._set_map_coordinates_eb(new_coord)
+        if self.reset_method.startswith('coords'):
+            _, coords = self.reset_method.split('_')
+            self._set_map_coordinates_eb(int(coords, 16))
+        elif self.reset_method != 'None':
+            # reset map/link/enemy location
+            for i in range(10):
+                valid_coords = []
+                if 'map' in self.reset_method:
+                    valid_map_coords = [
+                        0x1e, 0x1f, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x38, 0x3a, 0x3b, 0x3d, 0x3e, 0x3f, 0x48, 0x49, 0x4a, 0x4c, 0x4d, 0x4e, 0x4f, 0x51, 0x52, 0x53, 0x5d, 0x58, 0x59, 0x5a, 0x5b, 0x5b, 0x5e, 0x5f, 0x61, 0x63, 0x63, 0x64, 0x65, 0x66, 0x67, 0x69, 0x6a, 0x6b, 0x6f, 0x70, 0x71, 0x73, 0x73, 0x76, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d
+                        ]
+                    hard_coords = [0x10, 0x11, 0x20, 0x12, 0x13, 0x14, 0x15, 0x25, 0x26, 0x70, 0x50, 0x60]
+                    valid_coords += valid_map_coords
+                if 'spider' in self.reset_method:
+                    valid_coords += [0x76, 0x79, 0x7a, 0x4a, 0x2c]
+                if 'octo' in self.reset_method:
+                    valid_coords += [0x68, 0x78, 0x58, 0x57, 0x67, 0x66, 0x49, 0x64]
+                if valid_coords != []:
+                    new_coord = self.random.choice(valid_coords)
+                    self._set_map_coordinates_eb(new_coord)
 
-            isvalid = self.tasks[self.episode_task].get('is_valid', lambda ram:True)(self.ram)
-            if isvalid:
-                break
-        if not isvalid:
-            self.episode_task = 'attack'
+                isvalid = self.tasks[self.episode_task].get('is_valid', lambda ram:True)(self.ram)
+                if isvalid:
+                    break
+            if not isvalid:
+                self.episode_task = 'attack'
 
-        if 'link' in self.reset_method:
-            self._set_random_link_position()
-        if 'enemy' in self.reset_method:
-            self._set_random_enemy_positions()
+            if 'link' in self.reset_method:
+                self._set_random_link_position()
+            if 'enemy' in self.reset_method:
+                self._set_random_enemy_positions()
         return self.observation_space.sample(), info
 
     def step(self, action):
         observation, reward, terminated, truncated, info = super().step(action)
 
         # potentially end task early if we're going too long
-        if _ramstate_all_enemies_health(self.ram) == _ramstate_all_enemies_health(self.ram2) and _ramstate_hearts(self.ram) == _ramstate_hearts(self.ram2):
+        if (self.ram is not None and
+            self.ram2 is not None and
+            _ramstate_all_enemies_health(self.ram) == _ramstate_all_enemies_health(self.ram2) and
+            _ramstate_hearts(self.ram) == _ramstate_hearts(self.ram2)):
             self.frames_without_attack += 1
         else:
             self.frames_without_attack = 0
@@ -388,6 +462,14 @@ class ZeldaWrapper(RetroKB):
                 if _ramstate_hearts(self.ram) <= 0 and self.skipped_frames%2 == 0:
                     skipbuttons = ['START']
                 self._step_silent(skipbuttons)
+
+                # FIXME:
+                # when playing interactively,
+                # we want link's task to reset when he enters a new screen;
+                # the code below is a hacky way to achieve this effect
+                self._set_episode_task('attack')
+                self.mouse = None
+                self.ram.mouse = None
 
         # return step results
         return observation, reward, terminated, truncated, info
@@ -488,15 +570,19 @@ class ZeldaWrapper(RetroKB):
         # so we move him to a random position
         self._set_random_link_position()
 
-    def _set_random_link_position(self, choice=None):
+    def _get_random_link_position(self):
         subtiles = _get_subtiles(self.ram)
         valid_positions = []
         for x in range(32):
             for y in range(1, 22):
                 if subtiles[x, y] in ignore_tile_set:
                     valid_positions.append([x*8, y*8+60-8])
+        position = self.random.choice(valid_positions)
+        return position
+
+    def _set_random_link_position(self, choice=None):
         if choice is None:
-            position = self.random.choice(valid_positions)
+            position = self._get_random_link_position()
         else:
             position = valid_positions[choice]
         self._set_mem({112: position[0], 132: position[1]})
@@ -608,6 +694,27 @@ def generate_knowledge_base(ram, ram2, include_background=True, use_subtiles=Fal
         'objects_continuous': ['relx', 'rely', 'x', 'y', 'dx', 'dy', 'health'],
         })
 
+    # FIXME:
+    # The NES uses the OAM region of memory $0200-$02FF for storing sprites;
+    # we could have a generic object detector just by using this region of ram
+    # see:
+    # <https://austinmorlan.com/posts/nes_rendering_overview/>
+    # <https://www.nesdev.org/wiki/PPU_OAM>
+    if False:
+        for i in range(64):
+            base_addr = 0x0200 + 4*i
+            item = {}
+            item['state'] = ram[base_addr + 2]
+            item['direction'] = 0
+            item['type'] = ram[base_addr + 1]
+            item['x'] = ram[base_addr + 3]
+            item['y'] = ram[base_addr + 0]
+            item['dx'] = ram[base_addr + 3] - ram2[base_addr + 3] if ram2 is not None else 0
+            item['dy'] = ram[base_addr + 0] - ram2[base_addr + 0] if ram2 is not None else 0
+            item['health'] = 0
+            kb[f'sprite_{i:02}'] = item
+
+
     if ram.mouse is not None:
         item = {}
         item['x'] = ram.mouse['x']
@@ -680,6 +787,12 @@ def generate_knowledge_base(ram, ram2, include_background=True, use_subtiles=Fal
         else:
             item['health'] = rawhealth//16
         if item['type'] > 0:
+            # FIXME:
+            # this sets all monster types to be octorocs,
+            # this is a hack to force us to be able to attack any monster
+            #if item['type'] <= 0x3E and item['type'] != 0x2F:
+                #item['type'] = 7
+            #item['health'] = max(1, item['health'])
             kb[f'enemy_{i}'] = item
 
     # projectile info
@@ -821,9 +934,9 @@ def _isscreen_changeable(ram, direction):
         return any(np.isin(subtiles[:,0], ignore_tile_set))
     if direction == 'SOUTH':
         return any(np.isin(subtiles[:,21], ignore_tile_set))
-    if direction == 'EAST':
-        return any(np.isin(subtiles[0,:], ignore_tile_set))
     if direction == 'WEST':
+        return any(np.isin(subtiles[0,:], ignore_tile_set))
+    if direction == 'EAST':
         return any(np.isin(subtiles[31,:], ignore_tile_set))
     assert False, 'should not happen'
     
@@ -1042,26 +1155,34 @@ def _ramstate_hearts(ram):
     return link_full_hearts + link_partial_hearts
 
 def _ramstate_all_enemies_dead(ram):
-    return all([ram[848+i] == 0 for i in range(6)])
+    return all([ram[848+i] == 0 or ram[848+i] == 0x2F for i in range(6)])
 
 def _ramstate_all_enemies_health(ram):
     healths = []
     for i in range(6):
         rawhealth = ram[1158+i]
-        if rawhealth > 0 and (rawhealth < 16 or rawhealth >= 128):
+        enemy_type = ram[848+i]
+        if enemy_type == 0x2F or enemy_type > 0x3E:
             healths.append(0)
         else:
-            healths.append(rawhealth//16)
+            if rawhealth > 0 and (rawhealth < 16 or rawhealth >= 128):
+                healths.append(0)
+            else:
+                healths.append(rawhealth//16)
     return sum(healths)
 
 def _ramstate_total_enemies(ram):
     healths = []
     for i in range(6):
         rawhealth = ram[1158+i]
-        if rawhealth > 0 and (rawhealth < 16 or rawhealth >= 128):
+        enemy_type = ram[848+i]
+        if enemy_type == 0x2F or enemy_type > 0x3E:
             healths.append(0)
         else:
-            healths.append(rawhealth//16)
+            if rawhealth > 0 and (rawhealth < 16 or rawhealth >= 128):
+                healths.append(0)
+            else:
+                healths.append(rawhealth//16)
     return sum([1 for health in healths if health > 0])
 
 def _ramstate_screen_change(ram):
@@ -1069,7 +1190,7 @@ def _ramstate_screen_change(ram):
 
 
 ################################################################################
-# FIXME:
+# NOTE:
 # This class was taken from another open source project;
 # it reduces the action space to speed up training;
 # I need to incorporate this trick and lookup the cite

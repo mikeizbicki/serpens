@@ -1,0 +1,8 @@
+{
+"attack":               ["attack!", "kill the monsters!"],
+"screen_north":         ["Going north", "Going up"],
+"screen_south":         ["Going south", "Going down"],
+"screen_east":          ["Going east", "Going right"],
+"screen_west":          ["Going west", "Going left"],
+"interactive_onmouse":  ["Going there", "Yes sir!"]
+}

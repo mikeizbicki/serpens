@@ -1,0 +1,8 @@
+{
+"attack":               ["¡ataca!", "¡mata a los monstruos!"],
+"screen_north":         ["Yendo hacia el norte", "Subiendo"],
+"screen_south":         ["Yendo hacia el sur", "Bajando"],
+"screen_east":          ["Yendo hacia el este", "Yendo hacia la derecha"],
+"screen_west":           ["Yendo hacia el oeste", "Yendo hacia la izquierda"],
+"interactive_onmouse":  ["Yendo allí", "¡Sí, señor!"]
+}

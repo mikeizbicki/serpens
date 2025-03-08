@@ -1,4 +1,4 @@
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict, defaultdict, Counter
 import logging
 import numpy as np
 import gymnasium
@@ -185,6 +185,14 @@ class ContinuousEventExtractor(BaseFeaturesExtractor):
         return torch.cat(encoded_tensor_list, dim=1)
 
 
+class History:
+    def __init__(self):
+        self.event_counts = Counter()
+
+    def register_KnowledgeBase(self, step, kb):
+        self.event_counts += kb.events
+
+
 class KnowledgeBase:
     def __init__(self, keys, max_objects=24):
         self.items = defaultdict(lambda: {})
@@ -198,22 +206,23 @@ class KnowledgeBase:
         self.info = {}
 
     def __setitem__(self, name, val):
-        if len(self.items) >= self.max_objects:
-            logging.warning(f'len(self.items) >= self.max_objects; ignoring [{name}]={val}')
-        else:
-            self.items[name] = val
-            for k, v in val.items():
-                self.columns.add(k)
-                # NOTE: we convert all integer values away from numpy types to python int
-                # because the numpy types are unsigned and small;
-                # this can result in hard-to-debug integer overflow problems
-                if not isinstance(v, (np.floating, float)):
-                    val[k] = int(v)
+        self.items[name] = val
+        for k, v in val.items():
+            self.columns.add(k)
+            # NOTE: we convert all integer values away from numpy types to python int
+            # because the numpy types are unsigned and small;
+            # this can result in hard-to-debug integer overflow problems
+            if not isinstance(v, (np.floating, float)):
+                val[k] = int(v)
 
     def to_observation(self):
+        item_list = self.items.items()
+        if len(item_list) >= self.max_objects:
+            logging.warning(f'len(self.items) >= self.max_objects; truncating')
+            item_list = list(item_list)[:self.max_objects]
 
         observations = []
-        for item, val in self.items.items():
+        for item, val in item_list:
             observation = {
                 'objects_discrete': [val[k]%self.max_discrete for k in self.keys['objects_discrete']],
                 'objects_continuous': [val[k] for k in self.keys['objects_continuous']],

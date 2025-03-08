@@ -1,41 +1,135 @@
-import subprocess
+import fcntl
+import io
 import logging
 import os
-import time
-import fcntl
 import re
+import subprocess
+import sys
+import threading
 import time
 
 import numpy as np
-import pyaudio
 import gymnasium
-import simpleaudio as sa
+
+# before loading pyaudio, we set an error handler;
+# this error handler will cause buffer underrun warnings to not get displayed to stderr;
+# a buffer underrun happens when the fps drops too low,
+# and we don't want these messages cluttering other debug information
+from ctypes import *
+ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p)
+def py_error_handler(filename, line, function, err, fmt):
+    pass
+c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
+asound = cdll.LoadLibrary('libasound.so.2')
+asound.snd_lib_error_set_handler(c_error_handler)
+import pyaudio
+
+# the following context manager can be used to prevent messages to stderr;
+# pyaudio automatically outputs to stderr,
+# and so this context manager is used to make the pyaudio code silent
+import contextlib
+devnull = os.open(os.devnull, os.O_WRONLY)
+old_stderr = os.dup(2)
+@contextlib.contextmanager
+def ignore_stderr():
+    sys.stderr.flush()
+    os.dup2(devnull, 2)
+    try:
+        yield
+    finally:
+        os.dup2(old_stderr, 2)
+
+from elevenlabs.client import ElevenLabs
+from elevenlabs import play
+import elevenlabs
 
 
-class PlayAudio(gymnasium.Wrapper):
+'''
+speaker, lang, voice_id
+link, en, JBFqnCBsd6RMkjVDRZzb
+link, es, 7imL5gCghUGRIJcFUust
+link, el, KDImLuG6RkuyuX5httC7
+link, ko, TRO4gatqxbbwLXHLDLSk
+'''
+
+def text_info_to_voice_id(text_info):
+    if text_info['lang'] == 'en':
+        return 'JBFqnCBsd6RMkjVDRZzb'
+    if text_info['lang'] == 'es':
+        return 'z3kTTwYbQrmL7ckdGcJi'
+        #return 'JBFqnCBsd6RMkjVDRZzb'
+        #return 'Nh2zY9kknu6z4pZy6FhD'
+    return 'JBFqnCBsd6RMkjVDRZzb'
+
+
+class PlayAudio_ElevenLabs(gymnasium.Wrapper):
     '''
-    FIXME:
-    The playback of this audio is not smooth due to the blocking interface.
-    I've tried a bunch of other blocking interfaces, and this one is the best.
-    The non-blocking interface (below) has lag issues.
+    ElevenLabs provides an API for voice generation.
+    This sends the generated audio to pyaudio.
     '''
-    def __init__(self, env):
+    def __init__(self, env, ignore_ALSA_warnings=True):
         super().__init__(env)
+        self.text_audio = None
+        self.audio_env = self.env
+        self.elevenlabs = ElevenLabs()
+        self.cache_dir = '.audio_cache'
+        os.makedirs(self.cache_dir, exist_ok=True)
 
-    def step(self, actions):
-        data = self.unwrapped.em.get_audio().astype('int16')
-        sa.play_buffer(data, 2, 2, 32000)
-        return super().step(actions)
+        env.unwrapped.RetroKB.add_text_callback(lambda text_info: self.register_text(text_info))
+
+    def register_text(self, text_info):
+        if self.audio_env.text_audio is not None:
+            return
+        time_start = time.time()
+        try:
+            voice_id = text_info_to_voice_id(text_info)
+            dirname = f'{self.cache_dir}/{text_info["lang"]}_elevenlabs_{voice_id}'
+            os.makedirs(dirname, exist_ok=True)
+            filepath = f'{dirname}/{text_info["text"]}'
+            with open(filepath, 'rb') as fin:
+                self.audio_env.text_audio = np.repeat(np.frombuffer(fin.read(), dtype=np.int16), 2)
+                self.audio_env.text_audio_pos = 0
+        except FileNotFoundError:
+            def thread_function():
+                response = self.elevenlabs.text_to_speech.convert(
+                    text=text_info['text'],
+                    voice_id=voice_id,
+                    model_id="eleven_turbo_v2_5",
+                    output_format="pcm_16000",
+                    voice_settings=elevenlabs.VoiceSettings(
+                        stability=0.0,
+                        similarity_boost=1.0,
+                        style=0.0,
+                        use_speaker_boost=True,
+                    ),
+                )
+                lag = time.time() - time_start
+                logging.info(f"ElevenLabs API initial response; lag={lag}")
+                audio_stream = io.BytesIO()
+                for i, chunk in enumerate(response):
+                    lag = time.time() - time_start
+                    if chunk:
+                        audio_stream.write(chunk)
+                audio_stream.seek(0)
+                self.audio_env.text_audio = np.repeat(np.frombuffer(audio_stream.read(), dtype=np.int16), 2)
+                self.audio_env.text_audio_pos = 0
+                lag = time.time() - time_start
+                logging.info(f"saving sound file {filepath}; lag={lag}")
+                with open(filepath, 'wb') as fout:
+                    audio_stream.seek(0)
+                    fout.write(audio_stream.read())
+            thread = threading.Thread(target=thread_function)
+            thread.start()
 
 
-class PlayAudio2(gymnasium.Wrapper):
+class PlayAudio_pyaudio(gymnasium.Wrapper):
     '''
-    FIXME:
-    The playback of this audio is smooth, but it's delayed 1-2 seconds for some reason.
+    This wrapper uses pyaudio to play the sound of the NES stable-retro environment.
     '''
     def __init__(self, env, ignore_ALSA_warnings=True):
         super().__init__(env)
         self.PlayAudio_buffer = np.zeros([0,2], dtype='int16')
+        self.text_audio = None
     
         # create the audio stream
         def playing_callback(in_data, frame_count, time_info, status):
@@ -43,32 +137,40 @@ class PlayAudio2(gymnasium.Wrapper):
                 data = self.PlayAudio_buffer[:frame_count, :]
                 self.PlayAudio_buffer = self.PlayAudio_buffer[frame_count:, :]
                 data = data.flatten()
-                #logging.info(f"self.PlayAudio_buffer.shape={self.PlayAudio_buffer.shape}")
+                #logging.debug(f"self.PlayAudio_buffer.shape={self.PlayAudio_buffer.shape}")
                 return (data.tobytes(), pyaudio.paContinue)
             else:
-                logging.warning('PlayAudio: buffer underrun')
+                #logging.warning('PlayAudio: buffer underrun')
                 return (b'\x00' * frame_count * 4, pyaudio.paContinue)  # 4 bytes per frame (2 channels * 2 bytes per sample)
 
-        logging.info(f"env.em.get_audio_rate()={env.em.get_audio_rate()}")
-        self.p = pyaudio.PyAudio()
-        self.stream = self.p.open(
-                format=pyaudio.paInt16,
-                channels=2,
-                rate=32000, #int(env.em.get_audio_rate()),
-                output=True,
-                stream_callback=playing_callback,
-                frames_per_buffer=128,
-                start=False,
-                )
-        #self.stream._stream.suggestedLatency = 0.1  # Try to achieve 100ms latency
-        self.stream.start_stream()
+        with ignore_stderr():
+            logging.info(f"env.unwrapped.em.get_audio_rate()={env.unwrapped.em.get_audio_rate()}")
+            self.p = pyaudio.PyAudio()
+            self.stream = self.p.open(
+                    format=pyaudio.paInt16,
+                    channels=2,
+                    rate=int(env.unwrapped.em.get_audio_rate()),
+                    output=True,
+                    stream_callback=playing_callback,
+                    frames_per_buffer=128,
+                    start=False,
+                    )
+            self.stream.start_stream()
 
     def step(self, actions):
-        data = self.env.em.get_audio().astype('int16')
-        self.PlayAudio_buffer = np.concatenate([self.PlayAudio_buffer, data])
+        game_frame_audio = self.env.unwrapped.em.get_audio().astype('int16')
+        game_frame_audio //= 2
+        if self.text_audio is not None:
+            text_frame_audio = self.text_audio[self.text_audio_pos:self.text_audio_pos + len(game_frame_audio)]
+            if len(text_frame_audio) > 0:
+                self.text_audio_pos += len(game_frame_audio)
+                text_frame_audio = np.pad(text_frame_audio, (0, len(game_frame_audio)-len(text_frame_audio)))
+                game_frame_audio += text_frame_audio[:, np.newaxis]
+            else:
+                self.text_audio = None
+        self.PlayAudio_buffer = np.concatenate([self.PlayAudio_buffer, game_frame_audio])
         if len(self.PlayAudio_buffer) > 32000:
             self.PlayAudio_buffer = np.zeros([0,2], dtype='int16')
-            #logging.info(f"len(self.PlayAudio_buffer)={len(self.PlayAudio_buffer)}")
         return super().step(actions)
 
     def close(self):

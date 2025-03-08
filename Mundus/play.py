@@ -1,22 +1,91 @@
-import atexit
+#!/usr/bin/env python3
+
+# set logging level
 import logging
-import numpy as np
+#logging.basicConfig(
+    #level=logging.DEBUG,
+    #format='%(asctime)s.%(msecs)03d %(name)-10s [pid=%(process)d] %(levelname)s: %(message)s',
+    #datefmt='%Y-%m-%d %H:%M:%S'
+#)
+# Define custom color mapping
+COLORS = {
+    'DEBUG': '\033[90m',  # grey
+    #'INFO': '\033[36m',  # cyan
+    'WARNING': '\033[91m',  # red
+    'ERROR': '\033[91m\033[43m',  # red on yellow
+    'CRITICAL': '\033[91m\033[43m'  # red on yellow
+}
+
+class CustomFormatter(logging.Formatter):
+    def format(self, record):
+        levelname = record.levelname
+        if levelname in COLORS:
+            #levelname_color = COLORS[levelname] + levelname + '\033[0m'
+            #record.msg = record.msg
+            #record.levelname = levelname_color
+            return COLORS[levelname] + super().format(record) + '\033[0m'
+        else:
+            return super().format(record)
+
+# Create a logger and assign the custom formatter
+logger = logging.getLogger()
+handler = logging.StreamHandler()
+handler.setFormatter(CustomFormatter(
+    '%(asctime)s.%(msecs)03d %(name)-10s [pid=%(process)d] %(levelname)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+))
+logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
+
+logging.getLogger('groq').setLevel(logging.WARNING)
+logging.getLogger('httpcore.connection').setLevel(logging.WARNING)
+logging.getLogger('httpcore.core').setLevel(logging.WARNING)
+logging.getLogger('httpcore.http11').setLevel(logging.WARNING)
+logging.getLogger('matplotlib').setLevel(logging.WARNING)
+
+logger_fps = logging.getLogger('root/fps')
+logger_fps.setLevel(logging.INFO)
+
+# use only 1 CPU for model inference
+import os
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['NUMPY_NUM_THREADS'] = '1'
+
+import setproctitle
+setproctitle.setproctitle(f'serpens')
+
+logging.debug('import stdlib')
+import multiprocessing
 import os
 import pprint
+import queue
 import random
 import sys
+import signal
 import time
 
+logging.debug('import numpy')
+import numpy as np
+
+logging.debug('import pyglet')
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pyglet
+logging.debug('import pygame')
 import pygame
+logging.debug('import gymnasium')
 import gymnasium
-from  gymnasium.wrappers import *
+logging.debug('import retro')
 import retro
+logging.debug('import tkinter')
+import tkinter as tk
 
+logging.debug('import Mundus.Audio')
 from Mundus.Audio import *
+logging.debug('import Mundus.Wrappers')
 from Mundus.Wrappers import *
+logging.debug('import Mundus.Zelda')
 from Mundus.Zelda import *
+from Mundus.Agent.Zelda import *
 
 
 # pyglet doesn't seem to have a map built-in for converting keycodes to names;
@@ -32,20 +101,185 @@ for name in dir(keycodes):
         pass
 
 
+class Pygame_frame(tk.Frame):
+    def __init__(self, master, width, height):
+        super().__init__(master, width=width, height=height)
+        os.environ['SDL_WINDOWID'] = '0'
+        pygame.init()
+        pygame.display.init()
+        self.width = width
+        self.height = height
+        self.bind('<Map>', self._on_map)
+        self.bind('<Configure>', self._on_configure)
+        self.bind('<Visibility>', self._on_visibility)
+
+        self.scaled_size = (width, height)
+        self.screen = None
+        self.scaled_surface = pygame.Surface(self.scaled_size)
+        array_size = (240, 224)
+        self.array_surface = pygame.Surface(array_size, pygame.HWSURFACE)
+
+    def _on_visibility(self, event):
+        if self.screen:
+            # Force realignment when window becomes visible
+            self.update_pygame_window()
+
+    def update_pygame_window(self):
+        os.environ['SDL_WINDOWID'] = str(self.winfo_id())
+        self.screen = pygame.display.set_mode(self.scaled_size, pygame.HWACCEL | pygame.DOUBLEBUF | pygame.SCALED)
+        self.scaled_surface = pygame.Surface(self.scaled_size)
+
+    def _on_configure(self, event):
+        self.width = event.width
+        self.height = event.height
+        self.scaled_size = (self.width, self.height)
+        if self.screen:
+            self.update_pygame_window()
+
+    def _on_map(self, event):
+        self.update_pygame_window()
+
+    def redraw(self, array=None):
+        if array is not None and self.screen:
+            pygame.surfarray.blit_array(self.array_surface, array.swapaxes(0,1))
+            pygame.transform.scale(self.array_surface, self.scaled_size, self.screen)
+            pygame.display.flip()
+
+
+class ImageViewer:
+    def __init__(self, env, fullscreen=True):
+        self.width = 1080
+        self.height = 600
+        self._create_window(fullscreen=fullscreen)
+
+        self.env = env
+        self.Agent = env
+        while not isinstance(self.Agent, Agent):
+            assert self.Agent is not None
+            self.Agent = self.Agent.env
+
+    def _create_window(self, fullscreen):
+        self.window = tk.Tk()
+        self.window.title('Zelda')
+
+        # NOTE:
+        # the RetroEnv class expects this variable to exist,
+        # but we don't actually use it at all
+        self.isopen = True
+
+        # Prevent window resizing
+        self.window.resizable(False, False)
+
+        # Add window close handler
+        def on_closing():
+            self.window.destroy()
+            sys.exit(0)
+            #os._exit(0)
+        self.window.protocol("WM_DELETE_WINDOW", on_closing)
+
+        # Center the window and set exact size
+        screen_width = self.window.winfo_screenwidth()
+        screen_height = self.window.winfo_screenheight()
+        x = (screen_width - self.width) // 2
+        y = (screen_height - self.height) // 2
+        self.window.geometry(f"{self.width}x{self.height}+{x}+{y}")
+
+        # Calculate new image dimensions maintaining aspect ratio
+        original_ratio = 256 / 240  # Original NES aspect ratio
+        self.image_height = self.height
+        self.image_width = int(self.image_height * original_ratio)
+
+        # Create and configure frames
+        self.image_frame = Pygame_frame(self.window, width=self.image_width, height=self.image_height)
+        self.image_frame.pack(side=tk.LEFT, fill=tk.BOTH)
+        self.image_frame.pack_propagate(False)
+
+        textbox_frame = tk.Frame(self.window)
+        textbox_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Add buttons above textbox
+        button_frame = tk.Frame(textbox_frame)
+        button_frame.pack(side=tk.TOP)
+
+        self.button_task = tk.Button(button_frame, text="New Task", command=self.button_task_callback)
+        self.button_task.pack(side=tk.LEFT, pady=5)
+
+        self.button_objective = tk.Button(button_frame, text="New Objective", command=self.button_objective_callback)
+        self.button_objective.pack(side=tk.LEFT, pady=5)
+
+        # Create and configure textbox
+        self.textbox = tk.Text(textbox_frame)
+        self.scrollbar = tk.Scrollbar(textbox_frame)
+        self.textbox.config(yscrollcommand=self.scrollbar.set)
+        self.scrollbar.config(command=self.textbox.yview)
+        self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.textbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        self.textbox.tag_config("black", foreground="black")
+        self.textbox.tag_config("blue", foreground="blue")
+        self.textbox.tag_config("red", foreground="red")
+        self.textbox.config(state="disabled")
+
+        def on_resize(event):
+            self.width = self.window.winfo_width()
+            self.height = self.window.winfo_height()
+            self.image_height = self.height
+            original_ratio = 256 / 240  # Original NES aspect ratio
+            self.image_width = int(self.image_height * original_ratio)
+            self.image_frame.config(width=self.image_width, height=self.image_height)
+        self.window.bind('<Configure>', on_resize)
+        if fullscreen:
+            self.window.attributes("-fullscreen", True)
+        self.window.update_idletasks()
+
+        self.framecount = 0
+
+    def button_objective_callback(self):
+        self.Agent.objective = self.Agent.objective_selector.select_objective()
+
+    def button_task_callback(self):
+        self.Agent.generate_newtask()
+
+    def imshow(self, arr):
+        self.framecount += 1
+        # FIXME:
+        # this is a dirty hack to speed up rendering by rendering
+        # only some frames
+        if self.framecount %3 == 0:
+            self.image_frame.redraw(arr)
+            self.image_frame.update()
+            self.window.update()
+
+    def register_text(self, text_info):
+        # format elapsed time
+        elapsed_time = text_info['step'] / 60
+        minutes, seconds = divmod(elapsed_time, 60)
+        hours, minutes = divmod(minutes, 60)
+        timestamp = f"{int(hours):02d}:{int(minutes):02d}:{seconds:05.2f}"
+
+        # insert text
+        self.textbox.config(state="normal")
+        self.textbox.insert(tk.END, timestamp + " ", 'black')
+        if text_info['speaker'] == 'Link':
+            color = 'blue'
+        else:
+            color = 'red'
+        self.textbox.insert(tk.END, f"({text_info['speaker']}) {text_info['text']}\n", color)
+        if not self.textbox.tag_config(color):
+            self.textbox.tag_config(color, foreground=color)
+        self.textbox.yview(tk.END)
+        self.textbox.config(state="disabled")
+        self.window.update()
+
+
 class Interactive(gymnasium.Wrapper):
-    def __init__(self, env, maxfps=60):
+    def __init__(self, env, windowed, maxfps=60):
         super().__init__(env)
 
         self.action_override = False
         self.maxfps0 = maxfps
         self.maxfps_multiplier = 0
-        self.laststep = time.time()
-        self.frames_since_log = 0
-        self.last_log_time = time.time()
-        self.last_log_reward = 0
-        self.this_log_reward = 0
         self.log_every = 1.0
-        self.total_reward = 0
 
         # initialize pygame joysticks
         # NOTE:
@@ -58,15 +292,17 @@ class Interactive(gymnasium.Wrapper):
         self.joysticks = {}
 
         # NOTE:
-        # self.render() is needed to create the self.unwrapped.viewer object;
-        # we need this to interact with the pyglet window
-        # and register the handlers
-        self.render() 
+        # The RetroEnv class comes with a built-in object for rendering images.
+        # It is the SimpleImageViewer class and created automatically.
+        # Here, we overwrite that with our own ImageViewer defined above.
+        # (To allow for inputs and other outputs besides just the screen.)
+        self.unwrapped.viewer = ImageViewer(env=self, fullscreen=not windowed)
+        self.unwrapped.RetroKB.add_text_callback(lambda text: self.unwrapped.viewer.register_text(text))
 
         # setup the key handler
         self._key_previous_states = {}
         self._key_handler = pyglet.window.key.KeyStateHandler()
-        self.unwrapped.viewer.window.push_handlers(self._key_handler)
+        #self.unwrapped.viewer.window.push_handlers(self._key_handler)
 
         # NOTE:
         # the mouse handler requires direct access to ZeldaWrapper
@@ -75,29 +311,46 @@ class Interactive(gymnasium.Wrapper):
         zelda_env = self.env
         while not isinstance(zelda_env, ZeldaWrapper):
             assert zelda_env.env is not None
-            zelda_env = env.env
+            zelda_env = zelda_env.env
 
-        def on_mouse_motion(x, y, dx, dy):
-            zelda_env.mouse = {}
-            zelda_env.mouse['x'] = int(x / self.unwrapped.viewer.window.width * 240)
-            zelda_env.mouse['y'] = int((self.unwrapped.viewer.window.height - y) / self.unwrapped.viewer.window.height * 224)
+        def on_mouse_press(event):
+            x = event.x
+            y = event.y
+            edge_size = 16
+
             # NOTE:
-            # the values above are hardcoded for zelda;
+            # the values here are hardcoded for zelda;
             # 240 is the y resolution,
             # and 60 is the height of the black bar
-        self.unwrapped.viewer.window.push_handlers(on_mouse_motion)
+            newx = int(x / self.unwrapped.viewer.image_width * 240)
+            newy = 224 - int((self.unwrapped.viewer.image_height - y) / self.unwrapped.viewer.image_height * 224)
+            zelda_env.mouse = {}
+            zelda_env.mouse['x'] = newx
+            zelda_env.mouse['y'] = newy
+            if zelda_env.mouse['x'] < edge_size:
+                zelda_env.mouse['x'] = -edge_size
+                zelda_env._set_episode_task('screen_west')
+            elif zelda_env.mouse['x'] > 240 - edge_size:
+                zelda_env.mouse['x'] = 240 + edge_size
+                zelda_env._set_episode_task('screen_east')
+            elif zelda_env.mouse['y'] < 60 + edge_size - 16:
+                zelda_env.mouse['y'] = 60 - edge_size
+                zelda_env._set_episode_task('screen_north')
+            elif zelda_env.mouse['y'] > 224 - edge_size:
+                zelda_env.mouse['y'] = 224 + edge_size
+                zelda_env._set_episode_task('screen_south')
+            else:
+                zelda_env._set_episode_task('interactive_onmouse')
 
-        def on_mouse_leave(x, y):
-            self.unwrapped.mouse = None
-        self.unwrapped.viewer.window.push_handlers(on_mouse_leave)
+        self.unwrapped.viewer.image_frame.bind("<Button-1>", on_mouse_press)
 
     def reset(self, **kwargs):
         self.frames_since_log = 0
         self.last_log_time = time.time()
         self.last_log_reward = 0
-        self.this_log_reward = 0
-        self.log_every = 1.0
-        self.total_reward = 0
+        self.this_log_sleeptime = 0
+        self.this_log_frames = 0
+        self.laststep_time = time.time()
         return super().reset(**kwargs)
 
     def get_maxfps(self):
@@ -105,6 +358,7 @@ class Interactive(gymnasium.Wrapper):
         
     def step(self, action):
         
+        """
         # register any pygame events
         for event in pygame.event.get():
             if event.type == pygame.JOYDEVICEADDED:
@@ -195,25 +449,25 @@ class Interactive(gymnasium.Wrapper):
             self.action_override = False
         if self.action_override:
             action = self.keys_to_act(keys_pressed)
+        """
         observation, reward, terminated, truncated, info = super().step(action)
-        results = observation, reward + manual_reward, terminated, truncated, info
-        self.this_log_reward += reward
-        self.total_reward += reward
+        results = observation, reward, terminated, truncated, info
 
         # sleep to adjust the fps
-        steptime = time.time() - self.laststep
-        sleeptime = 1.0/self.get_maxfps() - steptime
-        time.sleep(max(0, sleeptime))
-        self.laststep = time.time()
+        steptime = time.time() - self.laststep_time
+        sleeptime = max(0, 1.0/self.get_maxfps() - steptime)
+        self.this_log_sleeptime += sleeptime
+        time.sleep(sleeptime)
+        self.laststep_time = time.time()
 
         # report debugging info
-        time_diff = time.time() - self.last_log_time
         self.frames_since_log += 1
-        if time_diff >= self.log_every:
-            logging.debug(f'fps={self.frames_since_log} reward_diff={self.this_log_reward:+0.4f} total_reward={self.total_reward:+0.4f}')
+        time_since_log = time.time() - self.last_log_time
+        if time_since_log >= self.log_every:
+            logger_fps.debug(f'fps={self.frames_since_log/self.log_every:0.1f} sleep_fraction={self.this_log_sleeptime/self.log_every:0.4f}')
             self.last_log_time = time.time()
             self.frames_since_log = 0
-            self.this_log_reward = 0
+            self.this_log_sleeptime = 0
 
         return results
 
@@ -248,29 +502,23 @@ def main():
     # parse command line args
     import argparse
     parser = argparse.ArgumentParser()
+    parser.add_argument('--lang', default='es')
     parser.add_argument('--task_regex', default='attack')
-    parser.add_argument('--state', default='spiders_lowhealth_01*.state')
-    parser.add_argument('--model')
+    parser.add_argument('--state', default='overworld_07')
+    parser.add_argument('--model', default='models/model.zip')
     parser.add_argument('--logfile', default='.play.log')
-    parser.add_argument('--action_space', default='ALL')
+    parser.add_argument('--action_space', default='zelda-all')
+    parser.add_argument('--windowed', action='store_true')
+    parser.add_argument('--reset_method', default='None')
 
     emulator_settings = parser.add_argument_group('emulator settings')
     emulator_settings.add_argument('--no_render_skipped_frames', action='store_true')
     emulator_settings.add_argument('--allframes', action='store_true')
-    emulator_settings.add_argument('--no_alternate_screen', action='store_true')
+    emulator_settings.add_argument('--alt_screen', action='store_true')
     emulator_settings.add_argument('--noaudio', action='store_true')
     emulator_settings.add_argument('--doresets', action='store_true')
 
     args = parser.parse_args()
-
-    # set logging level
-    import logging
-    logging.basicConfig(
-        filename=args.logfile,
-        level=logging.DEBUG,
-        format='%(asctime)s.%(msecs)03d - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
 
     # convert warnings to errors
     import warnings
@@ -287,79 +535,112 @@ def main():
             # FIXME:
             # the action_space should be loaded automatically from the model
             action_space=args.action_space,
-            stdout_debug=not args.no_alternate_screen,
+            alt_screen=args.alt_screen,
             debug_assert=True,
+            state=args.state,
             no_render_skipped_frames=args.no_render_skipped_frames,
             skip_boring_frames=not args.allframes,
             task_regex=args.task_regex,
+            reset_method=args.reset_method,
+            fork_emulator=True,
+            lang=args.lang,
             )
-    env = Interactive(env)
+
     if not args.noaudio:
-        env = PlayAudio(env)
-    #env = StochasticFrameSkip(env, 4, 0.25)
-    env = RandomStateReset(env, path='custom_integrations/Zelda-Nes', globstr=args.state)
-    #env = Whisper(env)
-    #env = ConsoleWrapper(env)
+        env = PlayAudio_pyaudio(env)
+        #env = PlayAudio_ElevenLabs(env)
+    env = Interactive(env, args.windowed or args.alt_screen)
 
-    # NOTE:
-    # loading the models can cause a large number of warnings;
-    # this with block prevents those warnings from being displayed
-    logging.info('loading model')
-    model = None
-    if args.model:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            from stable_baselines3 import PPO
-            custom_objects = {
-                'observation_space': env.observation_space,
-                'action_space': env.action_space,
-                }
-            model = PPO.load(args.model, custom_objects=custom_objects)
-
-    # set the default action
-    action = env.action_space.sample() * 0
-
-    # switch the terminal to the alternate screen
-    if not args.no_alternate_screen:
-        print('\u001B[?1049h')
-
-        # cause the program to exit the alternate screen when the program exits;
-        # the use of the atexit library ensures that we switch
-        # even when the program exits abnormally
-        def exit_alternate_screen():
-            print('\u001B[?1049l')
-        atexit.register(exit_alternate_screen)
-
-    # if python crashes, we want the exception printed to the main screen
-    # and not the alternate screen
-    def crash_handler(type, value, tb):
-        env.close()
-        print("\033[?1049l")  # exit alternate screen
-        if type == KeyboardInterrupt:
-            sys.exit(0)
-        else:
-            sys.__excepthook__(type, value, tb)
-    sys.excepthook = crash_handler
 
     logging.info('begin main loop')
     env.reset()
+
+    # qin stores messages that go to the worker;
+    # qout stores messages that come from the worker;
+    # they are of size 1 to ensure syncronization between the worker and parent process;
+    # if one process gets ahead of the other process,
+    # it will block trying to add a second entry into the queue
+    qin = multiprocessing.Queue(maxsize=1)
+    qout = multiprocessing.Queue(maxsize=1)
+    qout_lock = multiprocessing.Lock()
+
+    # start the emulator process
+    def model_worker():
+        current_name = multiprocessing.current_process().name
+        setproctitle.setproctitle(f'{current_name}: model_worker')
+
+        # NOTE:
+        # loading the models can cause a large number of warnings;
+        # this with block prevents those warnings from being displayed
+        logging.info('loading model')
+        model = None
+        if args.model:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                from stable_baselines3 import PPO
+                custom_objects = {
+                    'observation_space': env.observation_space,
+                    'action_space': env.action_space,
+                    }
+                model = PPO.load(args.model, custom_objects=custom_objects)
+
+        # set the first action to be empty;
+        # we must do this after the model is loaded
+        # so that the main loop doesn't start playing before the model is loaded
+        action = env.action_space.sample() * 0
+        qout.put(action)
+
+        # set this process to have the lowest priority;
+        # the user won't notice if this process lags,
+        # but they will notice if this process interrupts the emulator or main processes
+        os.nice(19)
+
+        # the worker will loop forever;
+        # it blocks on the qin.get() line waiting for a new observation;
+        # then it puts the appropriate action in the queue
+        logging.info('entering model_worker main loop')
+        while True:
+            observation = qin.get()
+            if model is not None:
+                action, _states = model.predict(observation, deterministic=True)
+            else:
+                action = env.action_space.sample() * 0
+            with qout_lock:
+                qout.get()
+                qout.put(action)
+            # wait before selecting another action;
+            # in the meantime, the same action will remain in qout,
+            # and so the main loop will just repeat the action;
+            # this should have minimal adverse effects on model performance;
+            # the purpose of waiting is to reduce CPU load for low-resource devices;
+            time.sleep(1/60)
+    p = Process(name='serpens: model_worker', target=model_worker)
+    p.start()
+
     while True:
-        # clear the screen
-        if not args.no_alternate_screen:
-            print('\x1b[2J', end='')
+        # get the next action from the model
+        # (which is the action from the previous iteration's observation)
+        with qout_lock:
+            action = qout.get()
+            qout.put(action)
 
         # step the environment
         observation, reward, terminated, truncated, info = env.step(action)
         if args.doresets and (terminated or truncated):
             env.reset()
 
-        # select the next action;
-        if model is not None:
-            action, _states = model.predict(observation, deterministic=True)
-            
-            # ensure that the model does not press start/select
-            #action[2] = 0
-            #action[3] = 0
+        # send the observation to the model_worker process
+        # if there is already an observation,
+        # that means the model is running slowly and falling behind the main process;
+        # this happens when the model is larger than the hardware can run at 60fps;
+        # we overwrite the existing observation with the latest observation
+        # so that the model will always make decision on the latest observation
+        # even if it has to skip frames
+        try:
+            qin.get_nowait()
+        except queue.Empty:
+            pass
+        qin.put(observation)
 
 
 if __name__ == "__main__":

@@ -216,32 +216,41 @@ def main():
     import argparse
     parser = argparse.ArgumentParser()
 
-    debug = parser.add_argument_group('debug')
-    debug.add_argument("--log_dir", default='log')
-    debug.add_argument("--disable_video", action='store_true')
-    debug.add_argument("--render_mode", default='rgb_array')
-    debug.add_argument("--comment")
-    debug.add_argument("--total_timesteps", default=1_000_000_000_000, type=int)
+    group = parser.add_argument_group('debug options')
+    group.add_argument("--log_dir", default='log')
+    group.add_argument("--disable_video", action='store_true')
+    group.add_argument("--render_mode", default='rgb_array')
+    group.add_argument("--comment")
+    group.add_argument("--total_timesteps", default=1_000_000_000_000, type=int)
 
-    hyperparameters = parser.add_argument_group('hyperparameters')
-    hyperparameters.add_argument('--policy', choices=['ObjectCnn', 'EventExtractor', 'ContinuousEventExtractor'], default='ObjectCnn')
-    hyperparameters.add_argument('--pooling', choices=['lstm', 'mean', 'max'], default='mean')
-    hyperparameters.add_argument('--alg', choices=['ppo', 'dqn'], default='ppo')
-    hyperparameters.add_argument('--task_regex', default='')
-    hyperparameters.add_argument('--net_arch', type=int, nargs='*', default=[])
-    hyperparameters.add_argument('--features_dim', type=int, default=256)
-    hyperparameters.add_argument('--lr', type=float, default=3e-4)
-    hyperparameters.add_argument('--gamma', type=float, default=0.9)
-    hyperparameters.add_argument('--n_env', type=int, default=128)
-    hyperparameters.add_argument('--n_steps', type=int, default=128)
-    hyperparameters.add_argument('--batch_size', type=int, default=256)
-    hyperparameters.add_argument('--seed', type=int, default=42)
-    hyperparameters.add_argument('--warmstart', default=None)
-    hyperparameters.add_argument('--action_space', default='zelda-all')
-    hyperparameters.add_argument('--fwat', default=None, type=int)
-    hyperparameters.add_argument('--reset_method', default='map link enemy', type=str)
+    group = parser.add_argument_group('hyperparameters: architecture')
+    group.add_argument('--policy', choices=['ObjectCnn', 'EventExtractor', 'ContinuousEventExtractor'], default='ObjectCnn')
+    group.add_argument('--pooling', choices=['lstm', 'mean', 'max'], default='mean')
+    group.add_argument('--net_arch', type=int, nargs='*', default=[])
+    group.add_argument('--features_dim', type=int, default=256)
+    group.add_argument('--action_space', default='zelda-all')
+
+    group = parser.add_argument_group('hyperparameters: training algorithm')
+    group.add_argument('--alg', choices=['ppo', 'dqn'], default='ppo')
+    group.add_argument('--lr', type=float, default=3e-4)
+    group.add_argument('--gamma', type=float, default=0.9)
+    group.add_argument('--n_env', type=int, default=128)
+    group.add_argument('--n_steps', type=int, default=128)
+    group.add_argument('--batch_size', type=int, default=256)
+    group.add_argument('--warmstart', default=None)
+
+    group = parser.add_argument_group('hyperparameters: environment')
+    group.add_argument('--reset_method', default='map link enemy', type=str)
+    group.add_argument('--reset_state', default=None, type=str)
+    group.add_argument('--task_regex', default='')
+    group.add_argument('--seed', type=int, default=42)
+    group.add_argument('--frames_without_attack_threshold', default=None, type=int)
 
     args = parser.parse_args()
+
+    # modify args based on other args
+    if args.reset_state is not None:
+        args.reset_method = 'None'
 
     # set logging level
     import logging
@@ -270,12 +279,15 @@ def main():
                 skip_boring_frames=True,
                 task_regex=args.task_regex,
                 seed=seed,
-                frames_without_attack_threshold=args.fwat,
+                frames_without_attack_threshold=args.frames_without_attack_threshold,
                 fast_termination=True,
                 reset_method=args.reset_method,
                 )
         env = TimeLimit(env, max_episode_steps=30*60*5)
         env = StochasticFrameSkip(env, 4, 0.25, seed=seed)
+        if args.reset_state is not None:
+            path = 'custom_integrations/Zelda-Nes'
+            env = RandomStateReset(env, path, args.reset_state, seed)
         return env
 
     # NOTE:

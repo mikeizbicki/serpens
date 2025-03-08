@@ -398,7 +398,7 @@ class RetroKB(RetroWithRam):
 
     def compute_for_task(self, task, key):
         task_dict = self.tasks[task]
-        return any([getattr(self.game_module, fname)(self.ram) for fname in task_dict['is_success']])
+        return any([getattr(self.game_module, fname)(self.ram) for fname in task_dict[key]])
 
     def step(self, action):
         # step the emulator;

@@ -502,21 +502,30 @@ def main():
     # parse command line args
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--lang', default='es')
-    parser.add_argument('--task_regex', default='attack')
-    parser.add_argument('--state', default='overworld_07')
-    parser.add_argument('--model', default='models/model.zip')
-    parser.add_argument('--logfile', default='.play.log')
-    parser.add_argument('--action_space', default='zelda-all')
-    parser.add_argument('--windowed', action='store_true')
-    parser.add_argument('--reset_method', default='None')
 
-    emulator_settings = parser.add_argument_group('emulator settings')
-    emulator_settings.add_argument('--no_render_skipped_frames', action='store_true')
-    emulator_settings.add_argument('--allframes', action='store_true')
-    emulator_settings.add_argument('--alt_screen', action='store_true')
-    emulator_settings.add_argument('--noaudio', action='store_true')
-    emulator_settings.add_argument('--doresets', action='store_true')
+    group = parser.add_argument_group('debug options')
+    group.add_argument('--logfile', default='.play.log')
+
+    group = parser.add_argument_group('settings: interface')
+    group.add_argument('--lang', default='es')
+    group.add_argument('--windowed', action='store_true')
+
+    group = parser.add_argument_group('settings: emulator')
+    group.add_argument('--no_render_skipped_frames', action='store_true')
+    group.add_argument('--allframes', action='store_true')
+    group.add_argument('--alt_screen', action='store_true')
+    group.add_argument('--noaudio', action='store_true')
+    group.add_argument('--doresets', action='store_true')
+
+    # FIXME: these should all be loaded from the model file
+    group = parser.add_argument_group('hyperparameters: architecture')
+    group.add_argument('--action_space', default='zelda-all')
+    group.add_argument('--model', default='models/model.zip')
+
+    group = parser.add_argument_group('hyperparameters: environment')
+    group.add_argument('--reset_method', default='None')
+    group.add_argument('--reset_state', default='overworld_07', type=str)
+    group.add_argument('--task_regex', default='attack')
 
     args = parser.parse_args()
 
@@ -537,11 +546,11 @@ def main():
             action_space=args.action_space,
             alt_screen=args.alt_screen,
             debug_assert=True,
-            state=args.state,
             no_render_skipped_frames=args.no_render_skipped_frames,
             skip_boring_frames=not args.allframes,
             task_regex=args.task_regex,
             reset_method=args.reset_method,
+            reset_state=args.reset_state,
             fork_emulator=True,
             lang=args.lang,
             )

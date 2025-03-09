@@ -336,7 +336,11 @@ class SimpleNavigator():
         if len(valid_moves) == 0:
             valid_moves = moves
         closest_moves = [move for move in valid_moves if move[0] == valid_moves[0][0]]
-        return self.random.choice(closest_moves)[1]
+        if len(closest_moves) > 0:
+            return self.random.choice(closest_moves)[1]
+        else:
+            logging.error('SimpleNavigator: len(closest_moves) = 0')
+            return 'attack'
 
 
 class LLM_Navigator():

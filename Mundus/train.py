@@ -280,12 +280,10 @@ def main():
                 frames_without_attack_threshold=args.frames_without_attack_threshold,
                 fast_termination=True,
                 reset_method=args.reset_method,
+                reset_state=args.reset_state,
                 )
         env = TimeLimit(env, max_episode_steps=30*60*5)
         env = StochasticFrameSkip(env, 4, 0.25, seed=seed)
-        if args.reset_state is not None:
-            path = 'custom_integrations/Zelda-Nes'
-            env = RandomStateReset(env, path, args.reset_state, seed)
         return env
 
     # NOTE:

@@ -524,7 +524,7 @@ def main():
 
     group = parser.add_argument_group('hyperparameters: environment')
     group.add_argument('--reset_method', default='None')
-    group.add_argument('--reset_state', default='overworld_07', type=str)
+    group.add_argument('--reset_state', default=None, type=str)
     group.add_argument('--task_regex', default='attack')
 
     args = parser.parse_args()

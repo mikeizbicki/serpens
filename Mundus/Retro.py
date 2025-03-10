@@ -349,6 +349,20 @@ class RetroKB(RetroWithRam):
 
         self.mouse = None
 
+    def _get_valid_tasks(self):
+        task_dict = {
+            task : {
+                'is_valid': self.tasks[task].get('is_valid', lambda ram: True)(self.ram),
+                'not terminated': not self.compute_for_task(task, 'terminated'),
+                'not is_success': not self.compute_for_task(task, 'is_success'),
+                }
+            for task in self.tasks
+            }
+        valid_tasks = [task for task in task_dict if all(task_dict[task].values())]
+        if len(valid_tasks) == 0:
+            logging.warning(f"_get_valid_tasks: valid_tasks=[]; task_dict={task_dict}")
+        return valid_tasks
+
     def reset(self, **kwargs):
         # reset the random number generator
         self.random = random.Random(self._random_reset.randint(0, 2**30))

@@ -40,19 +40,19 @@ class UnstickLink(gymnasium.Wrapper):
         self.link_xy = {}
         self.link_xy_nochange_count = 0
         self.same_screen_count = 0
-        self.prev_ram_EB = self.ZeldaWrapper.ram[0xEB]
+        self.ramEB_history = [(0, self.ZeldaWrapper.ram[0xEB])]
         return ret
 
     def step(self, action):
         result = super().step(action)
 
         # count how long link has been in the same screen
-        ram_EB = self.ZeldaWrapper.ram[0xEB]
-        if self.prev_ram_EB == ram_EB:
+        ramEB = self.ZeldaWrapper.ram[0xEB]
+        if self.ramEB_history[-1][1] == ramEB:
             self.same_screen_count += 1
         else:
             self.same_screen_count = 0
-            self.prev_ram_EB = ram_EB
+            self.ramEB_history.append((self.ZeldaWrapper.stepcount, ramEB))
 
         # count how long link has been stuck at the same pixels
         new_link_xy = {
@@ -65,28 +65,36 @@ class UnstickLink(gymnasium.Wrapper):
             self.link_xy_nochange_count = 0
         self.link_xy = new_link_xy
 
-        # change task if link in the same place too long
+        # change task if link is stuck
         change_task = False
+
         if self.ZeldaWrapper.frames_without_attack > 10*60:
             logger.info(f'UnstickLink: frames_without_attack={self.ZeldaWrapper.frames_without_attack}')
             change_task = True
-            self.ZeldaWrapper.register_text("I'm confused")
+            self.ZeldaWrapper.register_text("Estoy confundido")
 
         elif self.link_xy_nochange_count >= 60 and self.link_xy_nochange_count % 20 == 0:
             logger.info(f'UnstickLink: link_xy_nochange_count={self.link_xy_nochange_count}')
             change_task = True
-            self.ZeldaWrapper.register_text("I'm stuck")
+            self.ZeldaWrapper.register_text("Estoy atascado")
 
-        elif self.same_screen_count >= 30*60 and self.same_screen_count % 5*60 == 0:
-            logger.info(f'UnstickLink: same_screen_count={self.same_screen_count}')
+        elif len(self.ramEB_history) > 5 and self.ramEB_history[-5][0] > self.ZeldaWrapper.stepcount - 60:
+            logger.info(f'UnstickLink: self.ramEB_history[-5:]={self.ramEB_history[-5:]}')
             change_task = True
-            self.ZeldaWrapper.register_text("I'm stuck")
+            self.ZeldaWrapper.register_text("Estoy mareado")
 
         if change_task:
             self.ZeldaWrapper._set_episode_task('interactive_onmouse')
             x, y = self.ZeldaWrapper._get_random_link_position()
             self.ZeldaWrapper.mouse = {'x': x, 'y': y}
             self.ZeldaWrapper.frames_without_attack = 0
+            self.ZeldaWrapper.link_xy_nochange_count = 0
+
+        # if we've been on the same screen too long, change screens
+        if self.same_screen_count >= 30*60 and self.same_screen_count % 10*60 == 0:
+            logger.info(f'UnstickLink: same_screen_count={self.same_screen_count}')
+            self.env.generate_newtask()
+            self.ZeldaWrapper.register_text("Estaba aquí demasiado tiempo")
 
         return result
 
@@ -213,13 +221,17 @@ class Agent(gymnasium.Wrapper):
         valid_tasks = self.ZeldaWrapper._get_valid_tasks()
         valid_tasks = [task for task in valid_tasks if 'screen' in task or task == 'attack']
         newtask = self.task_selector.select_task(valid_tasks)
-        logger.debug(f'setting newtask={newtask}, selected from valid_tasks={valid_tasks}')
         if newtask is not None:
+            logger.debug(f'setting newtask={newtask}, selected from valid_tasks={valid_tasks}')
             self.ZeldaWrapper._set_episode_task(newtask)
+
+    def generate_objective(self):
+        self.objective = self.objective_selector.select_objective()
+        self.ZeldaWrapper.register_text(f"Mi objetivo nuevo es ir a {self.objective}.")
 
     def reset(self, **kwargs):
         ret = super().reset(**kwargs)
-        self.objective = self.objective_selector.select_objective()
+        self.generate_objective()
         coords = self.get_current_coords()
         self.coords_history.append(coords)
         self.task = self.generate_newtask()
@@ -339,7 +351,7 @@ class SimpleNavigator():
         if len(closest_moves) > 0:
             return self.random.choice(closest_moves)[1]
         else:
-            logging.error('SimpleNavigator: len(closest_moves) = 0')
+            logging.error(f'SimpleNavigator: len(closest_moves) = 0; valid_tasks={valid_tasks}, valid_moves={valid_moves}, closest_moves={closest_moves}')
             return 'attack'
 
 

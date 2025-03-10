@@ -2,12 +2,7 @@
 
 # set logging level
 import logging
-#logging.basicConfig(
-    #level=logging.DEBUG,
-    #format='%(asctime)s.%(msecs)03d %(name)-10s [pid=%(process)d] %(levelname)s: %(message)s',
-    #datefmt='%Y-%m-%d %H:%M:%S'
-#)
-# Define custom color mapping
+
 COLORS = {
     'DEBUG': '\033[90m',  # grey
     #'INFO': '\033[36m',  # cyan
@@ -20,14 +15,10 @@ class CustomFormatter(logging.Formatter):
     def format(self, record):
         levelname = record.levelname
         if levelname in COLORS:
-            #levelname_color = COLORS[levelname] + levelname + '\033[0m'
-            #record.msg = record.msg
-            #record.levelname = levelname_color
             return COLORS[levelname] + super().format(record) + '\033[0m'
         else:
             return super().format(record)
 
-# Create a logger and assign the custom formatter
 logger = logging.getLogger()
 handler = logging.StreamHandler()
 handler.setFormatter(CustomFormatter(
@@ -235,7 +226,7 @@ class ImageViewer:
         self.framecount = 0
 
     def button_objective_callback(self):
-        self.Agent.objective = self.Agent.objective_selector.select_objective()
+        self.Agent.generate_objective()
 
     def button_task_callback(self):
         self.Agent.generate_newtask()
@@ -557,7 +548,7 @@ def main():
 
     if not args.noaudio:
         env = PlayAudio_pyaudio(env)
-        #env = PlayAudio_ElevenLabs(env)
+        env = PlayAudio_ElevenLabs(env)
     env = Interactive(env, args.windowed or args.alt_screen)
 
 

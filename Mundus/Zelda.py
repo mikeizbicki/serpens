@@ -65,8 +65,8 @@ def make_zelda_env(
     env = ZeldaWrapper(env, **kwargs)
     if fork_emulator:
         env = ZeldaInteractive(env)
-        env = UnstickLink(env)
         env = Agent(env, SimpleNavigator, RandomObjective)
+        env = UnstickLink(env)
 
     if reset_state is not None:
         path = 'custom_integrations/Zelda-Nes'
@@ -295,6 +295,31 @@ class ZeldaWrapper(RetroKB):
     # screen change tasks
     ####################
 
+    screen_base = {
+        'terminated': [
+            '_ramstate_link_killed',
+            '_ramstate_is_screen_scrolling',
+            '_ramstate_is_cave_enter',
+            ],
+        'reward': {
+            'link_killed': -2,
+            'link_hit': -1,
+            'enemy_alldead': 2,
+            'screen_scrolling': -2,
+            'screen_cave': -2,
+            'enemy_hit': -1,
+            'enemy_killed': -1,
+            #'add_bomb': 1,
+            #'add_keys': 1,
+            #'add_ruppees': 1,
+            #'add_clock': 1,
+            #'add_heart': 1,
+            },
+        'pseudoreward': {
+            'button_push': -0.001,
+            'button_arrow_nomove': -0.01,
+            }
+        }
     def _step_screen(self, kb, direction):
         if direction == 'NORTH':
             mouse = {'x': 120, 'y': 40}
@@ -307,7 +332,7 @@ class ZeldaWrapper(RetroKB):
         self.mouse = mouse
         self.ram.mouse = mouse
 
-    tasks['screen_north'] = copy.deepcopy(tasks['noattack'])
+    tasks['screen_north'] = copy.deepcopy(screen_base)
     tasks['screen_north']['is_success'] = [
         '_ramstate_screen_scrolling_north'
         ]
@@ -321,7 +346,7 @@ class ZeldaWrapper(RetroKB):
     tasks['screen_north']['is_valid'] = lambda ram: _isscreen_changeable(ram, 'NORTH')
     tasks['screen_north']['step'] = lambda self, kb: self._step_screen(kb, 'NORTH')
 
-    tasks['screen_south'] = copy.deepcopy(tasks['noattack'])
+    tasks['screen_south'] = copy.deepcopy(screen_base)
     tasks['screen_south']['is_success'] = [
         '_ramstate_screen_scrolling_south'
         ]
@@ -335,7 +360,7 @@ class ZeldaWrapper(RetroKB):
     tasks['screen_south']['is_valid'] = lambda ram: _isscreen_changeable(ram, 'SOUTH')
     tasks['screen_south']['step'] = lambda self, kb: self._step_screen(kb, 'SOUTH')
 
-    tasks['screen_east'] = copy.deepcopy(tasks['noattack'])
+    tasks['screen_east'] = copy.deepcopy(screen_base)
     tasks['screen_east']['is_success'] = [
         '_ramstate_screen_scrolling_east'
         ]
@@ -349,7 +374,7 @@ class ZeldaWrapper(RetroKB):
     tasks['screen_east']['is_valid'] = lambda ram: _isscreen_changeable(ram, 'EAST')
     tasks['screen_east']['step'] = lambda self, kb: self._step_screen(kb, 'EAST')
 
-    tasks['screen_west'] = copy.deepcopy(tasks['noattack'])
+    tasks['screen_west'] = copy.deepcopy(screen_base)
     tasks['screen_west']['is_success'] = [
         '_ramstate_screen_scrolling_west'
         ]
@@ -383,14 +408,6 @@ class ZeldaWrapper(RetroKB):
             self.frames_without_attack_threshold = math.inf
         else:
             self.frames_without_attack_threshold = frames_without_attack_threshold
-
-    def _get_valid_tasks(self):
-        valid_tasks = []
-        for task in self.tasks:
-            if self.tasks[task].get('is_valid', lambda ram: True)(self.ram):
-                if not self.compute_for_task(task, 'terminated') and not self.compute_for_task(task, 'is_success') :
-                    valid_tasks.append(task)
-        return valid_tasks
 
     def reset(self, **kwargs):
         obs, info = super().reset(**kwargs)

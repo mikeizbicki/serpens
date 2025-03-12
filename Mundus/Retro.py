@@ -384,7 +384,7 @@ class RetroKB(RetroWithRam):
         if task != self.episode_task:
             self.episode_task = task
             text = self.random.choice(self.task_to_text[task])
-            self.register_text(text)
+            self.register_text(text, speaker='Navi')
 
     def _step_silent(self, buttons=[], force_norender=False):
         '''

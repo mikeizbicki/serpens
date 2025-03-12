@@ -55,11 +55,61 @@ link, ko, TRO4gatqxbbwLXHLDLSk
 def text_info_to_voice_id(text_info):
     if text_info['lang'] == 'en':
         return 'JBFqnCBsd6RMkjVDRZzb'
-    if text_info['lang'] == 'es':
+    if text_info['lang'] == 'es' and text_info['speaker'] == 'Link':
         return 'z3kTTwYbQrmL7ckdGcJi'
         #return 'JBFqnCBsd6RMkjVDRZzb'
         #return 'Nh2zY9kknu6z4pZy6FhD'
+    if text_info['lang'] == 'es' and text_info['speaker'] == 'Navi':
+        return '9oPKasc15pfAbMr7N6Gs'
     return 'JBFqnCBsd6RMkjVDRZzb'
+
+
+from scipy import signal
+def make_fairy(text_frame_audio):
+    # Pitch shift (resample at higher rate for higher pitch)
+    #pitch_factor = 1.1  # Higher = more fairy-like
+    #text_frame_audio = signal.resample(text_frame_audio, int(len(text_frame_audio)/pitch_factor))
+  # 
+    ## Add shimmer/sparkle (add high frequency oscillation)
+    #t = np.arange(len(text_frame_audio))
+    #shimmer = (np.sin(t * 0.3) * 0.15 * text_frame_audio).astype(text_frame_audio.dtype)
+    #text_frame_audio = text_frame_audio + shimmer
+
+    # Add echo/reverb (simple implementation)
+    echo_delay = 2000  # samples
+    echo_volume = 0.3
+    echo = np.pad(text_frame_audio, (0, echo_delay))[-len(text_frame_audio):]
+    text_frame_audio = text_frame_audio + (echo * echo_volume).astype(text_frame_audio.dtype)
+
+    return text_frame_audio.astype('int16')
+
+
+def make_monster(text_frame_audio):
+    # Pitch shift (resample at higher rate for higher pitch)
+    pitch_factor = 0.8  # Higher = more fairy-like
+    audio_len = len(text_frame_audio)
+    #text_frame_audio = text_frame_audio.astype(np.float32)
+    text_frame_audio = signal.resample(text_frame_audio, int(audio_len/pitch_factor))
+    #text_frame_audio = signal.resample(text_frame_audio, audio_len)
+    #text_frame_audio = text_frame_audio.astype(np.int16)
+
+    # Add distortion/growl effect
+    distortion_amount = 0.2
+    text_frame_audio = np.clip(text_frame_audio * (1 + distortion_amount), -32768, 32767).astype(text_frame_audio.dtype)
+
+    # Add rumble (low frequency modulation)
+    t = np.arange(len(text_frame_audio))
+    rumble = (np.sin(t * 0.01) * 0.2 * text_frame_audio).astype(text_frame_audio.dtype)
+    text_frame_audio = text_frame_audio + rumble
+
+    # Add reverb for menacing echo
+    echo_delay = 3000  # samples
+    echo_volume = 0.4
+    echo = np.pad(text_frame_audio, (0, echo_delay))[-len(text_frame_audio):]
+    text_frame_audio = text_frame_audio + (echo * echo_volume).astype(text_frame_audio.dtype)
+
+   
+    return text_frame_audio.astype('int16')
 
 
 class PlayAudio_ElevenLabs(gymnasium.Wrapper):
@@ -69,7 +119,6 @@ class PlayAudio_ElevenLabs(gymnasium.Wrapper):
     '''
     def __init__(self, env, ignore_ALSA_warnings=True):
         super().__init__(env)
-        self.text_audio = None
         self.audio_env = self.env
         self.elevenlabs = ElevenLabs()
         self.cache_dir = '.audio_cache'
@@ -78,8 +127,12 @@ class PlayAudio_ElevenLabs(gymnasium.Wrapper):
         env.unwrapped.RetroKB.add_text_callback(lambda text_info: self.register_text(text_info))
 
     def register_text(self, text_info):
-        if self.audio_env.text_audio is not None:
-            return
+        audio_transform = lambda x: x
+        if text_info['speaker'] == 'Navi':
+            audio_transform = make_fairy
+        if text_info['speaker'] == 'Monster':
+            audio_transform = make_monster
+
         time_start = time.time()
         try:
             voice_id = text_info_to_voice_id(text_info)
@@ -87,8 +140,7 @@ class PlayAudio_ElevenLabs(gymnasium.Wrapper):
             os.makedirs(dirname, exist_ok=True)
             filepath = f'{dirname}/{text_info["text"]}'
             with open(filepath, 'rb') as fin:
-                self.audio_env.text_audio = np.repeat(np.frombuffer(fin.read(), dtype=np.int16), 2)
-                self.audio_env.text_audio_pos = 0
+                self.audio_env.push_audio(text_info['speaker'],audio_transform(np.repeat(np.frombuffer(fin.read(), dtype=np.int16), 2)))
         except FileNotFoundError:
             def thread_function():
                 response = self.elevenlabs.text_to_speech.convert(
@@ -111,8 +163,7 @@ class PlayAudio_ElevenLabs(gymnasium.Wrapper):
                     if chunk:
                         audio_stream.write(chunk)
                 audio_stream.seek(0)
-                self.audio_env.text_audio = np.repeat(np.frombuffer(audio_stream.read(), dtype=np.int16), 2)
-                self.audio_env.text_audio_pos = 0
+                self.audio_env.push_audio(text_info['speaker'],audio_transform(np.repeat(np.frombuffer(audio_stream.read(), dtype=np.int16), 2)))
                 lag = time.time() - time_start
                 logging.info(f"saving sound file {filepath}; lag={lag}")
                 with open(filepath, 'wb') as fout:
@@ -129,7 +180,8 @@ class PlayAudio_pyaudio(gymnasium.Wrapper):
     def __init__(self, env, ignore_ALSA_warnings=True):
         super().__init__(env)
         self.PlayAudio_buffer = np.zeros([0,2], dtype='int16')
-        self.text_audio = None
+        self.buffers = {}
+        self.buffers_index = {}
     
         # create the audio stream
         def playing_callback(in_data, frame_count, time_info, status):
@@ -157,17 +209,26 @@ class PlayAudio_pyaudio(gymnasium.Wrapper):
                     )
             self.stream.start_stream()
 
+    def push_audio(self, name, value):
+        if name not in self.buffers:
+            self.buffers[name] = value
+            self.buffers_index[name] = 0
+
     def step(self, actions):
         game_frame_audio = self.env.unwrapped.em.get_audio().astype('int16')
-        game_frame_audio //= 2
-        if self.text_audio is not None:
-            text_frame_audio = self.text_audio[self.text_audio_pos:self.text_audio_pos + len(game_frame_audio)]
-            if len(text_frame_audio) > 0:
-                self.text_audio_pos += len(game_frame_audio)
-                text_frame_audio = np.pad(text_frame_audio, (0, len(game_frame_audio)-len(text_frame_audio)))
-                game_frame_audio += text_frame_audio[:, np.newaxis]
+        game_frame_audio //= 3 # make text audio to be louder than game audio
+        keys_to_delete = []
+        for k, buff in self.buffers.items():
+            index = self.buffers_index[k]
+            buff_frame = buff[index:index + len(game_frame_audio)]
+            if len(buff_frame) > 0:
+                self.buffers_index[k] += len(game_frame_audio)
+                buff_frame = np.pad(buff_frame, (0, len(game_frame_audio) - len(buff_frame)))
+                game_frame_audio += buff_frame[:, np.newaxis]
             else:
-                self.text_audio = None
+                keys_to_delete.append(k)
+        for k in keys_to_delete:
+            del self.buffers[k]
         self.PlayAudio_buffer = np.concatenate([self.PlayAudio_buffer, game_frame_audio])
         if len(self.PlayAudio_buffer) > 32000:
             self.PlayAudio_buffer = np.zeros([0,2], dtype='int16')
@@ -177,6 +238,7 @@ class PlayAudio_pyaudio(gymnasium.Wrapper):
         self.stream.close()
         self.p.terminate()
         super().close()
+
 
 ################################################################################
 

@@ -227,7 +227,8 @@ class Agent(gymnasium.Wrapper):
 
     def generate_objective(self):
         self.objective = self.objective_selector.select_objective()
-        self.ZeldaWrapper.register_text(f"Mi objetivo nuevo es ir a {self.objective}.")
+        #self.ZeldaWrapper.register_text(f"Mi objetivo nuevo es ir a {self.objective}.")
+        self.ZeldaWrapper.register_text(f"Link, debes ir a {self.objective}.", speaker='Navi')
 
     def reset(self, **kwargs):
         ret = super().reset(**kwargs)

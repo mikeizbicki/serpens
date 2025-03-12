@@ -17,5 +17,4 @@ nohup*
 *.pyc
 
 # vim junk
-*.swo
-*.swp
+*.sw?

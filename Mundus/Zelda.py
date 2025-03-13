@@ -23,6 +23,7 @@ def make_zelda_env(
         action_space='all',
         render_mode='human',
         fork_emulator=False,
+        interactive=False,
         reset_state=None,
         **kwargs):
     '''
@@ -63,7 +64,7 @@ def make_zelda_env(
     if fork_emulator:
         env = ForkedRetroEnv(env)
     env = ZeldaWrapper(env, **kwargs)
-    if fork_emulator:
+    if interactive:
         env = ZeldaInteractive(env)
         env = Agent(env, SimpleNavigator, RandomObjective)
         env = UnstickLink(env)
@@ -329,6 +330,8 @@ class ZeldaWrapper(RetroKB):
             mouse = {'x': -20, 'y': 140}
         if direction == 'EAST':
             mouse = {'x': 260, 'y': 140}
+        if direction == 'CAVE':
+            mouse = {'x': 0, 'y': 0} # FIXME
         self.mouse = mouse
         self.ram.mouse = mouse
 
@@ -387,6 +390,20 @@ class ZeldaWrapper(RetroKB):
         }
     tasks['screen_west']['is_valid'] = lambda ram: _isscreen_changeable(ram, 'WEST')
     tasks['screen_west']['step'] = lambda self, kb: self._step_screen(kb, 'WEST')
+
+    tasks['screen_cave'] = copy.deepcopy(screen_base)
+    tasks['screen_cave']['is_success'] = [
+        '_ramstate_is_cave_enter',
+        ]
+    tasks['screen_cave']['reward'] |= {
+        'screen_cave': 4,
+        }
+    tasks['screen_cave']['pseudoreward'] = {
+        'link_l1dist_decrease_x' : 0.01,
+        'link_l1dist_increase_x' : -0.01,
+        }
+    tasks['screen_cave']['is_valid'] = lambda ram: _isscreen_changeable(ram, 'CAVE')
+    tasks['screen_cave']['step'] = lambda self, kb: self._step_screen(kb, 'CAVE')
 
 
     def __init__(
@@ -863,7 +880,9 @@ def generate_knowledge_base(ram, ram2, include_background=True, use_subtiles=Fal
         mapstr = ''
         for y in range(tiles.shape[1]):
             for x in range(tiles.shape[0]):
-                if abs(int(x) - int(link_tile_x)) + abs(int(y) - int(link_tile_y)) <= view_radius:
+                in_radius = abs(int(x) - int(link_tile_x)) + abs(int(y) - int(link_tile_y)) <= view_radius
+                is_cave = tiles[x, y] == 243
+                if in_radius or is_cave:
                     item = {}
                     item['x'] = x*tile_size 
                     item['y'] = y*tile_size + 61
@@ -956,10 +975,43 @@ def _isscreen_changeable(ram, direction):
     Return True if Link can change screens in the specified direction.
     This function is used to determine if the `screen_*` set of tasks are possible.
 
-    FIXME:
-    Link can also sometimes enter a cave.
-    We should detect when this is possible and add a new task for entering caves.
+    NOTE:
+    This implementation supports topologically disjoint screens.
+    For example, a river might split a screen into two distinct halves,
+    and if Link is on the left half of the river,
+    he will have different movement options than if he is on the right half of the river.
+    The implementation has been lightly tested on the overworld,
+    but it is untested in the underworld.
+
+    Known bugs:
+    1. does not support the raft or the ladder
+    2. does not support caves that are hidden behind a bomb
+    3. does not support steps instead of caves
     '''
+
+    subtiles = _get_subtiles(ram)
+    tiles = subtiles[::2,::2]
+    tile_size = 16
+
+    link_x = ram[112]
+    link_y = ram[132]
+    link_tile_x = (link_x+8)//tile_size
+    link_tile_y = (link_y-48)//tile_size
+    
+    targets = {
+        'west': [(0,                i               ) for i in range(tiles.shape[1])],
+        'east': [(tiles.shape[0]-1, i               ) for i in range(tiles.shape[1])],
+        'north':  [(i,                0               ) for i in range(tiles.shape[0])],
+        'south':  [(i,                tiles.shape[1]-1) for i in range(tiles.shape[0])],
+        'cave':  [(x, y) for x in range(tiles.shape[1]) for y in range(tiles.shape[0]) if tiles[y][x] == 243]
+        }
+    target = targets[direction.lower()]
+
+    return is_path_connected(tiles.T, [(link_tile_x, link_tile_y)], target, ignore_tile_set)
+    '''
+    NOTE:
+    The simple implementation below does not consider topology.
+
     subtiles = _get_subtiles(ram)
     if direction == 'NORTH':
         return any(np.isin(subtiles[:,0], ignore_tile_set))
@@ -969,8 +1021,164 @@ def _isscreen_changeable(ram, direction):
         return any(np.isin(subtiles[0,:], ignore_tile_set))
     if direction == 'EAST':
         return any(np.isin(subtiles[31,:], ignore_tile_set))
+    if direction == 'CAVE':
+        return np.any(np.isin(subtiles[:,:], [243]))
     assert False, 'should not happen'
+    '''
     
+
+from collections import deque
+
+def is_path_connected(grid, start_positions, stop_positions, valid_tiles):
+    """
+    Check if there is a path from any starting position to any stopping position.
+
+    Args:
+        grid: 2D numpy int8 array representing the gameboard
+        start_positions: List of (x,y) starting coordinates
+        stop_positions: List of (x,y) stopping coordinates
+        valid_tiles: Set of valid tile values that can be traversed
+
+    Returns:
+        True if a path exists, False otherwise
+
+    Examples (small, easy grid):
+        >>> grid = np.array([
+        ...     [1, 2, 3, 4, 2, 3],
+        ...     [1, 1, 1, 5, 2, 3],
+        ...     [2, 2, 2, 3, 2, 1],
+        ...     [3, 5, 2, 1, 3, 3],
+        ...     [3, 3, 3, 1, 1, 1],
+        ...     [3, 1, 5, 4, 3, 1]
+        ... ], dtype=np.int8)
+        >>> is_path_connected(grid, [(0, 0)], [(2, 1)], {1})
+        True
+        >>> is_path_connected(grid, [(0, 0)], [(1, 2)], {1})
+        False
+
+        >>> is_path_connected(grid, [(0, 0)], [(5, 5)], {1})
+        False
+        >>> is_path_connected(grid, [(0, 0)], [(5, 5)], {2})
+        False
+        >>> is_path_connected(grid, [(0, 0)], [(5, 5)], {1, 2})
+        True
+        >>> is_path_connected(grid, [(0, 0)], [(5, 5)], {1, 2, 3})
+        True
+        >>> is_path_connected(grid, [(0, 5)], [(5, 0)], {3})
+        False
+        >>> is_path_connected(grid, [(0, 5)], [(5, 0)], {3, 2})
+        True
+        >>> is_path_connected(grid, [(0, 5)], [(5, 0)], {3, 1})
+        True
+
+        >>> is_path_connected(grid, [(0, 0), (1, 5)], [(5, 0)], {3, 1})
+        True
+        >>> is_path_connected(grid, [(1, 5)], [(5, 0)], {3, 1})
+        True
+        >>> is_path_connected(grid, [(0, 0)], [(5, 0)], {3, 1})
+        False
+
+        >>> is_path_connected(grid, [(5, 0)], [(0, 0), (1, 5)], {3, 1})
+        True
+        >>> is_path_connected(grid, [(5, 0)], [(1, 5)], {3, 1})
+        True
+        >>> is_path_connected(grid, [(5, 0)], [(0, 0)], {3, 1})
+        False
+
+    Examples (full size grid):
+
+        >>> top = [(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (5, 0), (6, 0), (7, 0), (8, 0), (9, 0), (10, 0), (11, 0), (12, 0), (13, 0), (14, 0), (15, 0)]
+        >>> bottom = [(0, 10), (1, 10), (2, 10), (3, 10), (4, 10), (5, 10), (6, 10), (7, 10), (8, 10), (9, 10), (10, 10), (11, 10), (12, 10), (13, 10), (14, 10), (15, 10)]
+        >>> left = [(0, 0), (0, 1), (0, 2), (0, 3), (0, 4), (0, 5), (0, 6), (0, 7), (0, 8), (0, 9), (0, 10)]
+        >>> right = [(15, 0), (15, 1), (15, 2), (15, 3), (15, 4), (15, 5), (15, 6), (15, 7), (15, 8), (15, 9), (15, 10)]
+        >>> valids = [36, 38, 118, 132, 104, 116, 126]
+
+        >>> grid = np.array([
+        ... [144, 144, 144, 144, 149,  38, 206, 216, 216, 216, 216],
+        ... [144, 144, 144, 144, 149,  38, 206, 216, 216, 216, 216],
+        ... [144, 144, 144, 144, 149,  38,  38,  38,  38,  38,  38],
+        ... [144, 144, 144, 144, 149,  38,  38,  38,  38,  38,  38],
+        ... [144, 144, 144, 144, 144, 122,  38,  38,  38,  38,  38],
+        ... [144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144],
+        ... [144, 144, 144, 144, 144, 144, 144, 144, 144, 144, 144],
+        ... [144, 144, 144, 144, 144, 120,  38,  38,  38,  38,  38],
+        ... [144, 144, 144, 144, 118,  38,  38,  38,  38,  38,  38],
+        ... [144, 144, 144, 144, 149,  38,  38,  38,  38,  38,  38],
+        ... [144, 144, 144, 144, 149,  38,  38,  38,  38, 206, 216],
+        ... [144, 144, 144, 144, 149,  38,  38,  38,  38,  38,  38],
+        ... [144, 144, 144, 144, 149,  38,  38,  38,  38, 206, 216],
+        ... [144, 144, 144, 144, 149,  38,  38,  38,  38,  38,  38],
+        ... [144, 144, 144, 144, 149,  38, 206, 216, 216, 216, 216],
+        ... [144, 144, 144, 144, 149,  38, 206, 216, 216, 216, 216]])
+        >>> is_path_connected(grid, [(6, 3)], top, valids)
+        True
+        >>> is_path_connected(grid, [(6, 8)], top, valids)
+        False
+        >>> is_path_connected(grid, [(6, 3)], bottom, valids)
+        False
+        >>> is_path_connected(grid, [(6, 8)], bottom, valids)
+        True
+
+        >>> grid = np.array([
+        ... [216, 216, 216, 212,  38,  38,  38, 204, 216, 216, 216],
+        ... [216, 216, 216, 220,  38,  38,  38, 208, 216, 216, 216],
+        ... [216, 216, 220,  38,  38,  38,  38,  38, 208, 216, 216],
+        ... [216, 220,  38,  38,  38,  38,  38,  38,  38, 208, 216],
+        ... [216, 212,  38,  38,  38,  38,  38,  38,  38, 204, 216],
+        ... [216, 216,  38,  38, 196,  38, 196,  38,  38, 206, 216],
+        ... [216, 216,  38,  38,  38,  38,  38,  38,  38, 206, 216],
+        ... [ 38,  38,  38,  38,  38,  38,  38,  38,  38, 206, 216],
+        ... [ 38,  38,  38,  38,  38,  38,  38,  38,  38, 206, 216],
+        ... [216, 216,  38,  38,  38,  38,  38,  38,  38, 206, 216],
+        ... [216, 216,  38,  38, 196,  38, 196,  38,  38, 206, 216],
+        ... [216, 243,  38,  38,  38,  38,  38,  38,  38, 206, 216],
+        ... [216, 216,  38,  38,  38,  38,  38,  38,  38, 206, 216],
+        ... [216, 216, 212,  38,  38,  38,  38,  38, 204, 216, 216],
+        ... [216, 216, 216, 212,  38,  38,  38, 204, 216, 216, 216],
+        ... [216, 216, 216, 220,  38,  38,  38, 208, 216, 216, 216]])
+        >>> is_path_connected(grid, [(5, 2)], top, valids)
+        True
+        >>> is_path_connected(grid, [(5, 2)], bottom, valids)
+        True
+        >>> is_path_connected(grid, [(5, 2)], left, valids)
+        True
+        >>> is_path_connected(grid, [(5, 2)], right, valids)
+        False
+    """
+    rows, cols = grid.shape
+    visited = np.zeros((rows, cols), dtype=bool)
+    queue = deque()
+
+    # Add all starting positions to the queue
+    for x, y in start_positions:
+        if not (0 <= x < cols and 0 <= y < rows):
+            logging.warning(f"position {(x, y)} out of bounds; cols={cols}, rows={rows}")
+        elif not grid[y, x] in valid_tiles:
+            logging.warning(f"position {(x, y)} not in {valid_tiles}")
+        else:
+            queue.append((x, y))
+            visited[y, x] = True
+
+    # Directions: right, left, down, up
+    directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+
+    while queue:
+        x, y = queue.popleft()
+
+        # Check if current position is a stopping position
+        if (x, y) in stop_positions:
+            return True
+
+        # Try all four directions
+        for dx, dy in directions:
+            nx, ny = x + dx, y + dy
+            if (0 <= nx < cols and 0 <= ny < rows and
+                not visited[ny, nx] and grid[ny, nx] in valid_tiles):
+                queue.append((nx, ny))
+                visited[ny, nx] = True
+
+    return False
+
 
 ########################################
 # MARK: event functions

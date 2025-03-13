@@ -32,6 +32,7 @@ logging.getLogger('groq').setLevel(logging.WARNING)
 logging.getLogger('httpcore.connection').setLevel(logging.WARNING)
 logging.getLogger('httpcore.core').setLevel(logging.WARNING)
 logging.getLogger('httpcore.http11').setLevel(logging.WARNING)
+logging.getLogger('httpx').setLevel(logging.WARNING)
 logging.getLogger('matplotlib').setLevel(logging.WARNING)
 
 logger_fps = logging.getLogger('root/fps')
@@ -497,14 +498,23 @@ def main():
     import argparse
     parser = argparse.ArgumentParser()
 
+    def boolean_flag(value):
+        if value.lower() == 'true':
+            return True
+        elif value.lower() == 'false':
+            return False
+        else:
+            raise argparse.ArgumentTypeError('Invalid boolean value')
+
     group = parser.add_argument_group('debug options')
     group.add_argument('--logfile', default='.play.log')
+    group.add_argument('--fork_emulator', type=boolean_flag, default=True)
+    group.add_argument('--fork_model', type=boolean_flag, default=True)
+    group.add_argument('--fork_model_sleep', type=float, default=0.0)
 
     group = parser.add_argument_group('settings: interface')
     group.add_argument('--lang', default='es')
     group.add_argument('--windowed', action='store_true')
-    group.add_argument('--forked_model', type=bool, default=True)
-    group.add_argument('--forked_model_sleep', type=float, default=True)
 
     group = parser.add_argument_group('settings: emulator')
     group.add_argument('--no_render_skipped_frames', action='store_true')
@@ -547,7 +557,8 @@ def main():
             task_regex=args.task_regex,
             reset_method=args.reset_method,
             reset_state=args.reset_state,
-            fork_emulator=True,
+            fork_emulator=args.fork_emulator,
+            interactive=True,
             lang=args.lang,
             )
 
@@ -562,8 +573,8 @@ def main():
     # in principle, this could be parallelized with the make_zelda_env command,
     # but I need to find a way to remove the env dependency,
     # which seems possible but inconvenient
-    if args.forked_model:
-        model_handler = ModelHandlerForked(args.model, env, args.forked_model_sleep)
+    if args.fork_model:
+        model_handler = ModelHandlerForked(args.model, env, args.fork_model_sleep)
     else:
         model_handler = ModelHandler(args.model, env)
 

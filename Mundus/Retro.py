@@ -342,10 +342,9 @@ class RetroKB(RetroWithRam):
         kb = self.generate_knowledge_base(self.ram, self.ram2)
         self.observation_space = kb.get_observation_space()
         self.observation_space['rewards'] = self.observation_space['events']
-        logging.info(f'self.observation_space.shape={self.observation_space.shape}')
-        logging.info(f"self.observation_space.keys()={self.observation_space.keys()}")
+        logging.debug(f'self.observation_space.shape={self.observation_space.shape}')
         for k in self.observation_space:
-            logging.info(f"self.observation_space[k].shape={self.observation_space[k].shape}")
+            logging.debug(f"self.observation_space[{k}].shape={self.observation_space[k].shape}")
 
         self.mouse = None
 
@@ -359,6 +358,7 @@ class RetroKB(RetroWithRam):
             for task in self.tasks
             }
         valid_tasks = [task for task in task_dict if all(task_dict[task].values())]
+        logging.debug(f"_get_valid_tasks: valid_tasks={valid_tasks}")
         if len(valid_tasks) == 0:
             logging.warning(f"_get_valid_tasks: valid_tasks=[]; task_dict={task_dict}")
         return valid_tasks
@@ -590,6 +590,7 @@ class RetroKB(RetroWithRam):
             i = k + offset
             chunks.append(state[i0:i] + bytes([v]))
             i0 = i + 1
+            self.ram.ram[k] = v
         chunks.append(state[i0:])
         state1 = b''.join(chunks)
         self.env.em.set_state(state1)

@@ -91,7 +91,7 @@ class UnstickLink(gymnasium.Wrapper):
             self.ZeldaWrapper.link_xy_nochange_count = 0
 
         # if we've been on the same screen too long, change screens
-        if self.same_screen_count >= 30*60 and self.same_screen_count % 10*60 == 0:
+        if self.same_screen_count >= 30*60 and self.same_screen_count % (10*60) == 0:
             logger.info(f'UnstickLink: same_screen_count={self.same_screen_count}')
             self.env.generate_newtask()
             self.ZeldaWrapper.register_text("Estaba aquí demasiado tiempo")
@@ -258,7 +258,7 @@ class Agent(gymnasium.Wrapper):
         coords = self.get_current_coords()
         if self.coords_history[-1] != coords:
             self.coords_history.append(coords) 
-            logging.debug(f'objetive={self.objective}, coords={coords}, ram[0xEB]={self.ZeldaWrapper.ram[0xEB]}')
+            logging.debug(f'objetive={self.objective}, coords={coords}, ram[0xEB]={hex(self.ZeldaWrapper.ram[0xEB])}')
 
         # we should only ever consider setting the task by AI
         # if the task is not a manually generated task
@@ -339,8 +339,9 @@ class SimpleNavigator():
         coords = self.agent.coords_history[-1]
         horizon = self.agent.coords_history[-3:]
         moves = []
+        movement_tasks = ['screen_north', 'screen_south', 'screen_east', 'screen_west']
         for task in valid_tasks:
-            if 'screen' in task:
+            if task in movement_tasks:
                 newcoords = BattleshipCoords.move(coords, task)
                 dist = BattleshipCoords.dist(self.agent.objective, newcoords)
                 moves.append((dist, task, newcoords))

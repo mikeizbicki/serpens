@@ -20,7 +20,7 @@ import stable_baselines3
 import torch
 
 from Mundus.Wrappers import *
-from Mundus.Zelda import *
+from Mundus.Games import *
 
 
 class SaveOnBestTrainingRewardCallback(BaseCallback):
@@ -242,6 +242,7 @@ def main():
     group.add_argument('--warmstart', default=None)
 
     group = parser.add_argument_group('hyperparameters: environment')
+    group.add_argument('--game', default='Zelda')
     group.add_argument('--reset_method', default='map link enemy', type=str)
     group.add_argument('--reset_state', default=None, type=str)
     group.add_argument('--task_regex', default='^attack$')
@@ -271,7 +272,8 @@ def main():
     # create the environment
     def make_env(seed):
         logging.debug(f"seed={seed}")
-        env = make_zelda_env(
+        env = make_game_env(
+                game=args.game,
                 action_space=args.action_space,
                 render_mode=args.render_mode,
                 skip_boring_frames=True,

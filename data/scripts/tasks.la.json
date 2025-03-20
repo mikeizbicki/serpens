@@ -1,0 +1,9 @@
+{
+"attack":               ["Agite!", "Interficite monstra!"],
+"screen_north":         ["Ite ad septentrionem", "Ascendite"],
+"screen_south":         ["Ite ad meridiem", "Descendite"],
+"screen_east":          ["Ite ad orientem", "Ite ad dextram"],
+"screen_west":          ["Ite ad occidentem", "Ite ad sinistram"],
+"interactive_onmouse":  ["Ite huc", "Ite ad punctum roseum"],
+"translation_notes": "### Translation Explanation\n* The Latin word 'agite' is used for 'attack' as it means to do or perform an action, and in this context, the action of attacking. \n* For directions, the Latin words for cardinal directions are used, such as 'septentrionem' for north and 'meridiem' for south. \n* The phrase 'ite ad' is used for 'go to', and 'ascendite' and 'descendite' are used for 'go up' and 'go down' respectively. \n* For 'go right' and 'go left', the Latin words 'ad dextram' and 'ad sinistram' are used, which literally mean 'to the right' and 'to the left'. \n* In the 'interactive_onmouse' field, 'ite huc' is used for 'go here', and 'punctum roseum' is used for 'pink dot', as 'roseum' is the Latin word for the color pink."
+}

@@ -19,16 +19,23 @@ class ModelHandler():
     I have moved it into a class to make it easy to swap the forked model handler with the standard model handler.
     '''
     def __init__(self, model_path, env):
-        from stable_baselines3 import PPO
-        custom_objects = {
-            'observation_space': env.observation_space,
-            'action_space': env.action_space,
-            }
-        self.model = PPO.load(model_path, custom_objects=custom_objects)
+        try:
+            from stable_baselines3 import PPO
+            custom_objects = {
+                'observation_space': env.observation_space,
+                'action_space': env.action_space,
+                }
+            self.model = PPO.load(model_path, custom_objects=custom_objects)
+        except FileNotFoundError:
+            self.model = None
+        self.zero_action = env.action_space.sample() * 0
 
     def get_action(self, observation):
-        action, _states = self.model.predict(observation, deterministic=True)
-        return action
+        if self.model is None:
+            return self.zero_action
+        else:
+            action, _states = self.model.predict(observation, deterministic=True)
+            return action
 
 
 class ModelHandlerForked():

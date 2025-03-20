@@ -19,72 +19,9 @@ from Mundus.util import *
 from Mundus.Wrappers import *
 
 
-def make_zelda_env(
-        action_space='all',
-        render_mode='human',
-        fork_emulator=False,
-        interactive=False,
-        reset_state=None,
-        **kwargs):
-    '''
-    Create a Zelda environment.
-
-    NOTE:
-    I've arranged everything into a single function here
-    to avoid inconsistencies between the train/play code that were happening.
-    This style doesn't follow the standard for stable-retro,
-    and could probably be improved.
-    '''
-    if 'seed' in kwargs:
-        seed = kwargs['seed']
-    else:
-        seed = 0
-
-    # set the folder where retro.make() looks for ROMs
-    custom_path = os.path.join(os.getcwd(), 'custom_integrations')
-    retro.data.Integrations.add_custom_path(custom_path)
-
-    if action_space == 'DISCRETE':
-        use_restricted_actions = retro.Actions.DISCRETE
-    elif action_space == 'MULTI_DISCRETE':
-        use_restricted_actions = retro.Actions.MULTI_DISCRETE
-    elif action_space == 'MULTI_DISCRETE':
-        use_restricted_actions = retro.Actions.MULTI_DISCRETE
-    else:
-        use_restricted_actions = retro.Actions.ALL
-
-    # create the environment
-    env = retro.make(
-            game='Zelda-Nes',
-            inttype=retro.data.Integrations.ALL,
-            state='overworld_07',
-            render_mode=render_mode,
-            use_restricted_actions=use_restricted_actions,
-            )
-    if fork_emulator:
-        env = ForkedRetroEnv(env)
-    env = ZeldaWrapper(env, **kwargs)
-    if interactive:
-        env = ZeldaInteractive(env)
-        env = Agent(env, SimpleNavigator, RandomObjective)
-        env = UnstickLink(env)
-
-    if reset_state is not None:
-        path = 'custom_integrations/Zelda-Nes'
-        env = RandomStateReset(env, path, reset_state, seed)
-
-    # apply zelda-specific action space
-    if 'zelda-' in action_space:
-        kind = action_space.split('-')[1]
-        env = ZeldaActionSpace(env, kind)
-
-    logging.debug(f"env.action_space={env.action_space}")
-    logging.debug(f"env.action_space.n={getattr(env.action_space, 'n', None)}")
-    return env
-
-
 class ZeldaInteractive(gymnasium.Wrapper):
     def _step_interactive_onmouse(self, kb):
+        '''
         # extract the list of enemies
         enemies = []
         for k in kb.items:
@@ -126,6 +63,7 @@ class ZeldaInteractive(gymnasium.Wrapper):
                 self.mouse = None
                 self.ram.mouse = None
                 del kb.items['mouse']
+        '''
 
     def __init__(self, env):
         super().__init__(env)
@@ -238,6 +176,7 @@ class ZeldaWrapper(RetroKB):
             else:
                 raise ValueError('should not happen')
             self.mouse = self.ram.mouse
+            self.mouse['mode'] = 'task'
     tasks['onmouse_random'] = {
         'terminated': [
             '_ramstate_link_onmouse',
@@ -275,6 +214,7 @@ class ZeldaWrapper(RetroKB):
                 }
             self.mouse = mouse
             self.ram.mouse = mouse
+            self.mouse['mode'] = 'task'
     tasks['onmouse_enemy'] = copy.deepcopy(tasks['onmouse_random'])
     tasks['onmouse_enemy']['reward'] = {
         'link_killed': -2,
@@ -334,6 +274,7 @@ class ZeldaWrapper(RetroKB):
             mouse = {'x': 0, 'y': 0} # FIXME
         self.mouse = mouse
         self.ram.mouse = mouse
+        self.mouse['mode'] = 'task'
 
     tasks['screen_north'] = copy.deepcopy(screen_base)
     tasks['screen_north']['is_success'] = [
@@ -417,7 +358,9 @@ class ZeldaWrapper(RetroKB):
             ):
 
         # bookkeeping
-        super().__init__(env, **kwargs)
+        import sys
+        this_module = sys.modules[__name__]
+        super().__init__(env, game_module=this_module, **kwargs)
         self.use_subtiles = use_subtiles
         self.reset_method = reset_method
         self.fast_termination = fast_termination
@@ -521,30 +464,6 @@ class ZeldaWrapper(RetroKB):
 
         # return step results
         return observation, reward, terminated, truncated, info
-
-    ########################################
-    # MARK: debug code
-    ########################################
-
-    def save_state(statename):
-        '''
-        Create a file that stores the emulator's state.
-        The file is gzip compressed so that it is compatible with being loaded directly in gym-retro.
-        '''
-        filename = f'custom_integrations/Zelda-Nes/{statename}.state'
-        import gzip
-        with gzip.open(filename, 'wb') as f:
-            f.write(self.unwrapped.em.get_state())
-
-    def load_state(statename):
-        '''
-        Load a state file.
-        This is useful for debuging purposes to load in the middle of a game run.
-        '''
-        filename = f'custom_integrations/Zelda-Nes/{statename}.state'
-        import gzip
-        with gzip.open(filename, 'rb') as f:
-            self.unwrapped.em.set_state(f.read())
 
     ########################################
     # MARK: change game state
@@ -742,27 +661,6 @@ def generate_knowledge_base(ram, ram2, include_background=True, use_subtiles=Fal
         'objects_continuous': ['relx', 'rely', 'x', 'y', 'dx', 'dy', 'health'],
         })
 
-    # FIXME:
-    # The NES uses the OAM region of memory $0200-$02FF for storing sprites;
-    # we could have a generic object detector just by using this region of ram
-    # see:
-    # <https://austinmorlan.com/posts/nes_rendering_overview/>
-    # <https://www.nesdev.org/wiki/PPU_OAM>
-    if False:
-        for i in range(64):
-            base_addr = 0x0200 + 4*i
-            item = {}
-            item['state'] = ram[base_addr + 2]
-            item['direction'] = 0
-            item['type'] = ram[base_addr + 1]
-            item['x'] = ram[base_addr + 3]
-            item['y'] = ram[base_addr + 0]
-            item['dx'] = ram[base_addr + 3] - ram2[base_addr + 3] if ram2 is not None else 0
-            item['dy'] = ram[base_addr + 0] - ram2[base_addr + 0] if ram2 is not None else 0
-            item['health'] = 0
-            kb[f'sprite_{i:02}'] = item
-
-
     if ram.mouse is not None:
         item = {}
         item['x'] = ram.mouse['x']
@@ -775,87 +673,118 @@ def generate_knowledge_base(ram, ram2, include_background=True, use_subtiles=Fal
         item['health'] = 0
         kb['mouse'] = item
 
-    # link info
-    item = {}
-    item['x'] = ram[112]
-    item['y'] = ram[132]
-    item['dx'] = ram[112] - ram2[112] if ram2 is not None else 0
-    item['dy'] = ram[132] - ram2[132] if ram2 is not None else 0
-    item['type'] = -1
-    item['state'] = ram[172]
-    item['direction'] = ram[152]
-    if ram[1648] == 0:
-        item['health'] = 0.0
-    else:
-        partial = 0.5
-        if ram[1648] > 127:
-            partial = 0
-        item['health'] = float(ram[1647] - math.floor(ram[1647] / 16) * 16 - partial + 1)
-    kb['link'] = item
+    items_zelda = True
+    items_generic = True
 
-    # sword info
-    item = {}
-    item['state'] = ram[185]
-    item['direction'] = ram[165]
-    item['type'] = -2
-    item['health'] = 0
-    item['x'] = ram[125]
-    item['y'] = ram[145]
-    item['dx'] = ram[125] - ram2[125] if ram2 is not None else 0
-    item['dy'] = ram[145] - ram2[145] if ram2 is not None else 0
-    if item['state'] != 0:
-        kb['sword_melee'] = item
+    if items_zelda:
 
-    item = {}
-    item['state'] = ram[186]
-    item['direction'] = ram[166]
-    item['type'] = -2
-    item['health'] = 0
-    item['x'] = ram[126]
-    item['y'] = ram[146]
-    item['dx'] = ram[126] - ram2[126] if ram2 is not None else 0
-    item['dy'] = ram[146] - ram2[146] if ram2 is not None else 0
-    if item['state'] != 0:
-        kb['sword_proj'] = item
-
-    # enemy info
-    for i in range(6):
+        # link info
         item = {}
-        #item['countdown'] = ram[41+i]
-        item['state'] = ram[173+i]
-        item['direction'] = ram[153+i]
-        item['type'] = ram[848+i]
-        item['x'] = ram[113+i]
-        item['y'] = ram[133+i]
-        item['dx'] = ram[113+i] - ram2[113+i] if ram2 is not None else 0
-        item['dy'] = ram[133+i] - ram2[133+i] if ram2 is not None else 0
-        rawhealth = ram[1158+i]
-        if rawhealth > 0 and (rawhealth < 16 or rawhealth >= 128):
-            item['health'] = 0
+        item['x'] = ram[112]
+        item['y'] = ram[132]
+        item['dx'] = ram[112] - ram2[112] if ram2 is not None else 0
+        item['dy'] = ram[132] - ram2[132] if ram2 is not None else 0
+        item['type'] = -1
+        item['state'] = ram[172]
+        item['direction'] = ram[152]
+        if ram[1648] == 0:
+            item['health'] = 0.0
         else:
-            item['health'] = rawhealth//16
-        if item['type'] > 0:
-            # FIXME:
-            # this sets all monster types to be octorocs,
-            # this is a hack to force us to be able to attack any monster
-            #if item['type'] <= 0x3E and item['type'] != 0x2F:
-                #item['type'] = 7
-            #item['health'] = max(1, item['health'])
-            kb[f'enemy_{i}'] = item
+            partial = 0.5
+            if ram[1648] > 127:
+                partial = 0
+            item['health'] = float(ram[1647] - math.floor(ram[1647] / 16) * 16 - partial + 1)
+        kb['link'] = item
 
-    # projectile info
-    for i in range(6):
+        # sword info
         item = {}
-        item['direction'] = ram[159+i]
-        item['state'] = ram[179+i]
-        item['type'] = -3
+        item['state'] = ram[185]
+        item['direction'] = ram[165]
+        item['type'] = -2
         item['health'] = 0
-        item['x'] = ram[119+i]
-        item['y'] = ram[139+i]
-        item['dx'] = ram[119+i] - ram2[119+i] if ram2 is not None else 0
-        item['dy'] = ram[139+i] - ram2[139+i] if ram2 is not None else 0
+        item['x'] = ram[125]
+        item['y'] = ram[145]
+        item['dx'] = ram[125] - ram2[125] if ram2 is not None else 0
+        item['dy'] = ram[145] - ram2[145] if ram2 is not None else 0
         if item['state'] != 0:
-            kb[f'projectile_{i}'] = item
+            kb['sword_melee'] = item
+
+        item = {}
+        item['state'] = ram[186]
+        item['direction'] = ram[166]
+        item['type'] = -2
+        item['health'] = 0
+        item['x'] = ram[126]
+        item['y'] = ram[146]
+        item['dx'] = ram[126] - ram2[126] if ram2 is not None else 0
+        item['dy'] = ram[146] - ram2[146] if ram2 is not None else 0
+        if item['state'] != 0:
+            kb['sword_proj'] = item
+
+        # enemy info
+        for i in range(6):
+            item = {}
+            #item['countdown'] = ram[41+i]
+            item['state'] = ram[173+i]
+            item['direction'] = ram[153+i]
+            item['type'] = ram[848+i]
+            item['x'] = ram[113+i]
+            item['y'] = ram[133+i]
+            item['dx'] = ram[113+i] - ram2[113+i] if ram2 is not None else 0
+            item['dy'] = ram[133+i] - ram2[133+i] if ram2 is not None else 0
+            rawhealth = ram[1158+i]
+            if rawhealth > 0 and (rawhealth < 16 or rawhealth >= 128):
+                item['health'] = 0
+            else:
+                item['health'] = rawhealth//16
+            if item['type'] > 0:
+                # FIXME:
+                # this sets all monster types to be octorocs,
+                # this is a hack to force us to be able to attack any monster
+                #if item['type'] <= 0x3E and item['type'] != 0x2F:
+                    #item['type'] = 7
+                #item['health'] = max(1, item['health'])
+                kb[f'enemy_{i}'] = item
+
+        # projectile info
+        for i in range(6):
+            item = {}
+            item['direction'] = ram[159+i]
+            item['state'] = ram[179+i]
+            item['type'] = -3
+            item['health'] = 0
+            item['x'] = ram[119+i]
+            item['y'] = ram[139+i]
+            item['dx'] = ram[119+i] - ram2[119+i] if ram2 is not None else 0
+            item['dy'] = ram[139+i] - ram2[139+i] if ram2 is not None else 0
+            if item['state'] != 0:
+                kb[f'projectile_{i}'] = item
+
+    # FIXME:
+    # The NES uses the OAM region of memory $0200-$02FF for storing sprites;
+    # we could have a generic object detector just by using this region of ram
+    # see:
+    # <https://austinmorlan.com/posts/nes_rendering_overview/>
+    # <https://www.nesdev.org/wiki/PPU_OAM>
+    #
+    # good overview of allthings NES:
+    # <https://www.copetti.org/writings/consoles/nes/>
+    if items_generic:
+        for i in range(64):
+            base_addr = 0x0200 + 4*i
+            item = {}
+            item['state'] = ram[base_addr + 2]
+            item['direction'] = 0
+            item['type'] = ram[base_addr + 1]
+            item['x'] = ram[base_addr + 3]
+            item['y'] = ram[base_addr + 0]
+            item['dx'] = ram[base_addr + 3] - ram2[base_addr + 3] if ram2 is not None else 0
+            item['dy'] = ram[base_addr + 0] - ram2[base_addr + 0] if ram2 is not None else 0
+            item['health'] = 0
+
+            # only add the sprite if it is on screen
+            if item['y'] < 240 and item['x'] < 240:
+                kb[f'sprite_{i:02}'] = item
 
     # add tile information last
     subtiles = _get_subtiles(ram)

@@ -4,11 +4,15 @@ import logging
 import multiprocessing
 import random
 import re
+import os
 
 import numpy as np
 import gymnasium
 import retro
 import setproctitle
+
+from Mundus.Object import *
+import Mundus.Games.NES_Generic
 
 # load font for writing to image
 from PIL import Image, ImageDraw, ImageFont
@@ -226,11 +230,14 @@ class RetroWithRam(gymnasium.Wrapper):
     def __init__(self, env):
         super().__init__(env)
         self.ram = None
+        self.screen = None
         self._update_ram()
 
     def _update_ram(self):
         self.ram2 = self.ram
         self.ram = self._IntLookup(self.unwrapped.get_ram())
+        self.screen2 = self.screen
+        self.screen = self.unwrapped.em.get_screen()
 
     def step(self, action):
         self._update_ram()
@@ -241,6 +248,8 @@ class RetroWithRam(gymnasium.Wrapper):
         obs, info = super().reset(**kwargs)
         self.ram2 = None
         self.ram = self._IntLookup(self.unwrapped.get_ram())
+        self.screen2 = None
+        self.screen = self.unwrapped.em.get_screen()
         return obs, info
 
 
@@ -261,6 +270,7 @@ class RetroKB(RetroWithRam):
     def __init__(
             self,
             env,
+            game_module=None, #Mundus.Games.NES_Generic,
             task_regex='attack',
             alt_screen=False,
             debug_assert=False,
@@ -269,6 +279,7 @@ class RetroKB(RetroWithRam):
             render_kb=True,
             seed=None,
             lang='en',
+            **kwargs
             ):
         
         # bookkeeping
@@ -281,8 +292,18 @@ class RetroKB(RetroWithRam):
         self.render_kb = render_kb
         self.lang = lang
         self.render_task = True
-
         self._text_callbacks = []
+
+        logging.debug(f"game_module={game_module}")
+        if game_module is None:
+            self.game_module = Mundus.Games.NES_Generic #game_module
+        else:
+            self.game_module = game_module
+        logging.debug(f"self.game_module={self.game_module}")
+
+        # there is lots of important functionality in this class;
+        # placing a reference to the RetroKB object in the base RetroEnv class
+        # ensures that this functionality is easily findable for all downstream uses
         self.unwrapped.RetroKB = self
 
         # switch the terminal to the alternate screen
@@ -318,6 +339,7 @@ class RetroKB(RetroWithRam):
         with open(f'data/tasks.{self.lang}.json') as fin:
             self.task_to_text = json.load(fin)
 
+
         # self._valid_tasks contains all the tasks that the reset() function might select
         pattern = re.compile(task_regex)
         self.valid_tasks = sorted([task for task in self.tasks.keys() if pattern.match(task) and 'interactive' not in task])
@@ -332,14 +354,8 @@ class RetroKB(RetroWithRam):
         self.random = None
         self._random_reset = random.Random(self.seed)
 
-        # FIXME:
-        # this stuff shouldn't be hardcoded
-        import Mundus.Zelda
-        self.game_module = Mundus.Zelda
-        self.generate_knowledge_base = self.game_module.generate_knowledge_base
-
         # create a new observation space
-        kb = self.generate_knowledge_base(self.ram, self.ram2)
+        kb = self.game_module.generate_knowledge_base(self.ram, self.ram2)
         self.observation_space = kb.get_observation_space()
         self.observation_space['rewards'] = self.observation_space['events']
         logging.debug(f'self.observation_space.shape={self.observation_space.shape}')
@@ -381,7 +397,9 @@ class RetroKB(RetroWithRam):
         return super().reset(**kwargs)
 
     def _set_episode_task(self, task):
-        if task != self.episode_task:
+        if task not in self.tasks:
+            logging.warning(f'set_episode_task({task}); task not in tasks')
+        elif task != self.episode_task:
             self.episode_task = task
             text = self.random.choice(self.task_to_text[task])
             self.register_text(text, speaker='Navi')
@@ -431,7 +449,7 @@ class RetroKB(RetroWithRam):
 
         # compute the task information
         self.ram.mouse = self.mouse # FIXME: this should be in only one spot
-        kb = self.generate_knowledge_base(self.ram, self.ram2)
+        kb = self.game_module.generate_knowledge_base(self.ram, self.ram2)
         pseudoreward = 0
         kb_obs = kb.to_observation()
         task = self.tasks[self.episode_task]
@@ -474,8 +492,82 @@ class RetroKB(RetroWithRam):
             info['misc_episode_reward'] = self.episode_reward
             info['misc_episode_pseudoreward'] = self.episode_pseudoreward
 
+        # move mouse
+        if self.mouse is not None:
+            if 'mode' not in self.mouse:
+                logging.warning('"mode" not in self.mouse')
+
+            elif self.mouse['mode'] in ['click', 'sprite']:
+                # if a sprite is within this many pixels of a mouse click,
+                # then self.mouse will automatically track the monster
+                min_l1dist0 = 16
+
+                # extract the list of sprites
+                sprites = []
+                for k in kb.items:
+                    if 'mouse' not in k:
+                        sprites.append(kb.items[k])
+
+                # find the sprite closest to the mouse position,
+                # and move self.mouse on top of the sprite
+                oldmouse = kb.items['mouse']
+                if 'x' not in oldmouse: oldmouse['x'] = 0
+                if 'y' not in oldmouse: oldmouse['y'] = 0
+                min_l1dist = min_l1dist0
+                newmouse = None
+                for sprite in sprites:
+                    sprite_l1dist = abs(sprite['x'] - oldmouse['x']) + abs(sprite['y'] - oldmouse['y'])
+                    if sprite_l1dist < min_l1dist:
+                        min_l1dist = sprite_l1dist
+                        newmouse = {
+                            'x': sprite['x'],
+                            'y': sprite['y'],
+                            }
+                if newmouse is not None:
+                    newmouse['mode'] = 'sprite'
+                    self.mouse = newmouse
+                    self.ram.mouse = newmouse
+                else:
+                    self.mouse['mode'] = 'background'
+                #logging.info(f"len(sprites)={len(sprites)}, min_l1dist={min_l1dist}, newmouse={newmouse}")
+
+            elif self.mouse['mode'] == 'background':
+                crop_size = 4
+                cropped_screen2 = self.screen2[crop_size:-crop_size,crop_size:-crop_size,:]
+                scroll_amounts = [(i, j) for i in [2, 1, 0, -1, 2] for j in [2, 1, 0, -1, -2]]
+                scores = []
+                for i, j in scroll_amounts:
+                    cropped_screen1 = self.screen[crop_size+i:-crop_size+i, crop_size+j:-crop_size+j, :]
+                    l1_dist = np.sum(np.abs(cropped_screen1 - cropped_screen2))
+                    scores.append((l1_dist, (i, j)))
+                scores.sort()
+                max_score = max([score for score, coord in scores])
+                scores = [(score/(max_score + 0.01), coord) for score, coord in scores]
+                mouse_adjust = scores[0][1]
+                #logging.debug(f"mouse_adjust={mouse_adjust}")
+                if self.mouse is not None:
+                    self.mouse['x'] += mouse_adjust[1]
+                    self.mouse['y'] += mouse_adjust[0]
+                #logging.debug(f"scores={' ; '.join([ f'{score:0.4f} {coord}; ' for score, coord in scores])}")
+                #logging.debug(f"self.mouse, self.ram.mouse={self.mouse, self.ram.mouse}")
+                if scores[0][0] > 0.25:
+                    logging.warning('background mouse slippage likely')
+
         # render the environment
         if self.render_kb:
+            
+            # NOTE:
+            # the code below determines whether the NES is using 8 or 16 pixel tall sprites;
+            # see <https://www.nesdev.org/wiki/PPU_registers#PPUCTRL> for details
+            state = parse_state(self.unwrapped.em.get_state())
+            PPUCTRL = state['PPUR'][0]
+            PPUSCROLL = state['XOFF'][0]
+            if PPUCTRL & 32 == 0:
+                sprite_height = 8
+                extra_sprite_y = 0
+            else:
+                sprite_height = 16
+                extra_sprite_y = 8
 
             # draw bounding box around objects
             for k, v in kb.items.items():
@@ -483,10 +575,11 @@ class RetroKB(RetroWithRam):
                 # some objects can be located off screen,
                 # and trying to render them directly crashes without clipping
                 if 'sprite' in k:
+                    # sprites are 8x16 or 8x8 pixels
                     xmin = max(0, min(239, v['x'] - 8))
-                    xmax = max(0, min(239, v['x'] + 8))
+                    xmax = max(0, min(239, v['x'] + 0))
                     ymin = max(0, min(223, v['y'] - 8))
-                    ymax = max(0, min(223, v['y'] + 8))
+                    ymax = max(0, min(223, v['y'] + extra_sprite_y))
                     self.unwrapped.img[ymin:ymax+1, xmin] = [255, 0, 0]
                     self.unwrapped.img[ymin:ymax+1, xmax] = [255, 0, 0]
                     self.unwrapped.img[ymin, xmin:xmax+1] = [255, 0, 0]
@@ -540,6 +633,14 @@ class RetroKB(RetroWithRam):
 
         self._run_register_text_callbacks()
         return kb_obs, reward + pseudoreward, terminated, truncated, info
+
+    ########################################
+    # MARK: functions for mouse manipulation
+    ########################################
+
+    def set_mouse(self, x, y):
+        self.mouse = {'x': x, 'y': y, 'mode': 'click'}
+        self.ram.mouse = self.mouse
 
     ########################################
     # MARK: functions for registering text callbacks
@@ -605,3 +706,90 @@ class RetroKB(RetroWithRam):
         masp = np.array(mask, dtype=np.uint8)
         self.unwrapped.em.set_button_mask(mask, 0)
 
+    def parse_state(self):
+        bytes_to_int = lambda x: int.from_bytes(x, byteorder='little')
+        state = self.unwrapped.em.get_state()
+        assert state[:3] == b'FCS'
+        assert state[3] == b'\xff'
+        total_size = bytes_to_int(state[4:8])
+        version = bytes_to_int(state[8:12])
+
+        # FIXME
+        # FIXME
+        # FIXME
+        # FIXME
+        # FIXME
+        # FIXME
+        # FIXME
+        # FIXME
+        # FIXME
+        # FIXME
+
+    ########################################
+    # MARK: save gamestate
+    ########################################
+
+    def save_state(self, statename):
+        '''
+        Create a file that stores the emulator's state.
+        The file is gzip compressed so that it is compatible with being loaded directly in gym-retro.
+        '''
+        counter = 0
+        while True:
+            filename = f'custom_integrations/{self.env.gamename}/{statename}{str(counter).zfill(4)}.state'
+            if not os.path.exists(filename):
+                break
+            counter += 1
+        import gzip
+        with gzip.open(filename, 'wb') as f:
+            f.write(self.unwrapped.em.get_state())
+        logging.info(f'save_state({statename}); filename={filename}')
+
+    def load_state(self, statename):
+        '''
+        Load a state file.
+        This is useful for debuging purposes to load in the middle of a game run.
+        '''
+        filename = f'custom_integrations/{self.env.gamename}/{statename}.state'
+        import gzip
+        with gzip.open(filename, 'rb') as f:
+            self.unwrapped.em.set_state(f.read())
+        logging.info(f'load_state({statename}); filename={filename}')
+
+
+def parse_state(state):
+    '''
+    Takes the FCEUX save state as input (given from env.em.get_state()
+
+    The output is all of the raw subsection chunk data.
+    See <https://fceux.com/web/help/fcs.html> for details.
+    '''
+    bytes_to_int = lambda x: int.from_bytes(x, byteorder='little')
+
+    # process 16 byte header
+    assert state[:3] == b'FCS'
+    assert state[3] == 0xff
+    total_size = bytes_to_int(state[4:8])
+    version = bytes_to_int(state[8:12])
+
+    state = state[16:]
+    assert len(state) == total_size
+
+    ret = {}
+    chunks = []
+    while len(state) > 0:
+        section = state[0]
+        size = bytes_to_int(state[1:5])
+        offset = size + 5
+        chunk = state[:offset]
+        chunk_data = chunk[5:]
+        chunks.append(chunk)
+        state = state[offset:]
+        while len(chunk_data) > 0:
+            subsection_name = chunk_data[:4].decode('utf-8').replace('\x00', '')
+            subsection_size = bytes_to_int(chunk_data[4:8])
+            subsection_data = chunk_data[8:8 + subsection_size]
+            chunk_data = chunk_data[8 + subsection_size:]
+            ret[subsection_name] = subsection_data
+
+    return ret

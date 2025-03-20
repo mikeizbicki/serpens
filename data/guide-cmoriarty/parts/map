@@ -5,9 +5,9 @@
       ---------------------------------------------------------------
  C   |   |MS |D6 |   |PB |   |   |   |   |   |   |   |H2 |   |   |H4 |
       ---------------------------------------------------------------
- D   |   |   |   |   |S5 |   |   |D1 |   |F1 |   |   |D2 |   |   |   |
+ D   |   |   |   |   |S5 |   |   |D1 |   |   |   |   |D2 |   |   |   |
       ---------------------------------------------------------------
- E   |   |   |D7 |F2 |S4 |D4 |S3 |H3 |   |   |   |   |   |   |   |   |
+ E   |   |   |D7 |   |S4 |D4 |S3 |H3 |   |   |   |   |   |   |   |   |
       ---------------------------------------------------------------
  F   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |H5 |
       ---------------------------------------------------------------
@@ -20,7 +20,7 @@
 KEY/LEGEND:
 
 X = The game starts here at the beginning, and whenever you die or restart a 
-game, unless you're in a dungeon/labyrinth.  The wood sword is located in the cave in this location.
+game, unless you're in a dungeon/labyrinth.  Get the wooden sword by entering the cave.  [Coordinate H8]
 
 D1 = Dungeon One ("Eagle") [Coordinate D8]
 D2 = Dungeon Two ("Moon") [Coordinate D13]
@@ -37,9 +37,6 @@ H2 = Heart Piece Two [Coordinate C13]
 H3 = Heart Piece Three [Coordinate E8]
 H4 = Heart Piece Four [Coordinate C16]
 H5 = Heart Piece Five [Coordinate F16]
-
-F1 = Fairy One (will give link more hearts) [Coordinate D10]
-F2 = Fairy Two (will give link more hearts) [Coordinate E4]
 
 S1 = Shop One (Magic Shield [160], Key [100], Blue Candle [60]) [Coordinate G7]
 S2 = Store Two (Magic Shield [130], Bombs [20], Arrows [80]) [Coordinate G16]

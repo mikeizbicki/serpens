@@ -2,6 +2,18 @@ import shutil
 from collections import defaultdict
 from typing import Dict, Union, Any
 
+
+def find_Wrapper(wrapped_env, wrapper_class):
+    try:
+        wrapper = wrapped_env
+        while not isinstance(wrapper, wrapper_class):
+            assert wrapper is not None
+            wrapper = wrapper.env
+        return wrapper
+    except (AttributeError, AssertionError):
+        return None
+
+
 class MultiSet:
     def __init__(self, init_data=None):
         self.data = defaultdict(int)
@@ -127,6 +139,7 @@ class MultiSet:
 
     def __neg__(self):
         return self._operate_scalar(-1, lambda x, y: x * y)
+
 
 def format_dict_pretty(d: Dict[str, Any], min_spacing: int = 2) -> str:
     """

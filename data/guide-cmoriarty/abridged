@@ -1,0 +1,4037 @@
+ 
+T A B L E     O F     C O N T E N T S...
+---------     ---     ---------------
+
+I.)........... | Legal Disclaimer
+II.).......... | Versions of the Guide
+III.)......... | Introduction
+IV.).......... | Storyline/Plot
+V.)........... | Characters
+VI.).......... | Controls
+VII.)......... | Game Physics and Mechanics (Battles and Movement, et cetera)
+VIII.)........ | The Game Map (goes hand-in-hand with the walkthrough)
+IX.).......... | WALKTHROUGH
+X.)........... | Game Ending (SPOILERS!)
+XI.).......... | Weapons/Items/Accessories (and their locations)
+XII.)......... | Enemies
+XIII.)........ | Bosses
+XIV.)......... | Dungeon Archive
+XV.).......... | Shops
+XVI.)......... | "Old Man" Quotes
+XVII.)........ | General FAQ
+XVIII.)....... | In Closing
+XIX.)......... | About the Author
+
+   /\                                                                     /\
+  /__\===================================================================/__\
+ /\  /\ VIII S E C T I O N   E I G H T  |  T H E   G A M E   M A P VIII /\  /\
+/__\/__\===============================================================/__\/__\
+
+The game map is a vital part of the FAQ, and should be used in relation to the 
+walkthrough at all points. There will be coordinates (i.e. A6) all over the 
+walkthrough, which, unless in a dungeon (which you should use the dunegon map), 
+is in reference to this map! The map is 8 sections high (vertically), and 16 
+sections long (horizontally). The vertical sectors will be named by a letter (A 
+through H), and the horizontal sectors will be named by a number (1 through 
+16). Hence, A1, A2, et cetera.
+
+
+      ---------------------------------------------------------------
+ A   |   |   |   |   |   |D9 |   |   |   |   |WS |D5 |   |   | L |   |
+      ---------------------------------------------------------------
+ B   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+      ---------------------------------------------------------------
+ C   |   |MS |D6 |   |PB |   |   |   |   |   |   |   |H2 |   |   |H4 |
+      ---------------------------------------------------------------
+ D   |   |   |   |   |S5 |   |   |D1 |   |   |   |   |D2 |   |   |   |
+      ---------------------------------------------------------------
+ E   |   |   |D7 |   |S4 |D4 |S3 |H3 |   |   |   |   |   |   |   |   |
+      ---------------------------------------------------------------
+ F   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |H5 |
+      ---------------------------------------------------------------
+ G   |   |   |   |   |MS |   |S1 |   |   |   |   |   |D8 |   |   |S2 |
+      ---------------------------------------------------------------
+ H   |   |   |   |   |D3 |   |   | X |   |   |   |H1 |   |   |   |   |
+      ---------------------------------------------------------------
+       1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16
+
+KEY/LEGEND:
+
+X = The game starts here at the beginning, and whenever you die or restart a 
+game, unless you're in a dungeon/labyrinth.
+
+D1 = Dungeon One ("Eagle") [Coordinate D8]
+D2 = Dungeon Two ("Moon") [Coordinate D13]
+D3 = Dungeon Three ("Manji") [Coordinate H5]
+D4 = Dungeon Four ("Snake") [Coordinate E6]
+D5 = Dungeon Five ("Lizard") [Coordinate A12]
+D6 = Dungeon Six ("Dragon") [Coordinate C3]
+D7 = Dungeon Seven ("Demon") [Coordinate E3]
+D8 = Dungeon Eight ("Lion") [Coordinate G14]
+D9 = Dungeon Nine ("Death Mountain") [Coordinate A6]
+
+H1 = Heart Piece One [Coordinate H12]
+H2 = Heart Piece Two [Coordinate C13]
+H3 = Heart Piece Three [Coordinate E8]
+H4 = Heart Piece Four [Coordinate C16]
+H5 = Heart Piece Five [Coordinate F16]
+
+S1 = Shop One (Magic Shield [160], Key [100], Blue Candle [60]) [Coordinate G7]
+S2 = Store Two (Magic Shield [130], Bombs [20], Arrows [80]) [Coordinate G16]
+S3 = Store Three (Magic Shield [90], Monster Bait [100], Heart [10]) 
+[Coordinate E7]
+S4 = Store Four (Magic Shield [130], Bombs [20], Arrows [80]) [Coordinate E5]
+S5 = Store Five (Key [80], Blue Ring [250], Monster Bait [60]) [Coordinate D5]
+
+WS = White Sword [Coordinate A11]
+L = Letter [Coordinate A15]
+MS = Medicine Shop [Coordinate G5]
+PB = Power Bracelet [Coordinate C5]
+MS = Magical Sword [Coordinate C2]
+
+
+   /\                                                                     /\
+  /__\===================================================================/__\
+ /\  /\ IX     S E C T I O N   N I N E  |  W A L K T H R O U G H     IX /\  /\
+/__\/__\===============================================================/__\/__\
+
+And now, the walkthrough. But before we get down to the nitty-gritty, lets go 
+over a few vitals that you should all probably be aware of.
+
+1.) Saving is easy, saving is fundamental. But when you save and shut off your 
+NES, make sure to hold in the reset button, so you don't lose that saved data! 
+NESes are retarded like that!
+
+2.) When you die on the overworld, you start back at the original screen in the 
+game, at coordinate H8 on the map. If you die in the dungeon, you restart at 
+the beginning of that particular dungeon.
+
+3.) The walkthrough is written in such a way that I always went through the 
+game since I was a kid. There are other walkthroughs on GameFAQs if you don't 
+like the way I go through the game. Some play it like I do, some don't, I'm 
+sure, so to each his own. This is the way I think it's easiest to get through 
+the game.
+
+4.) Keep an eye on your hearts, and if you're dangerously low ("beep, beep"), 
+make sure to get your hearts or you're gonna perish, boy!
+
+5.) Rupees are vital. You're definetly going to want to collect all the rupees 
+enemies drop... you never know when you're going to need them. Or maybe you do, 
+I don't know. =)
+
+And now, the walkthrough...
+
+-------------------------------------------------------------------------------
+1.) The Beginning
+-------------------------------------------------------------------------------
+
+Y'know, I get all nostalgic every time I begin a new adventure in Zelda. It's 
+sad, really.
+
+Anyway... as the game begins, move Link to the cave at the top of the screen 
+and enter it. The old man there, with his famous words, "It's dangerous to go 
+alone! Take this," will give you the Wooden Sword. But we won't have it for 
+long, so don't worry about a thing. =) There's so much to do before we go to 
+the first dungeon.
+
+The way I see it, most Zelda players choose to go right to the first dungeon, 
+but it's pointless. You can get three heart pieces and a stronger sword before 
+you ever even go to the first dungeon. Being that this is true, why waste your 
+time? Do it this way!
+
+-------------------------------------------------------------------------------
+2.) Bombs and the Blue Candle 
+-------------------------------------------------------------------------------
+
+From the start of the game, at coordinate H8, we're going to travel around 
+Hyrule to get three pieces of heart that'll bring our total up to six, which is 
+more than ample for the first dungeon. But first, we need to get the Blue 
+Candle and some Bombs, so that we can physically get these hearts.
+
+From the origin, head one screen left. Here, there are four Tektites. Kill them 
+afar with your sword beams (pending you have full hearts), and take whatever 
+rupees they drop. Then go north, and kill the four red Octoroks, taking 
+whatever they drop as well. Enter the cave on screen to find a store. A little 
+over-priced, yes, but they have the Blue Candle. It's 60 rupees here, so now 
+you know how much you have to save.
+
+Head back to the origin (H8), and go all the way east of the origin, along the 
+coastline. Fight all the enemies you see, and take whatever rupees they drop. 
+It's all important, whether it's one rupee or five. When you get all the way 
+east and you can't go east any more, head north. You'll be at coordinate G16 on 
+the map when you go east all the way and up one. Here should be a cave at the 
+north part of the screen. Enter the cave to find another store. This store has 
+bombs, which we need. Spend the 20 rupees and purchase the Bombs. The Magic 
+Shield here is only 130 rupees, but we'll come back for that later.
+
+Now all you have to do is run back and forth between this area and the origin, 
+and gather 60 rupees. Once you do, hit up the first store we went to at G7 and 
+buy the Blue Candle! Now we can get these hearts!
+
+-------------------------------------------------------------------------------
+3.) Getting the Three Heart Pieces 
+-------------------------------------------------------------------------------
+
+To get to the first heart, go from the cave, back to the origin, by going 
+south, than east. Head east all the way through until the first screen where 
+there's a coastline. Only the bottom righthand corner'll have coastline, but 
+this is the right place. Kill all of the Lynels so that there is no 
+disturbance, except from the Zola in the water. Equip the bombs to the A button 
+and bomb the wall to the left of the path leading up. When you bomb this area, 
+a cave will appear. Enter the cave, and the old man will offer you a heart 
+container or a Red Potion. Of course, take the heart container.
+
+From this location (H12), head north along the path all the way 'til you get to 
+the desert region, and you can't go north anymore. Along your way, kill or 
+avoid the Goriyas, it's up to you. When you get to the desert regions, Lynels 
+and Peahats are all over the place, so kill them to rack up some rupees. When 
+you reach the deadend heading north, go right one screen, to coordinate C13. 
+Kill the four Tektites in the area to free the area of any annoyances, and 
+approach the large rock formation in the middle of the screen. Bomb the lower 
+righthand side of the formation, and a cave entrance will appear. Again, enter 
+it and choose the Heart Container from the old man, which now gives us five 
+hearts. One more to get!
+
+Okay, now, the third heart that we need to get. From the origin, go right one 
+screen, and then head up all the way until you reach a screen which has water 
+in the upper right hand corner. This is at coordinate E9. From here, head right 
+one screen (E8), where there'll be water at the top of the screen and you'll be 
+on a short passageway which only heads horizontally along the screen. From the 
+right, where you enter the screen, count over five bushes. Stand back from the 
+bush, and use the Blue Candle on it, to burn it away, which will reveal a 
+hidden staircase. Descend the staircase, and take the heart from the old man, 
+which now gives us six hearts! Woohah! Alright, now to take care of some other 
+business.
+
+-------------------------------------------------------------------------------
+4.) Getting the White Sword and the Magic Shield 
+-------------------------------------------------------------------------------
+
+Yes, we can already update our weapon and armor situation, and we haven't even 
+hit the first dungeon yet! The deal is, we need six hearts to get the White 
+Sword, which is twice as strong as the Wooden Sword we have equipped on Link 
+now. Well, now that we have six hearts, we can get the White Sword, so lets do 
+so now, shall we?
+
+From the screen where we got the heart piece just before, at coordinate E8, 
+head right to E9, and then go up one screen, past the bridge heading west, and 
+up another screen. You'll be in a place filled with pesky Peahats, which you 
+can only kill when they are perfectly still, so don't waste your time. Instead, 
+head left from here, then up on the next screen, avoiding more Peahats. You'll 
+be in the Death Mountain region now, which is dangerous, with all of the 
+falling Rocks. Move quickly and avoid them the best you can... they do massive 
+damage, and can't be harmed or hindered by any weapon. Shoot right a few 
+screens until you get to a screen which has a staircase leading into Death 
+Mountain. Kill the Tektites on this screen and go up the stairs. Here, there'll 
+be a pond in the middle of the screen, with a Zola in it, and a Blue Lynel 
+patrolling around it. Kill or avoid the Lynel (they do a lot of damage, so be 
+careful!), and enter the cave there. Talk to the old man and he'll give you the 
+White Sword! Now to get the Magic Shield. 
+
+At coordinate G16, there's a place that sells the Magic Shield for 130, but we 
+can get it for 40 rupees cheaper somewhere else... you just have to know where 
+to look. From the cave where you just got the White Sword, head back down the 
+stairs, and then head back west, then south, back to the origin. From the 
+origin, head west one screen, then north one screen, then west again, then 
+north again, and then, finally, east. You should come out in a screen that has 
+some bushes in the center area of the screen. Have the Blue Candle equipped, 
+and make sure you have 90 rupees. If you don't have 90 rupees, run around and 
+fight some enemies until you do. Once that goal is reached, head north one more 
+screen, and burn the bush that's on the corner of the bushes going horizontally 
+and vertically, along the pathway. Enter the hidden stairway that is revealed, 
+and purchase the Magic Shield from the merchant, for 90 rupees! Sweet deal!
+
+Now, there are only a few more things we need to do. First, lets get the 
+Letter.
+
+-------------------------------------------------------------------------------
+5.) The Old Woman's Letter 
+-------------------------------------------------------------------------------
+
+The Old Woman's Letter is an important item, because it allows you to buy 
+medicine that refills your hearts, all over the world of Hyrule. From the shop 
+we were just in, head south, then west, then south, than east, then south, then 
+east again, and you'll be back at the origin. Now, head east from the origin a 
+few screens, to where we got the first heart container, at coordinate H12. 
+Right next to the secret cave entrance where the heart container was located is 
+a path heading north. Head north along this path to the next screen, and keep 
+heading north, through the desert region, until you hit a dead end, and can't 
+go north anymore. From here, head right one screen, and we'll be where the 
+second heart container was hidden. From here, head right one screen. On this 
+next screen are a barrage of enemies... kill them if you want, but ignore the 
+staircase leading up. Instead, head north along the passageway that's got water 
+touching it. In this area, there is another staircase leading up. Ignore it and 
+head right. Now, the staircase HERE is the one you want to take up. Kill the 
+Tektites and go up the stairs. Enter the cave at the top of the stairs, and 
+take the letter from the Old Man. Woo, now we got the letter! Now all we need 
+to do is get the Blue Ring, and we'll be ready for the first dungeon!
+
+-------------------------------------------------------------------------------
+6.) The Blue Ring
+-------------------------------------------------------------------------------
+
+Getting the Blue Ring isn't too hard, and it's a useful item, for it cuts out 
+half of the damage done by enemies, helping Link persevere in battle longer. It 
+is a pricey item, however, at 250 rupees. It takes a long time to save that 
+much up, but you have to. There are hidden locations of rupee stashes all over 
+Hyrule, but we should save them for later, when we really need them. So for 
+now, head all the way back down to the origin (it's a long way, just re-trace 
+your steps and you'll be back there in no time at all).
+
+From the origin, go up one screen. Then, go left several screens until you come 
+to a screen that has a cave on it. This cave holds an old woman that sells 
+Medicine, but we'll go to here after we get the Blue Ring. Go up and you'll be 
+near a body of water. Go up one more screen and there is a cave on this screen 
+which has a shop. Nothing of any importance there, however. Once you hit the 
+250 rupee total we need for the Blue Ring, go up one more screen, to a screen 
+with six Armos' on it. Touch the Armos in the middle of the top row. He'll walk 
+away and underneath him will be a staircase. Descend the staircase to find a 
+secret store! Within the store, of course, is the Blue Ring. Make the purchase, 
+and we're now ready for the first dungeon!
+
+Optionally, you can head back down to coordinate G5 before going to the first 
+dungeon, and pick up some Magic Potion, for 68 rupees, which refills your 
+hearts, now that we have the Letter, from the old woman we passed up before. 
+It's a good buy, and you should probably swing by there before hitting up the 
+first dungeon. If you don't want to, however, that's fine, too.
+
+Head back to the origin when you're all set, and then we'll go from there to 
+the first dungeon. Go right one screen, and then up that screen all the way 
+until you hit water. Once there is water in the upper right hand corner of the 
+screen you come across, go north one more screen, and there'll be a bridge 
+heading westward. Cross the bridge to the island, and enter the dungeon from 
+there.
+
+-------------------------------------------------------------------------------
+7.) DUNGEON ONE - "The Eagle"
+-------------------------------------------------------------------------------
+
+        -------
+ A     |   - K |
+        ---|---    -------
+ B     |BW |   |   | B | T |
+    -----------------------
+ C |OM |   - M |BM | K |
+    -----|-------------
+ D     |   | K | C |
+        -----------
+ E         |   |
+        -----|-----
+ F     | K | X | K |
+        -----------
+
+     1   2   3   4   5   6
+
+KEY/LEGEND:
+
+X = Entrance
+K = Key (whether or not you have to do something to get it in the room is based 
+on whatever situation you're in, see the walkthrough for specifics).
+M = Map
+C = Compass
+BM = Boomerang
+BW = Bow
+| = Locked Door
+|| = Bombable Wall
+OM = Old Man
+B = BOSS ROOM
+T = Triforce Piece
+
+Ah yes, welcome to the first dungeon. Now we actually get to do the fun part of 
+Zelda, "dungeon crawl." Enter the dungeon, and lets get to work.
+
+1.) F3 (entrance) - When you enter the dungeon, you can go left, right, or up. 
+First, go right.
+
+2.) F4 - This room has five Stalfos' within it. One of them holds a Key. Kill 
+all five of them, regardless of if you kill the one with the Key before they 
+all die. Collect everything they drop, not forgetting the Key, and then head 
+back to F3.
+
+3.) F3 - Shoot across the room leftward to F2.
+
+4.) F2 - In this room, there are three Keeses (Bat enemies). Kill them, being 
+weary to not run into them. When you defeat all three of them, a Key will 
+appear at the bottom of the screen. Grab it and head back to F3.
+
+5.) F3 - Now, go up to the door at the top of the room and use a Key on it to 
+open it. Shoot into E3.
+
+6.) E3 - In this room, simply kill the three Stalfos enemies that patrol it, 
+gather whatever they drop, and go north, to D3.
+
+7.) D3 - In this room, there are five Stalfos'. Kill all five of them, and a 
+Key will appear in the room. Grab the Key, as well as anything the Stalfos 
+dropped after you defeated them, and then head right, to D4.
+
+8.) D4 - There are a bunch of Keeses in this room, but also, there is the 
+Compass, which puts the bosses location on your dungeon map (which we haven't 
+gotten yet.) Kill all the Keeses and gather whatever they drop after they are 
+killed, and grab the Compass they were guarding. Then head back to D3.
+
+9.) D3 - Shoot leftward across the room to D2.
+
+10.) D2 - As you enter this room, the door will slam shut behind you. Kill all 
+the Keeses that are in the room, and grab whatever the drop. When they are all 
+defeated, the door will open up behind you. Ignore it, and go to the locked 
+door at the north of the room, and unlock it. Head upward to C2.
+
+11.) C2 - In this room, kill the three weak Gel enemies that are in the room, 
+and grab whatever they happen to drop. If you want to hear a hint from the 
+infamous Old Man of Zelda, push the block in the middle of the room from the 
+left rightward, and the door to the left will open. 
+
+12.) C1 - The old man in here will tell you that the "eastmost penninsula is 
+the secret." Note they spelt "peninsula" wrong, adding an extra 'n'. Then, head 
+back to C2.
+
+13.) C2 - Shoot across the room to the right, entering C3.
+
+14.) C3 - In this room, there are several Gels. Kill all the Gels, grab what 
+they drop, and then grab the Map at the righthand side of the room. Now you 
+have an idea of where you're going, although my map at the top of this section 
+is far better then the one the game supplies you with. In anycase, after you do 
+all of that, open the door to the right with your remaining key, and enter into 
+C4.
+
+15.) C4 - In this room, there are three Goriyas, chucking their boomerangs in 
+all directions. Get in close to each of them and kill them with your White 
+Sword, and when they are all defeated, a Boomerang will appear at the top of 
+the screen. Grab it and play with it a bit if you want, and then head back left 
+to C3. The enemy is the other way, yes, but we still have more to do here 
+before we engage in battle.
+
+16.) C3 - Shoot up to the door at the top, going to B3.
+
+17.) B3 - This room is a walkway surrounded by water. On the walkway are three 
+Stalfos. Kill them all and take the Key one of them drops, as well as anything 
+else they drop of interest to you. Use it to open the door at the north of the 
+room, leading to A3.
+
+18.) A3 - In this water-filled room, there are three Goriyas hunting you. Be 
+weary as you get in close to them, and kill them with your White Sword. One of 
+them will drop a Key, so grab it, and anything else they drop, and then open 
+the door at the left of the room with the Key you just got, leading to A2.
+
+19.) A2 - As you enter this room, be careful of the traps! Walk into the room 
+and around the block formation in the middle, to the left side of the room. 
+Push the leftmost block upward to gain passage to the staircase in the middle, 
+and go down the stairs, to B2.
+
+20.) B2 - Down here, avoid or destroy the four Keeses, and grab the Bow from 
+the catacombs. Then, head back up the ladder to A2.
+
+21.) A2 - Head right, avoiding the traps again, back to A3.
+
+22.) A3 - Head south from here, down to B3.
+
+23.) B3 - Head south again, to C3.
+
+24.) C3 - Head right, to the room where we got the boomerang, C4.
+
+25.) C4 - Head right again, killing the Goriyas, to C5.
+
+26.) C5 - In this room, you can hear the cries of the dungeon boss, Aquamentus. 
+You have to grab the final Key in the dungeon from the south of the room, but 
+avoid the hand enemies, Wall Masters. If they touch you, they'll drag you all 
+the way back to the entrance of the dungeon, and then you'll have to work your 
+way all the way back here. Grab the key and open the door at the north of the 
+room. Enter B5, the boss chamber.
+
+27.) B5 - Aquamentus' Boss Chamber...
+
+BOSS BATTLE - A Q U A M E N T U S
+
+Aquamentus is the first boss battle in the game, and is pretty easy to defeat. 
+If you're really low on hearts, use the red/blue potion in your inventory if 
+you have either. If not, then just risk it with what you've got. If you have 
+full heart energy, you can shoot sword beams at Aquamentus from afar, but it's 
+easier to avoid the triple fireballs he shoots at you, and slash him up close 
+with the White Sword, for full effect. With the White Sword, he only takes 
+three hits before he is defeated. Just avoid the fireballs he shoots and use 
+the fact that he's a very stationary enemy to your advantage. If you do get hit 
+with his fireballs, don't fret it. With the Blue Ring equipped, he only does 
+half a heart of damage. 
+
+After Aquamentus is defeated, go right, to room B6.
+
+28.) B6 - Grab the Triforce from the center of the room, which will refill your 
+hearts, and then you automatically leave the completed dungeon. 
+Congratulations!
+
+-------------------------------------------------------------------------------
+8.) Getting to the second dungeon...
+-------------------------------------------------------------------------------
+
+Once you're teleported outside of the first dungeon, it is indeed time to go to 
+the second dungeon. We're wasting no time here, baby! Head back to the origin 
+(go east across the bridge, and then south all the way until you can't go south 
+anymore. From there, head west one screen, and you'll be at the origin).
+
+From the origin, head east 8 screens, until you can't go east anymore. Then, 
+head north one screen, and from there, go west through that screen. Follow the 
+path leading upward two screens, and then head west again. Go north up the 
+staircase here, and you'll be at level 2, which on my map, is located at 
+coordinate D13, in case you get lost.
+
+Optionally, before you embark on this dungeon, if you need potions, go see the 
+old woman ar coordinate G5, the one we saw before we went to the first dungeon, 
+if you want any refills or what have you. If you're all set, then lets do this!
+
+-------------------------------------------------------------------------------
+9.) DUNGEON TWO - "The Moon"
+-------------------------------------------------------------------------------
+
+         -------
+ A      | T | B |
+         -----|-----
+ B          |   |OM |
+             -------
+ C          |   -   |
+             -------
+ D          | K | B |
+             -------
+ E          | K |MB |
+             -------
+ F          |   - M |
+     ---------------
+ G  | K |   |   - C |
+     ---------------
+ H      | X | K |
+         -------
+
+      1   2   3   4
+
+KEY/LEGEND:
+
+X = Entrance
+K = Key (whether or not you have to do something to get it in the room is based 
+on whatever situation you're in, see the walkthrough for specifics).
+M = Map
+C = Compass
+MB = Magic Boomerang
+B = Bombs
+| = Locked Door
+|| = Bombable Wall
+OM = Old Man
+B = BOSS ROOM
+T = Triforce Piece
+
+This, the second dungeon in the game, is shaped like a Moon. It's just as 
+straight forward as the first dungeon, however, except for some tougher 
+enemies... that's ALL! So here weeee go!
+
+1.) H2 (entrance) - Once you enter the entrance, you can go up, or you can go 
+east. First, go east, to room H3.
+
+2.) H3 - Once in this room, kill all the Ropes (snake enemies) in the room. 
+They move really fast, so be on your toes as you engage them in battle! Pick up 
+what they drop, and when you defeat them all, a key will appear. Pick up the 
+key. Go back to H2.
+
+3.) H2 - Go up now, to G2.
+
+4.) G2 - Once in G2, there are more Ropes for you to fight. Kill all the Ropes 
+in the room, and you'll notice that the closed door to the left of the room 
+will shoot open. Go into that room, which is G1.
+
+5.) G1 - Here in G1, kill all the Ropes in here as well, taking whatever they 
+drop after you kill them. Once they all die, take the key in the room that they 
+were guarding. After you get the key and kill all the Ropes, head right, back 
+to G2.
+
+6.) G2 - Shoot straight across this room now, to the door at the right, which 
+leads to G3.
+
+7.) G3 - Kill the three Ropes patrolling the room, gathering whatever they 
+drop. The door leading south leads to a room we've already been to, so ignore 
+it. The door leading right is locked and the door leading up isn't... first, go 
+right, to the locked door. Use a key on it, and enter G4.
+
+8.) G4 - In here, there is a Compass on the righthand side of the room. Kill 
+the plethora of Gels surrounding it, gathering whatever thingies they drop. 
+Then grab the Compass, and head back left, to G3.
+
+9.) G3 - Head north, now, to F3.
+
+10.) F3 - In this room, there is a crapload of boomerang-chucking Goriyas for 
+you to contend with. Take them out as quickly as possible, sustaining as little 
+damage as you possibly can. When they're all taken out, and you gather up 
+whatever they drop, unlock the door to your right, leading into F4.
+
+11.) F4 - Here, this room is just like G4, except instead of the Compass being 
+guarded by the Gels, it's the dungeon Map. Do the same exact thing you did back 
+in G4, taking out the Gels, and then grab the Map. Once the Map is had, head 
+back to F3.
+
+12.) F3 - Head north through the door, leading to E3.
+
+13.) E3 - Once you enter into E3, the door behind you will shut. The only way 
+to open it is to kill all the Ropes in the room. Although there's no need for 
+you to go back, you should still kill all the Ropes for all the items they 
+drop... plus, they hold a Key once they are all defeated. So defeat them all, 
+grab the key, and then head right, to E4.
+
+14.) E4 - E4 is a pretty hectic room, so make sure that when you enter it, 
+you're ready to fight. There is a statue in each corner of the room, constantly 
+shooting fireballs at Link. In addition to that, there are three blue Goriyas 
+chucking boomerangs in the room. Avoid the fireballs and kill the Goriyas. When 
+you kill the three Goriyas, they drop the Magic Boomerang. The only difference 
+between the regular Boomerang and the Magic Boomerang is how far the Magic 
+Boomerang can fly in relation to the regular Boomerang. When you get the 
+Boomerang, head left, back to E3.
+
+15.) E3 - Head north through the door, leading to D3.
+
+16.) D3 - In this desert room, two Moldorms will appear. These fireball snake 
+creatures are slow moving and easy to attack. Each time you attack them, you 
+take off the balls on their body, how many depending on how well you hit the 
+Moldorm. Once you defeat the two Moldorms here, a key appears in the center of 
+the room. Grab the key, and then head to the right, to D4.
+
+17.) D4 - As soon as you enter D4, be careful of the traps shooting at you! 
+This room is full of Keeses. In the center of the room are some bombs, if you 
+need them. If you don't need them, you can just ignore this room all together. 
+If you did come here, head back to D3 now.
+
+18.) D3 - Head north through the door, leading to C3.
+
+19.) C3 - As you enter this room, the door behind you slams shut. Kill all the 
+Ropes in this room (there are many), and grab all the goodies that they drop 
+after they are defeated. You'll notice that the room to your right is locked. 
+Open the door there with a key and enter it, leading to room C4.
+
+20.) C4 - In C4, kill all the weak Gel enemies, and five rupees will appear in 
+the center of the room for you to take, in addition to whatever else the Gels 
+dropped when you slayed them. After that, head through the door to the north, 
+to B4.
+
+21.) B4 - In this room, the old man of the dungeon is, to give you a clue. He 
+says, "Dodongo dislikes smoke" in reference to the boss enemy, Dodongo, in this 
+dungeon, whose weakness is bombs. (hence: smoke). Head back south to C4 after 
+you talk to the old man.
+
+22.) C4 - Head back left, to the door leading to C3.
+
+23.) C3 - Head north through the door, leading to B3.
+
+24.) B3 - This is the final room before you battle the boss of this dungeon. 
+This room is chock full of Goriya goodness. Stand far away from the pack if you 
+have full hearts, and chuck sword beams at them to beat them from a safe 
+distance. If you are lacking full power, you'll have to battle them in close 
+quarters. Either way, they all have to be defeated. Defeat them all, gather 
+what they drop, and some Bombs will appear in the corner of the room for you to 
+take. Then, open the door at the north of the room, and enter into A3... the 
+boss chamber.
+
+25.) A3 - Dodongo's Boss Chamber...
+
+BOSS BATTLE - D O D O N G O
+
+Dodongo is just as simple a boss battle as Aquamentus was in the first dungeon. 
+He isn't vulnerable to any weapon in your arsenal, including your sword, so you 
+should have taken a hint to his weakness, between the old man's hint in the 
+dungeon, and the fact that the dungeon gives you bombs twice. As this 
+rhinoceros boss walks towards you, drop a bomb in front of him. He will run 
+into the bomb, "eating" it, and it'll blow up inside his mouth. You only have 
+to do this twice to win. Dodongo has no attacks, he just walks around, 
+frustrating you if you don't know how to beat him... but if you DO know how to 
+beat him, he's cake baby... cake.
+
+After Dodongo is defeated, go left, to room A2.
+
+26.) A2 - In this room, grab the Triforce from the center of the room, and 
+you'll be healed up and teleported out of the dungeon! Two down, seven to go!
+
+Now that we've completed Dungeon Two, there's nothing for us to do before going 
+right to Dungeon Three, so we'll do that right now. 
+
+To get to Dungeon Three, leave Dungeon Two and work your way back to the 
+origin, by going down from the Dungeon screen, then right one screen, then down 
+'til you can't go down anymore, then right all the way to the coast (it's not 
+far at all), then follow the coast down, and left until you get back to the 
+origin. You should start knowing this region of Hyrule very well, so it 
+shouldn't be hard for you to getback to the origin.
+
+From the origin, go left once, then up one, and then left once, left again over 
+the bridge and to the next screen, and left again past the old woman's cave 
+whom sells magic potions. If you need the medicine she sells, now is the time 
+to get it! If not, go left past that screen, and you'll enter the brown Lost 
+Woods. Go immidiatly down one screen, and then make a sharp right. The dungeon 
+is here, at coordinate H5. Enter the dungeon, and here we go!
+
+-------------------------------------------------------------------------------
+10.) DUNGEON THREE - "The Manji"
+-------------------------------------------------------------------------------
+
+          -------
+ A       | K |OM |
+          -------     ---
+ B           |   |   | T |
+      ---------|---------   
+ C   |   |   - K - M ||B |
+      ------------------- 
+ D   |   - C |   ||  |   |
+      -------------------
+ E   | R |   | K |
+      ---     -------
+ F           | K | X |
+              -------   
+
+       1   2   3   4   5
+
+
+KEY/LEGEND:
+
+X = Entrance
+K = Key (whether or not you have to do something to get it in the room is based 
+on whatever situation you're in, see the walkthrough for specifics).
+M = Map
+C = Compass
+R = Raft
+BM = Bombs
+| = Locked Door
+|| = Bombable Wall
+OM = Old Man
+B = BOSS ROOM
+T = Triforce Piece
+
+This is where the dungeons start to get just a bit more complicated and 
+lengthy, but they still shouldn't be considered "hard" yet. This dungeon is 
+called the Manji dungeon... unfortunatly, I don't know if Nintendo is sensitive 
+to this sort of thing in Japan as we are here in America and the rest of the 
+world, but a Manji is the same shape as the Nazi Swastikaa... which is just 
+plain wrong. But whatever, it's just a videogame. You shouldn't read into 
+everything, right!? Then again, how can you not. The damn dungeon is just in a 
+shape that offends everyone, including me. I'm just curious what they were 
+thinking. But enough on that.
+
+1.) F4 (entrance) - As you enter the dungeon, you'll notice that you can only 
+go one way. So go that way, left, to F3.
+
+2.) F3 - Here, you'll notice several large Gels, called Zols. They split up 
+into Gels when you hit them with the Wooden Sword, but being that you have the 
+White Sword equipped, they die with one hit and that's it. So kill them all, 
+and whatever they drop, pick up. In the room when they all die is a key, which 
+you should also pick up, before heading north to the next room, E3.
+
+3.) E3 - In this room, there are more Zols for you to kill. The diagonal 
+dividers here shouldn't prove to be too much trouble for you while fighting 
+them, it just makes your fighting quarters a little tighter. When you kill all 
+of the Zols, they drop a key. Grab it and head to D3, which is to the north.
+
+4.) D3 - In this room, there are three Darknuts. Kill them if you can, or just 
+avoid them. You can go north or west, but first, go west, to D2.
+
+5.) D2 - In this here room, there is a Compass in the center. Be weary when you 
+enter the room, however, as there are traps on all four corners of the room 
+that'll shoot at you! Kill the various Keese in the room and grab the Compass. 
+Use a key on the door at the left of the room, and enter into that room, which 
+is __.
+
+6.) D1 - In this room, there are a crap load of red knight enemies, called 
+Darknuts. Darknuts walk around the room and don't attack, but are annoying to 
+defeat, because they are only vulnerable in the back and side. If you slash at 
+them when they're facing you, you'll hear a "clang" noise which means they 
+blocked your attack with their shield. Kill all the Darknuts in this room and 
+the door to the south will open up for you to go through. Go south through that 
+door, to E1.
+
+7.) E1 - In this room, there is a staircase to the right of the room. First, 
+kill the plethora of Darknuts in this room, grabbing whatever they drop. They 
+drop a crapload of Bombs if you need any, as well as Hearts and rupees. Grab 
+what you can and then go down the stairs to the basement of that room. In the 
+basement, go down the ladder and kill the four Keeses patrolling the basement 
+if you like. Grab the Raft sitting there, and then go back upstairs. Leave the 
+room going north, back to D1.
+
+8.) D1 - Back here, simply shoot north across the room, to C1.
+
+9.) C1 - Here, there are a crapload of enemies for you to contend with. Zols, 
+Keese, and new enemies we've yet to encounter, called Bubbles, which are the 
+glowing orbs shooting around the room. You can't damage them with your sword, 
+so just avoid them, and kill the other enemies in the room. Grab the key in the 
+room that they are all guarding as well. Then shoot right into the next room, 
+which is room C2.
+
+10.) C2 - In this room, it's a normal size place but you are stuck in a small 
+corridor that only allows you to go horizontal across the room. That's okay 
+though. Kill the Keese in the room, and Bombs will appear if you need them. 
+Otherwise, go straight across and use a Key on the door to gain entrance to C3.
+
+11.) C3 - This room holds many options for us. First and foremost, kill the 
+three Zols to get them out of the way. Going south will lead us backwards, 
+basically, so don't bother doing that. First go north and use the key on the 
+door there to gain entrance to B3.
+
+12.) B3 - In this room, be weary of the traps as you enter, otherwise they'll 
+shoot down and damage you. Kill the two Zols in this room. The door to the 
+north, the only way out of the room other than going back the way you came, is 
+sealed shut. The left block of the two blocks in the center of the room should 
+be pushed over, which will open the sealed door. Then go north through it, to 
+A3.
+
+13.) A3 - This is the Old Man's room of the dungeon. He'll ask you, "Did you 
+get the sword from the Old Man on top of the waterfall?" Being that you did 
+that in the beginning of the game (he's referring to the White Sword, of 
+course), you can ignore him and go left, to A2.
+
+14.) A2 - In this room, kill all of the Keese and grab the key they are 
+guarding. It's that simple. Then we have to backtrack, so go back right to A3.
+
+15.) A3 - Go south from here, back to B3.
+
+16.) B3 - Go south again (be careful of the traps!), to room C3.
+
+17.) C3 - Now that we're back in this room, go to the door at the right and use 
+a key on it to open it. Then shoot through that door, to C4.
+
+18.) C4 - In this room, again, be careful of the traps as you enter the room. 
+Then, kill the two Zols in the center of the room and grab the Map there. Now, 
+if you're not using the map that I made at the top of this section, you can 
+know where you're going now! Now, you have some options. If you want to make a 
+few rupees (it's not much, so I wouldn't bother), you can head south to D4. If 
+not, bomb the right wall, and go through the hole you make in the wall, to C5, 
+which is the bosses chamber.
+
+19.) C5 - Manhandla's Boss Chamber...
+
+BOSS BATTLE - M A N H A N D L A
+
+Manhandla looks pretty menacing, but trust me, he's not. You can beat Manhandla 
+in a variety of ways. There is one really easy way (which could be considered 
+cheap, I suppose) and another few ways to defeat him. The cheap way, and the 
+way I most enjoy beating him, is simply placing a bomb in his path and beating 
+him in one shot. While it's a difficult thing to destroy all four of his limbs 
+with one bomb shot, if you place is strategically so that it'll blow up when he 
+goes over it, it'll take him out in one shot, and one shot only, baby. If you 
+want to attack him with your sword, you'll have to go limb-by-limb on him, 
+which makes him tougher, because you'll have to continuously get in close to 
+him to swipe. Eight hits with the Magic Sword will do him in (two hits will 
+make one limb disappear, and so on and so forth). If you use the bomb technique 
+on him, make sure you make it a good hit. Otherwise, you'll have to go back in 
+with your sword or use another bomb to finish him off. It's a waste of time, 
+energy, and items.
+
+After Manhandla is defeated, go north to B5.
+
+21.) B5 - Grab the Triforce in this room, and your energy will be refilled and 
+you'll be transported outside of the dungeon. Three down, six to go!
+
+Once outside of the dungeon, head back to the origin... it's straightforward. 
+Just leave the dungeon area (which heads west), then shoot north one screen and 
+east another to get out of the Lost Woods. You should know how to get back to 
+the origin from there. Once back at the origin, we have some stuff to take care 
+of before proceeding to dungeon four.
+
+-------------------------------------------------------------------------------
+11.) The Fourth Heart Container and the Monster Bait
+-------------------------------------------------------------------------------
+
+Okay, now we can go get that fourth heart container. It's on the east coast of 
+Hyrule, and very straight forward to get to. From the origin, simply head to 
+the east all the way until you can't go anymore, to the coast. It's very 
+simple, we've been down here before, you should know how to get there by now 
+without having to have me explain it! Once you get all the way east, swing 
+upwards one screen. Before you keep going up to the heart, go to the cave store 
+there and buy Arrows if you haven't gotten any yet. Now we have a bow and 
+arrow, how useful!
+
+If you got Arrows already, all the better. Head north one screen, and you'll 
+see a heart. However, we need the Stepladder to get that one, not the Raft, so 
+keep going north! Go north two screens, and you'll come across an area where 
+you can only go back down south, or west. There's a dock there however. Walk 
+straight onto the dock and keep walking as if you were going across the water. 
+The Raft will automatically shoot you across the water, to a secret cave, 
+located at C16 on my map. Go in the cave, and get the heart from the old man 
+there. Then leave this island, and head back to the dock on the mainland. Now 
+to get the Monster Bait. We don't need it quite yet, but we should get it out 
+of the way, since we can buy it in the area. Okay, so we're not in the area, 
+but lets just get it now, and get it out of the way, okieday? =)
+
+Once back at the dock on the mainland, head south, all the way back to the 
+origin, the way we came. I don't have to retrace the steps, do I? Alright, 
+good. Once back at the origin, head north, then west, all the way to the screen 
+that holds the old woman's cave that sells the magic potions (G5). From there, 
+head north two screens, to the cave there. Don't go in the cave, go up one more 
+screen, to D5. Remember this place, where the secret store is that we bought 
+the Blue Ring from earlier? Move the top, middle Armor (by touching him) and 
+again, he'll reveal a hidden staircase. Go down the stairs and buy the Monster 
+Bait from the storeclerk for 60 rupees. Now that we've done that, head back 
+south, to the screen where the old woman selling medicine is, coordinate G5. 
+From there, go east one screen and then cross the bridge. Head north after 
+crossing the bridge, to the next screen. You see the dock there? Go north to 
+the dock, and walk across it, and the Raft will take you across the water, to 
+the island, which is where Dungeon Four is located! Enter the dungeon, and get 
+ready to fight!
+
+-------------------------------------------------------------------------------
+12.) DUNGEON FOUR  - "The Snake"
+-------------------------------------------------------------------------------
+
+       
+       ---------------
+ A    |OM -   |   | T |
+       ----||---------
+ B    |   = R =   | B |
+       ----||---------
+ C    |   | M |
+       -----------
+ D    |   |   | S |
+       -----------
+ E    | K |
+       -------
+ F    |   | K |
+       -----------
+ G        |   - C |
+       -----------
+ H    | K | X |
+       -------
+
+        1   2   3   4
+
+KEY/LEGEND:
+
+X = Entrance
+K = Key (whether or not you have to do something to get it in the room is based 
+on whatever situation you're in, see the walkthrough for specifics).
+M = Map
+C = Compass
+S = Stepladder
+R = Rupees
+| = Locked Door
+|| = Bombable Wall
+OM = Old Man
+B = BOSS ROOM
+T = Triforce Piece
+
+The fourth dungeon of the game doesn't hold too much difficulty and whatnot for 
+the player, but, naturally, the difficulty level of each dungeon progresses as 
+we get farther in the game, so it's naturally expected that this dungeon is 
+slightly harder than the last dungeon we were at... and it is.
+
+1.) H2 (entrance) -  In the first room of the dungeon, you can go either up, or 
+you can go left. First, go to the room to your left, which is room H1.
+
+2.) H1 - In this room, there is a swarm (if you can call it that) of Keeses. 
+Kill each Keese in the room, and when they are all defeated, a key will appear 
+in the middle of the room. Grab the key, and head back to the original room, 
+H2.
+
+3.) H2 - Back in this room, simply head north to G2.
+
+4.) G2 - In this room, you'll encounter a new enemy - Vire. The Vires are large 
+version of the Keese. When you slay a Vire, it mutates into two Keese, which 
+are red in color instead of blue, and move slightly quicker. So in the room, 
+kill the three Vires, as well as the smaller red Keese that spawn from their 
+dead bodies, and then use the key on the door at the right side of the room. 
+Enter into that door, going to room G3.
+
+5.) G3 - As you enter the room, it'll be completly dark. So what do you do? Use 
+the Blue Candle, of course! Use the Blue Candle and the room will automatically 
+be lightened up, so that you can see what you're doing. This room is an 
+annoying passageway, marked by numerous blocks. In relation to the enemies, 
+there are quite a few Vires chillin' out in here. Kill them (use your Bow and 
+Arrow to kill them from afar if you'd like, but be accurate with it when they 
+turn into red Keeses!), and grab the Compass in the middle of the room that 
+they were all guarding. Then head back through the door you came into, back to 
+G2.
+
+6.) G2 - Back here, just head north through the door, to F2.
+
+7.) F2 - In this room, kill the plethora of Keeses, and grab the key they were 
+all guarding. Then simply head left, to the next room, F1.
+
+8.) F1 - In this room, again use the Blue Candle to light the room up, so you 
+can see where you're going, and then kill all of the Vires chillin' in the 
+room, hoping all over the damn place like they own it. =) Kill the red Keeses 
+they split into when you hit them, and then simply go north to the door, 
+leading into E1.
+
+9.) E1 - Here in this room, it's more of the same. Firstly, light up the room 
+with the Blue Candle, so you can see what you're doing. Because there are 
+"rivers" in this screen (which can only be crossed with the Stepladder, which 
+we get a bit later on in the dungeon), you have to walk around them to get 
+around. Kill the easy Zol enemies in the room, and grab the key there. Then, go 
+north to the door, leading to room D1.
+
+10.) D1 - In this room, again use the Blue Candle to light it up. Then, be 
+ready to fight. Avoid the Bubbles that are roaming around the room. If they hit 
+you, as it was in the last dungeon, you won't be able to swing your sword for a 
+few seconds, which obviously puts you at a huge disadvantage. Avoid or kill the 
+Vires, and go to the door at the right. Enter into it, leading to D2.
+
+11.) D2 - In this room, it's basically a winding passageway around the room. 
+Patrolling the passageway is more of our friends, the Vires. Kill the Vires and 
+the red Keeses they become, and the door to the right will open. Enter that 
+door to the right, to room D3.
+
+12.) D3 - This room has a new enemy in it as well, called Like Likes. Kill them 
+(they take an amazing five hits to kill with the Magic Sword), but try to keep 
+your distance. If they touch you, they'll eat your Magic Shield! And no, you 
+won't get it back! That means you'll have to spend a crapload of rupees to buy 
+another one, and you don't want to do that. So kill the two Like Likes in this 
+room, as well as the two Zols, and avoid the two Bubbles floating around. There 
+are two blocks in the middle of the room. Push over the leftmost one, and a 
+staircase leading into the basement of the room will appear in the northeast 
+corner of the room. Go down that staircase to the basement, and kill the Keeses 
+there. Then, grab the Stepladder, and head back upstairs. Go back left, to the 
+previous room, D2.
+
+13.) D2 - Back in this room, you don't have to go around the passageway 
+anymore... the Stepladder we just got allows you to avoid doing that and cross 
+the rivers inside dungeons! So get to the door at the north of the room (ignore 
+the Vires), and ignore the door locked up to the north. Instead, head back west 
+again, to room D1.
+
+14.) D1 - Once back here, you can now cross the river in the middle of the room 
+that segments it into two halves. Cross over it, and use a key on the door in 
+the north of the room, to gain access to the room above it, C1.
+
+15.) C1 - In this room, kill all of the Vires if you want, or simply ignore and 
+avoid them, and head to the door at the right hand side of the room, leading 
+into the room we just ignored before, C2.
+
+16.) C2 - This room can be accessed from the other place where I said ignore 
+the locked door (in step 13). That's because we couldn't get across the water 
+in the room to get to the map or passageway across from it. Kill the two Gels 
+that are patrolling the passageway, and grab the Map from the other side of the 
+room. Now, you want to know a little secret? Okieday. Go to the top of the 
+screen and bomb the wall right in the middle. Enter the hole in the wall, to 
+B2.
+
+17.) B2 - This secret area is just kind of cool. Grab the rupees chillin' there 
+waiting for ya. All four walls of the room are bombable. So bomb the wall on 
+the lefthand side of the room, and enter through the hole you make to room B1.
+
+18.) B1 - In this room, you'll fight the mini-boss (I guess you can call it 
+that) of this dungeon, which is Manhandla, the boss we just fought in Dungeon 
+Three. Use the same strategy on him you did on the original we fought. Use a 
+bomb and blow him to pieces, and whatever part of him you miss, hack away with 
+your sword, or use another bomb. Then simply head through the door at the north 
+end of the room, to A1.
+
+19.) A1 - This is the old man's chillin' place in this dungeon. He says to you 
+here, "Walk into the waterfall." Hey thanks, Old Man River. =P Now, use a key 
+on the door to the right of this room, and enter into the next room, A2.
+
+20.) A2 - As you enter into this room, use your Blue Candle right away so you 
+can see where you're going. Then, kill all of the Keese in the room and grab 
+the key they are guarding. Shoot straight across the room to the door on the 
+righthand side, leading to room A3.
+
+21.) A3 - This room is darkened, but you don't really need to use the Blue 
+Candle, but you can if you want. The only enemies in this room are traps, so be 
+careful as you enter the room. Make your way to the door at the south side of 
+the room, while avoiding the traps, and down into room B3.
+
+22.) B3 - In this room, there are five Vires for you to fight. Kill the five 
+Vires in the room, then oush the block at the left side of the room, and the 
+door at the righthand side of the room will open for you. The room is B4, and 
+it's the boss, Gleeok's, room.
+
+23.) B4 - Gleeok's Boss Chamber...
+
+BOSS BATTLE - G L E E O K
+
+Gleeok is definetly the hardest boss we've yet to fight in the game. While he 
+doesn't move (like Aquamentus didn't), he shoots fireballs out of his various 
+heads, and they are quite damaging when they hit Link. Not only that, but when 
+you do enough damage to Gleeok, his head will split off of his body, and turn 
+red. When it's flying around the room in this state, it will shoot fireballs at 
+Link, making Gleeok an annoying version of Aquamentus, from a certain point of 
+view. In anycase, you'll want to be well-healed before entering this battle. 
+When you fight him, use your Sword Beams on him from far away if you have full 
+health, while dodging the fireballs he shoots at you. If you aren't at full 
+health, and don't have the advantage of using sword beams, then you'll simply 
+have to get in close and hack the hell out of him. You'll be trading blows with 
+him, but be consistant and he'll die long before you run out of health, for 
+sure.
+
+After Gleeok is defeated, go north to A4.
+
+24.) A4 - In this room, grab the Triforce, and you'll be automatically healed 
+and transported outside of the dungeon. 
+
+Once outside of the dungeon, head back to the origin. You aren't far away from 
+it at all, you should be able to get back to it on your own. Once back at the 
+origin, it's time to take care of some stuff before we move on to dungeon five. 
+So lets do that stuff now.
+
+-------------------------------------------------------------------------------
+13.) The Final Heart Container and the Power Bracelet
+-------------------------------------------------------------------------------
+
+Once back at the origin, we can get the final heart container easily. As we've 
+done many times now in the game, head all the way east from the origin until 
+you can't go east anymore. Sound familiar? Of course it does. Then, go up two 
+screens, and you'll see the heart on a dock in the middle of the water to your 
+right. This is at coordinate Go up to the first dock, and use the Stepladder to 
+get to it (it does it automatically, just walk towards it) and do it again to 
+get to the dock which holds the final heart container we can get outside of a 
+dungeon. That makes 12, which means we can get the Magical Sword, but first, 
+lets get the Power Bracelet.
+
+Head all the way back to the origin, being that the Power Bracelet is clear 
+across Hyrule on the other side from where we are. Once back at the origin, go 
+up and then left, to the screen where the cave is where the woman sells her 
+magic potions. Now is actually a good time to buy potions from her if you need 
+them, but other than that, head left one more screen. You're now in the Lost 
+Woods. We've been here before, but now, we're going to traverse it. 
+
+Once you enter the Lost Woods, go down. You'll be on a screen here that has 
+three ways out of it other than the way we just came. Going right will lead us 
+back to the third dungeon, so we don't want to go that way. The two paths 
+leading left look more enticing. Of the two paths leading left, take the one on 
+the bottom, and left into the next screen. Kill or avoid the various enemies 
+you come across. None of them should give you any troubles at this point in the 
+game. Follow the linear path heading left, and into the next screen. Then, head 
+north, and you'll be back in the Lost Woods.
+
+This part of the Lost Woods is a pain in the ass, because you have to do a 
+certain sequence in it to get out of the woods. Famous Zelda players know it as 
+ULDL, or Up, Left, Down, Left. That's how you get out of the Lost Woods. So do 
+that now. Go up, then left, then down, then left. Don't worry, each screen is 
+supposed to look the same... that's the idea. That's why it can be confusing. 
+And doesn't the screen look like a backwards Norweigan flag, or Finnish flag, 
+or Icelandic flag. How observant am I! =)
+
+Anyway, you'll know you did the sequence right, because you'll hear the famous 
+Zelda secret ring when you do it right. Then, just head up and out of the Lost 
+Woods (for now, anyway). You'll be in the Hyrule Graveyard now. Lynels and 
+other annoying (but beatable) enemies patrol these regions, so be careful when 
+you fight. In this area, just go up the stairs one screen. Once in the 
+graveyard proper, go right once, and then up once. If you come across a ghost 
+enemy (called Ghinis), just ignore them. They don't move that fast, and are 
+pretty strong enemies. It's not worth fighting them, to be honest.
+
+Go right one more screen and you'll be outside of the graveyard now. Kill the 
+Lynels and avoid the Peahats, and head right another screen. On this screen, 
+there are two staircases heading up into the mountains. Ignore the one on the 
+left, and take the one on the right. Once up the stairs, go right. There will 
+be two rows of Armos enemies, all standing still. This is where the Power 
+Bracelet is located. This is at coordinate C5 on my map. Awaken the Armor on 
+the top row, the one all the way to the right, and underneath him will be the 
+Power Bracelet. Pick it up, and then head back a few screens, back to the 
+graveyard. We have one more thing to do here before we move on...
+
+-------------------------------------------------------------------------------
+14.) The Magical Sword
+-------------------------------------------------------------------------------
+
+The Magical Sword is the next thing on our list to get. It's twice as powerful 
+as the White Sword we have equipped now, making it four times stronger than the 
+Wooden Sword. In otherwords, it's very, very strong. There are requirements to 
+get it, however, which is why I waited until now to get it. You must have 12 
+hearts in your reserves, which we have now. So, once back in the graveyard, 
+simply go up one screen, and we'll be in the right place. There are 12 graves 
+on each screen, correct? Go to the vertical row second to the right, and then 
+the middle row horizontally. Push the grave there from the bottom upwards. A 
+staircase will be hidden underneath of it. Go down the staircase, and grab the 
+Magical Sword from the old man! WOOHAH! Now THAT'S the ticket, baby. (note: The 
+Magic Sword, on my map, is at coordinate C2.)
+
+Anyway, once you get the Magical Sword (oh the power!), head all the way back 
+to the origin. Once you're back there, we can head to the next dungeon, dungeon 
+five. To get there from the origin, go right one screen, then up all the way 
+until you can't go up anymore. From there, go left, then up, then left again, 
+and you'll be near Death Mountain, where all of the rocks fall on you and 
+whatnot. Go right many a screen until you notice that the screen is repeating 
+itself. Go up the stairs into Death Mountain, and go up the stairs four times 
+(the screen'll look the same, but it's not), and you'll hear the famous Zelda 
+secret tone. Enter Dungeon five, and get ready for some fun. Or not.
+
+-------------------------------------------------------------------------------
+15.) DUNGEON FIVE  - "The Lizard"
+-------------------------------------------------------------------------------
+
+
+          -------
+ A       | W |   |
+      ---------------
+ B   | T |   | K | BU|
+      ---------------
+ C   | B -   |   | K |
+      ---------------
+ D   |   |       | C |
+      ---     -------
+ E           | M | K |
+          -----|-----
+ F       | K |   |   |
+      ---------------
+ G   |   =   = K - OM|
+      ------------||-
+ H           | X | K |
+              -------
+
+       1   2   3   4
+
+KEY/LEGEND:
+
+X = Entrance
+K = Key (whether or not you have to do something to get it in the room is based 
+on whatever situation you're in, see the walkthrough for specifics).
+M = Map
+C = Compass
+W = Whistle
+R = Rupees
+| = Locked Door
+|| = Bombable Wall
+OM = Old Man
+BU = Bomb Upgrade [Old Man]
+B = BOSS ROOM
+T = Triforce Piece
+
+The fifth dungeon can be a bit annoying, and is harder than any dungeon we've 
+yet to face in the game as of now, but that's perfectly natural. The cool thing 
+about this dungeon is that you can buy a Bomb Capacity Addition, which allows 
+you to carry 12 Bombs instead of just 8. It costs 100 rupees, and is within the 
+confines of the dungeon, so make sure to follow my walkthrough to a tee so you 
+don't miss it!
+
+1.) H3 (Entrance) - As you enter the dungeon, head right, to the next room, 
+room H4.
+
+2.) H4 - In this room, there are new enemies for you to face, hoping around 
+like crazy. They are called Pols Voice, and they are surprisingly strong. With 
+the Blue Ring equipped, they still take away one whole heart each time they 
+touch you. And with the Magical Sword, they can take two hits before perishing! 
+The Bow and Arrow works nicely on them, but it's really not worth using it... 
+just use the Magical Sword, and conserve your rupees [arrows], 'cause you'll 
+need them to make a purchase later in the dungeon. When you defeat all of the 
+Pols Voices, grab the key that appears in the middle of the room, then walk up 
+to the top wall and bomb the middle of it. Go through the hole you blow through 
+the wall, to G4.
+
+3.) G4 - This is the room where the Old Man of the dungeon resides. He tells 
+you, "Digdogger hates certain kind of sound." Thanks for the proper English, 
+old man! =D Anyway, when you do that, you'll notice that there is a locked door 
+to the left of the old man. Ignore it, to save a key. Instead, go back south 
+through the hole in the wall, back to room H4.
+
+4.) H4 - Back in this room, backtrack to the left, back to the entrance, H3.
+
+5.) H3 - Back here in the entrance, shoot up north, to G3.
+
+6.) G3 - As you walk into this room, use the Blue Candle right away to light up 
+this darkened room. New enemies reside in this room as well. These mummy-like 
+foes are called Gibdos, and are pretty basic enemies. They don't attack, but 
+they can take a lot of damage, even with the Magical Sword equipped on Link. In 
+anycase, kill the three Gibdos chillin' in the room, and one of them will drop 
+a key, which you should pick up. Ignore the door to the right of the room, 
+which is locked! It leads back to the Old Man's room we just bombed into 
+earlier, so I saved you a key! Instead, walk to the wall on the west of the 
+room, and plant a bomb in the middle of it. Blow a hole through the wall, and 
+then walk through it, to room G2.
+
+7.) G2 - In this room, there are more Gibdos for you to do battle with. Keep in 
+mind that one of them will drop some Bombs for you, so make sure to grab them, 
+you'll need to restock them. When they are all defeated, you'll notice that the 
+sealed door above doesn't budge, and that the four blocks in the room aren't 
+triggers for it. Henceforth, you'll have to bomb your way through the left wall 
+again! Place a bomb in the middle of the left wall, and, again, walk through 
+the hole you create, to G1.
+
+8.) G1 - In this room, there are a few blue Darknuts to deal with, which are 
+harder than their red cousins, but still only take two hits with the Magical 
+Sword to subdue. Remember, that like the red Darknuts, the blue Darknuts are 
+also not vulnerable to hits from the front, as they block them with their 
+shield. So you have to hit them from the side or back! And they twist and turn 
+in their paths a lot, so be careful. In anycase, when they are all dead, pick 
+up whatever they drop, and push the leftmost block of the blocks blocking the 
+way to the staircase in the room, and go down the stairs. Kill the Keese in 
+this basement here, and go up the ladder on the other side, to a new area of 
+the dungeon, room A3.
+
+9.) A3 - In this room, come out of the stairs and you'll notice two doors out 
+of this room, both of which are locked. Which one do we go to? First, open the 
+door on the left, and enter into room A2.
+
+10.) A2 - In this room, there's a crapload of blue Darknuts for you to fight. 
+Kill them all, and then push the block in the middle of the room upwards. A 
+staircase will appear in the corner of the room, which you should use to get 
+into the basement. In the basement, kill the Keese, and grab the Whistle there! 
+This is the item of this dungeon! So now that we've found that, go back 
+upstairs, and then back to your right, back into room A3.
+
+11.) A3 - Once back in the original staircase room we just "warped" too, use 
+the key on the door to the south of the room, and go through it, to room B3.
+
+12.) B3 - In this room, there are a bunch of weak Keeses for you to deal with. 
+Do away with all of them, and grab the key that they were guarding. It seems 
+like this room is a dead end, but it's not. Use a bomb in the middle of the 
+righthand wall, and enter through the hole there into B4.
+
+13.) B4 - In this room, an old man is selling a Bomb Upgrade for 100 rupees, 
+which allows you to hold up to 12 Bombs instead of just 8. If you don't have 
+the amount of rupees you need, you gotta leave the dungeon (or fight within the 
+dungeon) and get enough rupees so you can do your thing or whatever. When you 
+do get the Bomb Upgrade, head back to room B3.
+
+14.) B3 - Back here, just go north to room A3.
+
+15.) A3 - Once back in this room, take the staircase back down into the 
+basement, and come up on the other side, at room G1.
+
+16.) G1 - From here, ignore all of the blue Darknut enemies, and shoot to the 
+right of the room, back through the hole in the wall we busted open with a bomb 
+earlier, and back into room G2.
+
+17.) G2 - Back in this room, re-kill all of the Gibdos. You'll notice that even 
+after you kill all of them, that the door to the north of the room is still 
+closed. The four blocks in the room, surprisingly, are not the key either, so 
+simply ignore this room, and go right, into another room we've already been in, 
+room G3.
+
+18.) G3 - In this room, kill the three Gibdos running around, and the shut door 
+to the north of the room will open, revealing a passage into room F3, which you 
+should take.
+
+19.) F3 - Once in here, you'll be in a desert-like room, with three Dodongos! 
+Fear not, however... they are easier now that we're stronger, than they were 
+when we had to fight them as boss enemies in the second dungeon. Do you 
+remember how to kill them? If not, simply place bombs in front of where they're 
+walking so they'll walk into them, and eat them. The bombs will explode in 
+their mouths and injure them. Two bombs per Dodongo will do them in. So kill 
+the three Dodongos, and when they are dead, gather the Bombs that appear in the 
+middle of the room as a reward. As a side award, the door to the left of the 
+room will open for you. Go through this now opened door, to room F2.
+
+20.) F2 - In this room, simply kill all of the Zols that are in the room, and a 
+key will appear in the middle of the room. Grab the key, and ignore the door 
+leading south (it leads back to the room that north door won't open, so it's a 
+trap, meaning you'll have to backtrack if you go down there), and then go back 
+the way you came, through the right door, to F3.
+
+21.) F3 - Back in this Dodongo room (void of the Dodongos, of course), head 
+north through the door (using a key on it to open it), to room E3.
+
+22.) E3 - In this room, use the Blue Candle to light it up for you to see if 
+you'd like, and grab the Map. Being that the room has a huge moat in the middle 
+of it, you can't go anywhere in this room except back to the previous room, so 
+go south, back to room F3.
+
+23.) F3 - Back here, since we've taken care of the other doors in the room, go 
+right, to room F4.
+
+24.) F4 - Right away, use the Blue Candle to light up the room. Then kill all 
+of the Zols in the room, and some rupees will appear in the middle of the room 
+for you (not much of a reward, I know). Then shoot through the north door, to 
+room E4.
+
+25.) E4 - In this room, there are a bunch of Gibdos for you to kill. Slay them 
+all, and they'll drop a key for you to take. Grab the key, and ignore the door 
+leading left (it leads to the same room you got the Map in prior, but it leads 
+nowhere, really). Instead, go through the north door, to room D4.
+
+26.) D4 - In this darkened room, there are nothing but some red Darknuts for 
+you to contend with. With your Magical Sword, they only take on hit now, so 
+they are chumps. Just aim for their sides and backs to do damage! (as always!). 
+When they are all defeated, grab the Compass they drop, then shoot north one 
+more time to room C4. (it's your option in this room to use the Blue Candle, 
+being that it's dark... but you don't really need to).
+
+27.) C4 - This room is chock full of monster goodness, indeed. Right away, use 
+the Blue Candle to light things up. There are two Gibdos, two Pols Voices, and 
+two Keeses in this room. Grab the key in the middle of the room as you melee 
+with the enemies in the room. When they are all defeated, and you nabbed the 
+key, use it on the door to the left of the room, and enter into room C3.
+
+28.) C3 - In this simple room, there are five Gibdos for you to end the lives 
+of. When you kill all five of them, a key will appear, which you should take 
+and enter into the next room to your left, to room C2.
+
+29.) C2 - In this room, you can hear the cries of the boss! We are close! Kill 
+all of the Pols Voices in the room and then use a key on the door to the left, 
+to enter into the boss lair of Digdogger, room C1.
+
+30.) C1 - Digdogger's Boss Chamber...
+
+BOSS BATTLE - D I G D O G G E R
+
+Digdogger might be a hard boss, if you don't know how to defeat him the proper 
+way, that is. As you enter the battle, equip the Whistle we found within 
+Dungeon Five (also called the Recorder, if you're a nerd), and blow the Whistle 
+to hear a pretty tune. Not only is this tune pretty, but it is deadly to the 
+Digdogger! It'll reduce his size to practically nothing! Once you do this to 
+Digdogger, simply run up to him and give him two slashes with your sword, and 
+he'll die (granted you have the Magical Sword, otherwise it'll take more 
+slashes). He doesn't have any attacks in the small form... you'll simply have 
+to worry more about getting hit and damaged by the four statues that shoot 
+fireballs at you in each corner of the room. You should be done with Digdogger 
+in a matter of five seconds though, so getting hit once or twice shouldn't 
+matter at all... and you can always block those fireballs with your shield! In 
+anycase, take the bastard down.
+
+After Digdogger is defeated, go north to B1.
+
+31.) B1 - In this room, grab the Triforce, and you'll be automatically healed 
+and transported outside of the dungeon. 
+
+Once outside of the dungeon, head back to the origin, as we usually do after we 
+finish off a dungeon. Then just regroup, and we'll go right to the sixth 
+dungeon!
+
+To get to the sixth dungeon from the origin, this is what we do. Go right one 
+screen, and then up all the way until you can go up no longer. Then go left a 
+screen, then up a screen, then left a screen once more (crossing the river via 
+the Stepladder, in case you think my directions are wrong). Go left one more 
+screen, and there'll be two staircases heading south. Take either of these 
+staircases, and once down them, go left one screen. In this screen, ignore the 
+stairs going north, and go left once more. Then, go south down the stairs, and 
+then west, and then north up the stairs (killing or avoiding the mighty Lynels 
+as you go), to get to the sixth dungeon! It's showtime!
+
+-------------------------------------------------------------------------------
+16.) DUNGEON SIX  - "The Dragon"
+-------------------------------------------------------------------------------
+
+            ---------------
+ A         | MW=   = OM| T |
+        -----------------------
+ B     |   | M |   |   | B |   |
+        -----------------------
+ C     |   = K |       |   | K |
+        -----------     -------
+ D     |   |   |   |   |   |
+        -----------     ---
+ E     |   |
+        ---
+ F     | K |
+        ---     ---
+ G     | C |   |   |
+        ---------|-
+ H     |   - X | K |
+        -----------
+
+         1   2   3   4   5   6
+         
+KEY/LEGEND:
+
+X = Entrance
+K = Key (whether or not you have to do something to get it in the room is based 
+on whatever situation you're in, see the walkthrough for specifics).
+M = Map
+C = Compass
+MW = Magic Wand
+R = Rupees
+| = Locked Door
+|| = Bombable Wall
+OM = Old Man
+BU = Bomb Upgrade [Old Man]
+B = BOSS ROOM
+T = Triforce Piece
+
+The sixth dungeon, in the words of my Uncle John, gets a little bit "hairy"... 
+and take his word for it, 'cause he never lies. Ah yes, but really... the shear 
+volume of enemies found within the confines of the dungeon is enough to make 
+any Zelda nerd shiver and yell "Hookshot!" I don't even know what the hell I'm 
+talking about anymore... onward.
+
+1.) H2 (Entrance) - Once here in the entrance, head right, through the open the 
+door, to room H3.
+
+2.) H3 - In this room, use the Blue Candle right away, so that you can see 
+where you're going. This is your first encounter with the biggest pain-in-the-
+ass enemies in the game; Wizzrobes. These mystical enemies come in two 
+varieties. These are the weaker of the two, as they are red in color. They 
+shoot magical beams out of their hands, and can disappear and reappear anywhere 
+on screen. With your Magical Sword, one swipe at them kills these red 
+Wizzrobes, but be careful to block or avoid their magic, as it does some crazy 
+damage to Link. Once they are all defeated (there are five of them in this 
+room), grab the key they drop, and go north through the door, unlocking it with 
+the key you just got, to room G3.
+
+3.) G3 - In this room, the old man speaks to you, telling you, "Aim at the eyes 
+of Gohma." Gohma is the boss in this dungeon, just so you know... and you'll 
+see what the old man is talking about when we go fight Gohma. But for now, go 
+back down, to room H3.
+
+4.) H3 - Back in this room, just go left, back to the entrance, room H2.
+
+5.) H2 - This time, use a key on the door to your left, and enter into room H1.
+
+6.) H1 - In this room, there are three more Wizzrobes for you to combat. Kill 
+them, avoiding their powerful magical energy, and grab whatever they drop 
+(hopefully hearts, if they've hit you a few times). Then just go north, to room 
+G1, the next room in our path.
+
+7.) G1 - In this room, thankfully, there are only Zols for you to slay. Slay 
+these poor, helpless enemies, and a Compass will appear in the room! Grab the 
+Compass, and continue going north through the dungeon, to room F1.
+
+8.) F1 - Here in this room of the dungeon, there are a crapload of Keeses for 
+you to kill. Kill the Keeses while avoiding the fireballs from the statues in 
+the room, or blocking them with your Magic Shield. Either way, when all of the 
+Keeses are defeated, a key will appear in the middle of the room, and the 
+sealed door to the north of the room will also open. Shoot north, to the next 
+room, room E1.
+
+9.) E1 - In this room, simply run north quickly, avoiding the traps flying 
+towards you around the room, going north, to room D1.
+
+10.) D1 - This room is ridiculous... well,that's all I can really say about it. 
+There are eight enemies in this room... two of each variety of Wizzrobe, two 
+Bubbles (that hinder you from using your sword for a few seconds if they touch 
+you), and two Like Likes, that can steal your Magic Shield if they touch you. 
+To say the least, this room is a little bit on the crazy side. In anycase, kill 
+all of the enemies (except for the Bubbles, who can't be killed). When the room 
+is void, push the block at the left of the room over, to open the north sealed 
+door. Go north through it, to room C1.
+
+11.) C1 - This room has more Wizzrobes for you to compete with. Kill all of the 
+Wizzrobes, and hope that they drop some hearts for you to use. Make sure to 
+keep an eye on your heart containers... I'm telling you, these Wizzrobes can 
+really destroy you before you even know what hit you. When they are all 
+defeated, you can go north, but there is a Gleeok up there. To avoid it, bomb 
+the righthand wall right in the middle, and go through the hole we make in the 
+wall there, to room C2.
+
+12.) C2 - In this room, there are more Wizzrobes. *sigh* In anycase, use the 
+Blue Candle to light up the darkened room, and kill the Wizzrobes. It's an 
+option to grab the key in the center of the room and not kill any of them... 
+but they'll be here when you return to this room, so do it now, or do it 
+later... or don't do it at all, I don't care. =) Grab the key at the center of 
+the room, and use it on the door to the north, heading to room B2.
+
+13.) B2 - In this room, there are two Zols, two Bubbles, and two Like Likes. 
+Kill the two Like Likes and the two Zols, and a Map will appear in the room. 
+Grab the Map, and then go through the door to the north of the room (the one 
+that's locked), using a key on it to open it. Enter into room A2.
+
+14.) A2 - In this room, there is a slew more of Wizzrobes. Work fast, killing 
+them and playing a defensive game with your shield and your agility, so that 
+you don't take too much damage from these mighty foes. When all of the 
+Wizzrobes are defeated in the room, push over the left block in the room, to 
+make a staircase appear it the upper righthand corner of the room. Take the 
+staircase down into the room's basement, and kill the Keese down there. Grab 
+the Magic Wand, and then go back up the stairs. Head back down to the previous 
+room, room B2.
+
+15.) B2 - Once back in this room, cross over the red river, and through the 
+door at the right of the room, to room B3.
+
+16.) B3 - In this room, there are five of the weaker variety of Wizzrobes, and 
+a key in the middle of the room. Kill the Wizzrobes, and grab the key they were 
+all guarding. You have an option to go north, or to go west. Go north through 
+the door, to the next room up north, room A3.
+
+17.) A3 - In this room, there are two Zols, two Like Likes, and two Bubbles... 
+a combonation of enemies that we've seen before. Kill the two Like Likes and 
+the two Zols, and then bomb the middle of the righthand side wall, to make a 
+passage into room A4, which you should take.
+
+18.) A4 - In this room is another old man, who tells you, "There are secrets 
+where fairies don't live." Wow, that's great. =P Heh heh... now, go back left, 
+through the bombed wall, to room A3. (ignore the door leading south... there 
+are a crapload of enemies down there, that'd be in your best interest to 
+ignore).
+
+19.) A3 - Back in this room, go south, to room B3.
+
+20.) B3 - Once back here, go west, back to room B2.
+
+21.) B2 - Now that we're back here, go south, back to room C2.
+
+22.) Back in this room, kill any Wizzrobes you may have left behind (I told you 
+to kill them the first time we were here!), and then go south once more, to a 
+new room, room D2.
+
+23.) D2 - This room holds some enemies we haven't seen in a while... Vires. 
+Light up the room with the Blue Candle and slay the weak Vires with your mighty 
+Magical Sword. Grab whatever goodies they drop, and go right, to room D3.
+
+24.) D3 - This room is full of enemies, as well, making it just as big of a 
+pain in the ass as three other rooms in this damn dungeon. =) Kill all of the 
+Wizzrobes and Like Likes, leaving just the Bubble in the room. Use Magic 
+Potions if you're running out of energy! When only the Bubble remains, push the 
+block in the middle of the room to the left, and a staircase will appear. Take 
+the staircase into the basement, and re-emerge on the other side, in room B6.
+
+25.) B6 - As you re-emerge in this room, more enemies are there to greet you; 
+Zols and Like Likes. Kill them or avoid them, and go down, into room C6. We're 
+almost there, I promise!
+
+26.) C6 - In this darkened room, use the Blue Candle, and then kill the three 
+Vires, and a key will appear. While avoiding the Bubbles, grab the key, and go 
+left, into the next room, room C5.
+
+27.) C5 - This room has so many enemies for you to fight, it's not even funny. 
+So don't even bother with any of them. Ignore the door to the south, it leads 
+no where important. Instead, run straight up to the door at the north end of 
+the room, unlock it, and go through the door, entering into Gohma's boss 
+lair... whew. Now we just gotta fight the boss! This is room B5.
+
+28.) B5 - Gohma's Boss Chamber...
+
+BOSS BATTLE - G O H M A
+
+Gohma is a crab-looking enemy, who is easily defeated, so don't worry. Remember 
+the first or two Old Men in this dungeon, the one who told you to shoot at the 
+eye of Gohma? Well that's the key. Equip the Bow and Arrow. When Gohma opens 
+his eye during battle, shoot an arrow at his eye, and he'll die just like that. 
+Gohma doesn't open his eye often during battle, however, and runs back and 
+forth at the top of his lair shooting numerous fireballs at Link. So be careful 
+when you fight him! Block the fireballs with your Magic Shield, or avoid them 
+all together, and wait for that time when he opens that eye of his. Then, just 
+shoot that arrow at his eye, and he'll crumble, leaving nothing but a heart for 
+you, Link, to get. He's easy, ain't he. =) But imagine if you didn't know what 
+to do against him... ALWAYS LISTEN TO OLD MEN! That's what that lesson teaches 
+you, young one. =)
+
+After Gohma is defeated, go north to room A5.
+
+29.) A5 - In this room, grab the Triforce, and you'll be automatically healed 
+
+and transported outside of the dungeon. 
+
+Dungeon Seven is the next dungeon on our trip, but before we head to that 
+dungeon, make sure you bought Monster Bait earlier in the game, and if you 
+haven't done so yet, do so now. I buy it very early in the game so I don't have 
+to do it later, but if you haven't bought it yet, we need it for the seventh 
+dungeon, so purchase it at one of many stores around Hyrule. (see the map above 
+the walkthrough section for exact coordinates)
+
+Head back to the origin once you're all prepared (Monster Bait, don't forget), 
+and from there, head north one screen, and then left all the way into the Lost 
+Woods region. Once surrounded by brown trees, head north one screen, and then 
+left (along either path) to the next screen. Then go around and head north, and 
+you'll be in a dead end region of Hyrule, with a pond in the middle of the 
+screen. Worry not... you're not lost. Play the Whistle, and the pond will dry 
+up, revealing a staircase. Decend the staircase, and welcome to Dungeon Seven, 
+The Demon!
+
+-------------------------------------------------------------------------------
+17.) DUNGEON SEVEN  - "The Demon"
+-------------------------------------------------------------------------------
+
+         -----------------------
+  A     |   =   | K |   |   =   |
+         -||--------------------
+  B     |   |   = RC|   |   |
+         -------------------
+  C     |   |   = B | T |
+         -||------------
+  D     |   |   = K |
+         -----------
+  E     | BU|   |
+         -|-----------
+  F     |   |   | C | OM|
+         -----------------------
+  G     |   |   |   |   |   | K |
+         -----------------------
+  H     | K | X |   |
+         -----------
+ 
+          1   2   3   4   5   6
+         
+KEY/LEGEND:
+
+X = Entrance
+K = Key (whether or not you have to do something to get it in the room is based 
+on whatever situation you're in, see the walkthrough for specifics).
+M = Map
+C = Compass
+RC = Red Candle
+R = Rupees
+| = Locked Door
+|| = Bombable Wall
+OM = Old Man
+BU = Bomb Upgrade [Old Man]
+B = BOSS ROOM
+T = Triforce Piece
+
+Dungeon Seven, "The Demon," isn't too difficult of a dungeon to defeat, 
+especially after we got through the hell that is dungeon six, and we got out 
+alive, to boot. =) The dungeon is pretty big, but pretty smushed together. You 
+shouldn't get too lost... plus, the boss is Aquamentus... the boss from the 
+first dungeon, so... ha ha ha, don't laugh!
+
+1.) H2 (entrance) - Once you enter this dungeon, you can go north, or you can 
+go east. Ignore the door to the north, and head east, into room H3.
+
+2.) H3 - In this room, there are two Moldorms for you to attack. Kill both of 
+them, and some Bombs will appear in the room, if you need any. Once done in 
+there, head north, to room G3.
+
+3.) G3 - Here in this room, use the Blue Candle right away so you can see what 
+you're doing in this darkened room, and you'll see a bunch of Keeses on the 
+attack. Kill them all, and manuver around the huge box in the middle of the 
+room, giving the Keeses the advantage. When they are all defeated, ignore the 
+door heading left (no reason to go there), and head right, to room G4.
+
+4.) G4 - This room is chock full of boomerang chucking Goriyas for you to 
+fight. Kill all of them, and then head through the door at the right of the 
+room, to room G5.
+
+5.) G5 - In this room, there is a Digdogger. Just ignore it, don't bother 
+fighting him. He's easy (especially with the Whistle), but it's a waste of 
+time. Just go around him, to the door at the right of the room, which leads 
+into room G6.
+
+6.) G6 - In this room, there are some weak Stalfos enemies walking around. One 
+of them is carrying a key. Slay all of these weak enemies, and grab the Key 
+which one of them drops. Then head left, back to the room where the Digdogger 
+is, room G5.
+
+7.) G5 - Just avoid the Digdogger again as you head to your left, back to room 
+G4.
+
+8.) G4 - Back in this room, take the north door, to room F4.
+
+9.) F4 - In this room, there is an old man. Listen to the old man's wise words; 
+"There's a secret in the tip of the nose." Yeah, whatever. =P Anywho, after you 
+talk to him, you can go back south, back to room G4.
+
+10.) G4 - Back here, just swing back west, to room G3.
+
+11.) G3 - Use the Blue Candle in this room again, then take the outside of the 
+room around the box to the north wall. Bomb the middle of the north wall to 
+create a hole in the wall, and go north through it, to room G3.
+
+12.) F3 - This room needs to be lit up with the Blue Candle, so do that first. 
+Then, kill all the weak little Stalfos running around. When all of them are 
+defeated, a Compass will appear. Grab the Compass, then head through the left 
+door, to room F2.
+
+13.) F2 - This room has a bunch of Goriyas, of both varieties, for you to kill. 
+Slay them all, and then go through the left door, to room F1.
+
+14.) F1 - In this room, there are three Dodongos waiting to take you on. Just 
+biomb the hell out of 'em. You can bomb them so they eat them (which takes two 
+bombs per Dodongo), or bomb them so it freezes them, and then hack at them with 
+your sword. Either or, it doesn't matter to me. =) When they are all defeated, 
+use a key on the north door, entering into room E1.
+
+15.) E1 - In this room, an old man will sell you the second of two bomb 
+capacity upgrades found in the game. Give him 100 rupees and he'll give you 16 
+Bombs maximum, which is a good deal, 'cause trust me, you'll need them later. 
+If you don't have 100 rupees, go fight Stalfos and Goriyas back around the 
+beginning of the dungeon until you do. After you buy the upgrade, go back south 
+into the Dodongo room, room F1.
+
+16.) F1 - Back in the Dodongo room, head south, to room G1.
+
+17.) G1 - In this room, be weary of the traps by both doors. Kill the Keese in 
+the room to get them to drop some Bombs when they are all dead, and then head 
+south again, to room H1.
+
+18.) H1 - In this room, avoid the fireballs shot by the two statues in the 
+room, and grab the Key, while killing or avoiding the Ropes in the room. After 
+you nab the key, head back north, to room G1.
+
+19.) G1 - Avoid the traps once more in this room, as you head north to room F1.
+
+20.) F1 - Back in the Dodongo room once more, head east, back to room F2.
+
+21.) F2 - Once you're back in this room, just head north, through the door 
+there, to room E2.
+
+22.) E2 - In this room, there are a plethora of enemies, including Bubbles, 
+Keese, and Goriyas. Kill the Goriyas and Keese while avoiding the Bubbles (as 
+you can't kill them, as you should know by now). When the other enemies are 
+defeated in the room, the door to the north will be open for you to go through. 
+Go through that door now, to room D2.
+
+23.) D2 - In this room, kill or ignore the Digdogger. While avoiding all of the 
+fireballs from the statues in the room, go to the righthand wall and bomb the 
+middle of it to make a hole. Then, go through the hole into room D3.
+
+24.) D3 - Here, you'll encounter two more Moldorms. Kill both of them and a key 
+will appear. Grab the key, and simply head back west, to the room previous 
+where we fought/avoided the Digdogger, room D2.
+
+25.) D2 - Go left through this room now, to the door there, to room D1.
+
+26.) D1 - As you enter this room, the door behind you will shut, so you'll be 
+forced to fight the enemies within, which are basically numerous Goriyas. Kill 
+them all, then use a key on the door to the north, and enter through that door, 
+to room C1.
+
+27.) C1 - This room is where we need the Monster Bait, so if for some retarded 
+reason you didn't get it before coming here like I told you to, you need to 
+leave the dungeon and get it. The monster will say "grumble grumble" but don't 
+be afraid of his harsh words! Go up to him and use the Monster Bait on him, and 
+he'll disappear, leaving the passage going north open, so go north, to room B1.
+
+28.) B1 - Once in this room, use the Blue Candle so you can see. Kill all the 
+Goriyas and Keeses in the room, and avoid those pesky Bubbles (I wish we can 
+kill those bastards sometimes!) Then go to the middle of the north wall, and 
+bomb through it, to get to a secret room. Go through the hole to room A1.
+
+29.) A1 - In this room, just grab the numerous coinage, and then go back south, 
+to room B1.
+
+30.) B1 - Back here, just go to room B2, which is to the east through the door, 
+just unlock it with a key.
+
+31.) B2 - In this room, there are many a Goriya. Kill them all, and then shoot 
+through the door at the north of the room, to room A2.
+
+32.) A2 - In this room, there are more Goriyas, of both colors, for you to 
+slay. Slay them all and gather whatever they drop, including the 5 rupee piece 
+reward for killing them all. Then go through the door at the east of the room, 
+which leads to A3.
+
+33.) A3 - There are Goriyas and Statues in this room, but you don't necessarily 
+have to fight any of them. Just get the key in the middle of the room that they 
+are all guarding, and then go back through the door at the left of the room 
+that you came in through, back to room A2.
+
+34.) A2 - Go south, back to room B2.
+
+35.) B2 - Once back here, go to the righthand wall, in the middle of it, and 
+bomb it, then go through the hole you made in the wall, to room B3.
+
+36.) B3 - In this room, kill all the Goriyas while avoiding their boomerangs 
+and such. When they are all defeated, push the block on the lefthand side up, 
+and enter into the staircase, which will lead to the basement of the room. Grab 
+the Red Candle there while avoiding or killing the Keese, then resurface into 
+the room. Go to the righthand side of the room, to the middle of the wall, and 
+bomb through that wall as well, which will lead you to room B4.
+
+37.) B4 - In this here room, there are a bunch of Goriyas and two locked doors. 
+Kill all the Goriyas, and ignore the door leading north, instead unlocking the 
+door leading to the east, which you should go through, to room B5.
+
+38.) B5 - In this room, there are four statues shooting fireballs at you, and 
+you'll have to fight a Digdogger as well. Just toot your Whistle, then destroy 
+the three small Digdoggers with two hacks of your Magical Sword each. Then just 
+go north, through the door to room A5.
+
+39.) A5 - In this room, two statues take up the middle of the room (shooting 
+fireballs, naturally) while you'll have to fight and kill three Dodongos. Break 
+out your bombs, and then use the same strategy that you did earlier. When they 
+are defeated, bomb the middle of the righthand wall, and enter through the hole 
+you've made there, to room A6.
+
+40.) A6 - This room is really pretty difficult. This is the first time in the 
+game you actually have to kill the Wall Masters, which is a tricky proposition. 
+All the while, you have to avoid those Bubbles, because if they hit you, you'll 
+be unable to unsheath your sword for a few seconds, making you bait for the 
+Wall Masters. Thankfully, the Wall Masters only take one hit each to defeat 
+with the Magical Sword, so that's always good. There are five total, so defeat 
+them all, and don't let them touch you, or back to the entrance of the dungeon 
+you will find yourself! When they are all slain, push the middle block on the 
+blocks going vertical across the room, and a staircase will appear in the 
+corner of the room. Go down those stairs, to reappear on another side of the 
+dungeon, room C2.
+
+41.) C2 - When you resurface, you'll be in a room chock full of Goriya 
+goodness. Kill all of the blue and red Goriyas, so the room is empty of any 
+foes. When you're set, bomb the righthand wall in the middle, and enter into 
+that room, to fight the boss, room C3.
+
+42.) C3 - Aquamentus' Boss Chamber...
+
+BOSS BATTLE - A Q U A M E N T U S
+
+Well, we get to fight Aquamentus again, go figure. For those of you whom are 
+dense (^_^), Aquamentus is the very first boss we fought in the game. Why they 
+stuck him in the seventh dungeon is well beyond me, but go figure. He's the 
+same exact dude we fought earlier on, but if you want to have some fun, equip 
+the Bow and Arrow and shoot him in the head three times to subdue him. He's not 
+treacherous anymore, so there's not much more I can say about him... just slay 
+the begger! When he's defeated, just grab that heart piece and thank your lucky 
+stars it was that easy to get. Wait 'til you fight Ganon. =)
+
+After Aquamentus is defeated, go east to room C4.
+
+43.) C4 - In this room, grab the Triforce, and you'll be automatically healed 
+and transported outside of the dungeon. 
+
+Once outside of the dungeon, we're ready to go right to the eighth dungeon, 
+which is the final dungeon before Death Mountain! You stoked!? 'Cause you 
+should be. =) Head all the way back to the origin, and make sure you're 15 
+heart containers are full, as well as making sure you have red potion in your 
+inventory. You can never be too safe.
+
+From the origin, head right all the way a few screens until you hit water. This 
+is the screen where we got a heart piece very early in the game. From here, 
+head north two screens, and then go east along the top of the two paths. Head 
+east, and then go south. Equip the Red Candle and burn the lone bush in the 
+middle of the screen, the one that sticks out from the two groups of bushes, 
+towards the righthand side of the screen. Enter the staircase that's under the 
+bush there, and welcome yourself to the eighth dungeon!
+
+-------------------------------------------------------------------------------
+18.) DUNGEON EIGHT  - "The Lion"
+-------------------------------------------------------------------------------
+
+                    ---
+  A                |   |
+                -----------
+  B            |   =   | MK|
+            ---------------
+  C        | T |   = M |
+            ---------||----
+  D        | B | OM|   |   |
+        -----||------------
+  E    | OM| K |   -   |
+        -------------------
+  F    | K | K | K | K | C |
+        -------------||----
+  G                |   |
+            ---------------
+  H        | MB|   | X | K |
+            ---------------
+
+         1   2   3   4   5    
+     
+KEY/LEGEND:
+
+X = Entrance
+K = Key (whether or not you have to do something to get it in the room is based 
+on whatever situation you're in, see the walkthrough for specifics).
+M = Map
+C = Compass
+MB = Magic Book
+MC = Magic Key
+R = Rupees
+| = Locked Door
+|| = Bombable Wall
+OM = Old Man
+B = BOSS ROOM
+T = Triforce Piece
+
+Dungeon eight is small and straightforward, thankfull enough, because after we 
+conquer this dungeon, off to Death Mountain we go... and that dungeon is 
+anything but small and straightforward. In anycase, the boss enemy is a boss 
+we've already fought before, just like Aquamentus' return in the last dungeon. 
+In this dungeon, we fight Gleeok... harder than Aquamentus, but still 
+elementary, my dear. =)
+
+1.) H4 (entrance) - From the entrance, head right through the door, to room H5.
+
+2.) H5 - In this darkened room, use the Red Candle to light it up, and then 
+kill the Zols and other enemies in there, avoiding the Bubbles as you go. In 
+the middle of the room is a Key, which you should grab, and then exit out of 
+the room, back to the entrance, to room H4.
+
+3.) H4 - Once back in the entrance, take the door to the left, to room H3.
+
+4.) H3 - In this room, two statues shoot fireballs at you from the center of 
+the room while a Manhandla runs around causing havoc. You have to defeat the 
+Manhandla to get the door to the left to open, so kill him, using your Magical 
+Sword, or Bombs, whichever you want. He's easy now, he just gets faster as you 
+cut off his limbs, but he was like that every time we've fought him, so this 
+should be nothing new for you. When he's defeated, get the five rupees as your 
+reward in between the two statues (avoid or block their fireballs), and go 
+through the door at the left of the room, into room H2.
+
+5.) H2 - In this room, there are Darknuts, Gibdos and Bubbles for you to 
+contend with. Avoid the Bubbles and slay the Darknuts. They aren't so annoying 
+anymore, just make sure to hit them in the back or sides, or otherwise you 
+won't damage them, as you know by now. The Gibdos are elementary to defeat as 
+well, so fear not. When they are all defeated, push the block at the left of 
+the staircase in the middle of the room to gain access to it. Go down the 
+stairs into the basement of the room, where there are Keeses and a Magic Book. 
+Grab the Magic Book, avoid or kill the Keeses, and go back to the main floor. 
+Then leave this room the way you came in, to the door at the right, to room H3.
+
+6.) H3 - Shoot across this room, while avoiding the fireballs from the statues, 
+back to the entrance of the dungeon, room H4.
+
+7.) H4 - Once back at the entrance again, go north through the door there, to 
+room G4.
+
+8.) G4 - In this room, there is another Manhandla for you to battle. Do 
+whatever you want to it, just kill it. =) Grab the five rupees he drops, and 
+then bomb the middle of the northern wall to make an exit out of this room, and 
+go through the hole to room F4.
+
+9.) F4 - In this room, there are Statues and blue Darknuts galore. Ignore them 
+for now, and unlock the door to the right of the room, and enter into that 
+room, which is room F5.
+
+10.) F5 - Light up this darkened room with the Red Candle, and then slay all of 
+the hoping and jumping Pols Voices. Grab the Compass that they guard, and head 
+back to the previous room, room F4.
+
+11.) F4 - Back here, kill all of the blue Darknuts in this room. When they are 
+all defeated, the rooms to the north and the west become available, and they 
+also drop a key. Grab the key, and go through the western door, to room F3.
+
+12.) F3 - In this room, light it up with a Red Candle, and then slay all of the 
+beasties in here, including the Pols Voices and whatever else, to get the key 
+they drop when they are all defeated. Then simply head left into the next room, 
+which is room F2.
+
+13.) F2 - In this room, there are four statues trying to hit you with their 
+fireballs, and three red Darknuts, the weaker variety of Darknut. Avoid the 
+fireballs and slay the Darknuts, and they'll drop a key. Grab the key, and head 
+back to the right, to room F3.
+
+14.) F3 - Once back in this room, light it up with a Red Candle once more, and 
+then take the northern door, to room E3.
+
+15.) E3 - In this room is a Gohma, like we've fought in the past, but this one 
+is blue, and takes three hits with your Bow and Arrow to fell. Be patient with 
+him, it takes a little while, as he is only vulnerable when his eye is open, 
+and he opens it rarely and for short bursts. Block whatever fireballs (or avoid 
+them) that he shoots at you while you're waiting for that eye to open, and when 
+it opens, pummel him. When he's defeated, go north through the door in that 
+room, to room D3.
+
+16.) D3 - This is the old man room. Heh heh. He says, "Spectacle Rock is an 
+entrance to death." He's basically telling you that Death Mountain is where the 
+last dungeon is. Just so you know. =) Leave that room back to the south, back 
+to room E3.
+
+17.) E3 - Back in the Gohma room, just head right, unlocking the door with a 
+key, to the next room, room E4.
+
+18.) E4 - In this room, there are Gibdos and Darknuts for you to slay, as well 
+as two Bubbles for you to avoid at all costs! =) When they are defeated, 
+they'll drop five rupees, which you can get if you want. After that, ignore the 
+door leading south (leads to a room we've been to already), and unlock the door 
+to the north, and go to room D4.
+
+19.) D4 - As you enter into this room, two statues and six blue Darknuts are 
+there to greet you. Kill them all and avoid those fireballs best you can, 
+although you're more likely than not to take a beating in this room, it's 
+pretty tough. When those Darknuts are defeated, the door to the right opens, 
+but ignore it for now. Go north by bombing a wall in the middle of the north 
+wall instead, to room C4.
+
+20.) C4 - In this room, you'll meet yet another Manhandla. Kill him, and he'll 
+drop a map. Then, simply unlock the door to the north of the room, and go 
+through it, to room B4.
+
+21.) B4 - In this room, another Gohma (blue colored) is here for you to fight. 
+Shoot him in the eye with the Bow and Arrow three times like we did earlier on 
+in the dungeon, and both doors in his lair will open. First, check the door to 
+the right, which leads into room B5.
+
+22.) B5 - In this room, there are two Pols Voices, two red Darknuts, and two 
+blue Darknuts. Kill all of them, and then to gain access to the stairs in the 
+middle of the room, push the left block of the box in the middle of the room, 
+then go down the stairs into the basement of the room. Kill or avoid the Keeses 
+down there, and grab the Magic Key, which negates using any other key in the 
+game... you don't need anymore keys! Makes life so much easier. Go back 
+upstairs, and then leave the room back through the left door, to room B4.
+
+23.) B4 - The room to the north leads to some bombs, it's a waste, so don't go 
+up there. Instead, go south, back to room C4.
+
+24.) C4 - Just head south again, to room D4.
+
+25.) D4 - Back here, you'll have to fight the blue Darknuts again. Kill them 
+all, avoid the fireballs that the statue shoots, and the door to the right will 
+open up, which you should now go through, to room D5.
+
+26.) D5 - In this room, there's a plethora of enemies... Gibdos, and both kinds 
+of Darknuts, as well as Bubbles. Just ignore them and go to the staircase at 
+the righthand side of the room, which leads clear across the dungeon, to room 
+F2.
+
+27.) F2 - In this room, there are Pols Voices all over the place. Kill them 
+all. The key in the corner of the room we don't need now that we have the Magic 
+Key. Ignore the door to your left, and bomb the wall at the north of the room, 
+which leads to the boss lair. The boss here is Gleeok, and we've fought him 
+before, so fear not. This is room D2.
+
+28.) D2 - Gleeok's Boss Chamber...
+
+BOSS BATTLE - G L E E O K
+
+Gleeok is back, but he's just as simple (actually, he's more simple now, we 
+have the Magical Sword this time around) as when we fought him earlier in the 
+game, in the fourth dungeon, I believe. Run up to Gleeok and slash at him. 
+Don't worry about getting hit by fireballs, just slash at his heads. Each two 
+hits, one head will die, and it'll float around the room, as the enemy "Head of 
+Gleeok." Finish Gleeok off totally with eight hits of the Magical Sword. He's 
+really easy, just be tenacious and don't worry about playing defense with this 
+guy. It's really not worth it.
+
+After Gleeok is defeated, go north to room C2.
+
+29.) C2 - In this room, grab the Triforce, and you'll be automatically healed 
+and transported outside of the dungeon.
+
+Once outside of the dungeon, we can go to Death Mountain. Before you go, make 
+sure to visit a Fairy and get your life refilled, all 16 hearts! Also, go to 
+the Old Woman and buy a Red Potion if you haven't got one already in your 
+inventory. Bombs should also be stocked up to 16, and rupees, to 25 at least, 
+which is the equivelant of 25 arrows, of course. When you're ready, head back 
+to the origin and follow these directions to get to Death Mountain.
+
+From the origin, go right, and then up all the way until you can't go up 
+anymore. Then, go left, and up once more. Cross over the river with the 
+stepladder, and go up the staircase to the left of the river, into the Death 
+Mountain region. Go left two screens, until you get to a screen with two rocks, 
+the "Spectacle Rocks." Bomb the left rock in the middle, towards the right a 
+bit, to make a door. Enter into the door, and welcome to Death Mountain!
+
+-------------------------------------------------------------------------------
+19.) DUNGEON NINE  - "Death Mountain"
+-------------------------------------------------------------------------------
+
+NOTE: The map of the final dungeon is laid out a bit differently than the 
+previous eight dungeon maps I've provided you with in the walkthrough. Being 
+that Death Mountain is so massive, and you can avoid going to most of it en 
+route to slaying Ganon, I've mapped out the parts you need to go to, and 
+nothing more. The "T1", "T2", et cetera, are teleports, so to speak, like we've 
+seen in other dungeons. Since there are so many, and they lead straight across 
+this massive dungeon, I've now put them on the map. Therefore, T1 in one place 
+corresponds with T1 in another place. As the map segements go down, you are 
+farther into the dungeon, so they are also in sequential order, for ease. Hope 
+they help.
+
+             -------
+  A         | T1=   |
+             -------
+  B             |   |
+                 ---
+  C             | E |
+                 ---
+To...
+
+                 -----------
+  D             | T2| OM| RR|
+             ---------|---||
+  E         | T1|   |   |   |
+             -----||------||
+  F             |   =   | M |
+                 -----------
+  G             | C |
+                 ---
+
+To...
+
+             ---
+  H         | T4|
+             -|-
+  I         |   |
+             -|-----
+  J         |   |   |
+             ---------------
+  K             | T3|   | T2|
+                 -----------
+
+To...
+
+             ---
+  L         | SA|
+             ---
+  M         | T3|
+             ---
+
+To...
+
+             -------
+  N         | T5| T4|
+             -------
+
+To...
+
+            ---
+  O        | Z |
+            ---
+  P        | B |
+            ---
+  Q        | T5|
+            ---  
+
+             1   2   3   4    
+
+
+KEY/LEGEND:
+
+X = Entrance
+K = Key (whether or not you have to do something to get it in the room is based 
+on whatever situation you're in, see the walkthrough for specifics).
+M = Map
+C = Compass
+SA = Silver Arrow
+RR = Red Ring
+T# = Teleport [_] {Corresponding}
+R = Rupees
+| = Locked Door
+|| = Bombable Wall
+OM = Old Man
+B = BOSS ROOM
+T = Triforce Piece
+
+Death Mountain is the final stage in the first quest. Death Mountain is big and 
+hard, but one thing you have to realize about Death Mountain is, out of the 58 
+(!) rooms in the dungeon, you don't have to visit even half of those, if you do 
+things right. You can still get the Red Ring and the Silver Arrows and avoid a 
+lot of annoyances. Just follow the walkthrough, and you'll get those two items 
+and to Ganon in no time, trust me my friends.
+
+1.) C2 (entrance) - As you enter the dungeon, go up to room B2.
+
+2.) B2 - In this room, there would be an Old Man telling you to go back, but 
+since you've beaten all eight dungeons, there's nothing here, and doors to the 
+left and north open up. Go through the north door, to room C2.
+
+3.) C2 - In this room, there are Bubbles, Like Likes, and Zols, two of each. 
+Avoid the enemies being that all they drop is a key (you don't need anymore, 
+remember!), and bomb the middle of the lefthand wall, to make a hole. Go 
+through the hole in the wall, to room C1.
+
+4.) C1 - In this room, there are two of a new enemy, called Lanmolas. You have 
+to attack their bodies first, and then their heads after all of their body 
+segments are defeated. They are basically stronger, faster versions of the 
+Moldorm. Kill both of them, and then move the block to the left of the large 
+box in the middle of the room, to get to the staircase. Take the staircase, 
+which will teleport you to another part of the dungeon, to room E1.
+
+5.) E1 - In this room, kill the Like Likes as you go around the huge spiral in 
+the room. Ignore the open door leading south, and instead, use the Magic Key on 
+the door to the right of the room, which leads into room E2.
+
+6.) E2 - When you get into this room, use the Red Candle right away, and start 
+blocking the spells coming your way from the blue Wizzrobes in the room. Engage 
+them in battle if you'd like, but I'd save your energy if I were you. Instead, 
+go to the south wall, and place a bomb in the middle of it. Go through the hole 
+you make in the wall, down to room F2.
+
+7.) F2 - In this room, shoot straight down the path laid out for you, and place 
+a bomb in the middle of the south wall here as well. Go through the hole, into 
+the next room, room G2.
+
+8.) G2 - This room is dark, like an Old Man's room, for whatever reason. There 
+are four Wizzrobes in here for you to kill. Kill all of them (be careful with 
+your energy!) and then grab the Compass that they drop after they die. Then go 
+up one room, back to room F2.
+
+9.) F2 - Here, just head back up again, to room E2.
+
+10.) E2 - Back in this room, don't bother with a Red Candle or anything, just 
+walk to the door at the right of the room, and go through it, to room E3.
+
+11.) E3 - In this room, there is a Patra, a new enemy we've yet to encounter on 
+our quest. It's a floating eyeball surrounded by some sort of debris, I can't 
+really make it out. In anycase, you can kill it if you want, but I wouldn't 
+waste your time. Just go through the southern door, to room F3.
+
+12.) F3 - This room, strangely enough, is occupied by some weak Gels. Ignore 
+them, and go to the middle of the righthand wall, where you should place a 
+bomb. A hole in the wall will now be there for you to go through, to room F4.
+
+13.) F4 - Another Patra resides in this room, and this time, you'll have to 
+kill it, if you want the Map of the huge dungeon. Patras are indeed a pain in 
+the ass to defeat, but sometimes, you must do what you don't want to do. To 
+slay a Patra, walk up to the debris surrounding him and hack at them to destroy 
+them (two hits each with the Magical Sword). Only when all of that debris is no 
+longer orbiting him is he vulnerable to your attack. Then, you can just attack 
+the eyeball itself. When he is defeated, a Map will appear in the room for you 
+to use. Beautiful. Now, we can go get the Red Ring, the next item on our trail. 
+From this room, bomb the middle of the north wall, and walk through the hole 
+you make there, to room E4.
+
+14.) E4 - In this room, there are a plethora of toughies for you to slay. 
+Wizzrobes and Like Likes galore. Ignore them all however, and dash to the top 
+wall, and bomb the middle of it. Go through the hole in the wall, to room D4.
+
+15.) D4 - In this room, so many Wizzrobes for you to kill. You have to kill 
+them all, and avoid the Bubbles. When all the Wizzrobes are killed, push the 
+left block in that box in the middle of the room, and go down the stairs there. 
+Kill or avoid the Keeses down here, and grab the Red Ring! The Red Ring is an 
+AWESOME item that is twice as powerful as the Blue Ring... in other words, you 
+now take half of the damage that you would with the Blue Ring equipped, or one 
+fourth the damage with out any ring equipped! It's a beautiful thing. In 
+anycase, head back upstairs, and back south, to room E4.
+
+16.) E4 - Back in this room, go south again, to room F4.
+
+17.) F4 - Back here, go left, to room F3.
+
+18.) F3 - Now, go north, back to the original Patra room, room E3.
+
+19.) E3 - Avoid or kill the Patra, as he's in front of the door we need to get 
+to, the locked one to the north of the room. When you get around the Patra, or 
+kill him, go to the north door, unlock it with the Magic Key, and go through 
+it, to room D3.
+
+20.) D3 - The old man simply tells you here to go to the next room. Since there 
+are no doors in his room, break out your trusty bombs. Bomb the middle of the 
+lefthand wall, and go through the hole in the wall, to the next room, room D2.
+
+21.) D2 - In this room, there are five Wizzrobes - three blue, two red. Slay 
+all five of them, and then go to the block at the left side of the room, and 
+push it over, to reveal a hidden staircase in the upper righthand corner of the 
+room. Take the staircase down into the basement, and come up on the other side, 
+in room K4.
+
+22.) K4 - Over here, you'll be in a room with five weak enemies, Zols. Kill 
+them and grab whatever they drop. Then, open the door to the left of the room 
+with the Magic Key, and go into the room there, room K3.
+
+23.) K3 - In this dark, "old man" style room, there are numerous Keeses. Kill 
+them, or avoid them, and go left into the next room, room K2.
+
+24.) K2 - In this room, there is yet another Patra for you to deal with. Since 
+you need to gain access to the stairs in the middle of the room, you'll have to 
+slay this Patra, so do that, and then push the leftmost block up or down, to 
+gain access to the staircase in the middle of the room. Take it into the 
+basement, and come up on the other side, room L1.
+
+25.) M1 - In this room, there is a plethora of Wizzrobes. Ignore and avoid all 
+of them, and place a bomb in the middle of the northern wall, to bust a hole 
+through that wall, leading north to room L1.
+
+26.) L1 - In this room are more Wizzrobes and Bubbles. Kill the Wizzrobes and 
+avoid the Bubbles. When all of the Wizzrobes are slain, push the middle block 
+on the vertical block row, to make a staircase appear in the upper righthand 
+corner of the room. Take it into the room's basement, and grab the Silver 
+Arrows down there! Now, go back up to the main floor, and go back south, to 
+room M1.
+
+27.) M1 - Since we now need to get back to those stairs, those Wizzrobes are 
+going to have all be killed. Kill them all, and once again, push that left 
+block out of the way, and take the stairs back to the other side, where the 
+Patra was earlier, room K2.
+
+28.) K2 - Back in the room (now void of a Patra), head north, to room J2.
+
+29.) J2 - In here, carefull kill all of the Like Likes (don't let them take 
+your Magic Shield!), and the door at the lefthand side of the room will open up 
+for you. Take that door to room J1.
+
+30.) J1 - In this dark room, don't waste your time with the Red Candle. There 
+are only Zols in here. Just go to the north door and open it with your Magic 
+Key, and go into room I1.
+
+31.) I1 - This room has three Wizzrobes in it... three Wizzrobes we don't have 
+to deal with. Avoid them best you can and open the door to the north of this 
+room with the Magic Key, and go into room H1.
+
+32.) H1 - This room has Wizzrobes and Traps, and the Wizzrobes do have to be 
+killed here. While carefull avoiding the traps, kill the Wizzrobes in the room, 
+and then push the lefthand block in the room, to reveal a staircase in the 
+upper righthand corner of the room. Take it down into the basement, and come up 
+in another area of the dungeon, in room N2. (since the stairs come up under a 
+Trap, you have to trigger the Trap, then run to the staircase before the Trap 
+resets itself).
+
+33.) N2 - As you resurface, you'll be in a room full of Traps and Wizzrobes, 
+and Bubbles as well. Avoid everything the best you can and work your way to the 
+lefthand side of the room. Trigger the traps, then move out of the way as they 
+come together. When they are going back to reset themselves, place a bomb in 
+the middle of that wall and blow a hole in it, and quickly run through it 
+before the Traps come back to injure you. You're now in room N1.
+
+34.) N1 - In this room, there are two Bubbles, two Zols and two Like Likes. 
+Kill the Like Likes carefully, and the Zols as well. When those are defeated, 
+push the block at the left of the room up or down, and go down the stairs in 
+the middle of the room, coming up on the other side, in room Q1.
+
+35.) Q1 - You're right before Ganon's room! There's a Patra guarding the 
+entrance. Kill the Patra, and then go north, to Ganon's lair... get ready for 
+the last boss battle, in room P1.
+
+36.) P1 - Ganon's Boss Chamber...
+
+BOSS BATTLE - G A N O N
+
+The boss battle with Ganon is more of a novelty than anything, if you ask me, 
+because it really lacks any difficulty at all. As you walk into the room where 
+he is, Link takes out the Triforce and the room is lit up. To let you know 
+right away, you CAN walk on the black parts of the floor, the hole room is 
+walkable, regardless of color, so those AREN'T holes in the floor. Ganon will 
+disappear and shoot unblockable fireballs at you. Stab around the room a bit 
+and you'll hit him, and he'll reappear, but then disappear. You have to do this 
+to him four times, and then he'll turn a brown color. This is when you have to 
+break out the Bow and Silver Arrow. One hit with the Silver Arrow will turn the 
+evil Ganon into dust, and open the door to the north of his room, which leads 
+to Zelda's holding chamber. See, Ganon wasn't that hard... which is a shame... 
+'cause he never is in any of the Zelda games he appears in, if you think about 
+it. Ah well.
+
+After Ganon is defeated, go north to room O1.
+
+In this room, slay the fires surrounding Zelda with your mighty Magical Sword, 
+and walk up to her. You've defeated the game, CONGRATULATIONS!
+
+
+   /\                                                                     /\
+  /__\===================================================================/__\
+ /\  /\ XI   S E C T I O N   E L E V E N  |  W E A P O N S / E T C   XI /\  /\
+/__\/__\===============================================================/__\/__\
+
+This part of the FAQ/Walkthrough are several lists of various items, weapons, 
+and accessories that are found throughout the world of Hyrule, for your 
+convenience.
+
+------ -----
+Common Items
+------ -----
+
+-Name: RUPEES
+-Use: Hyrule's monetary unit
+-Where Found/How Obtained: Kill enemies, and some of them sometimes drop 
+rupees. Sometimes, you can even find large sums of rupees in hidden areas...
+-Description: There are two forms of rupees. One rupee piece and five rupee 
+piece. The one rupee piece is gold, and is common after defeating an enemy. A 
+five rupee piece is blue in color, and far rarer to get after an enemy is 
+defeated, although they still show up.
+
+-----
+
+-Name: CLOCK
+-Use: Freezes On-Screen Enemies
+-Where Found/How Obtained: Rarely dropped by enemies after they are defeated.
+-Description: The Clock is a pretty useful item dropped by enemies after they 
+are defeated in battle. Pick up the clock, and all enemies on the screen will 
+freeze, so that you can easily defeat them and take their wares. Link will 
+flash when this frozen state is obtained. The time stays frozen until you leave 
+the screen.
+
+-----
+
+-Name: HEART
+-Use: Refills one heart container
+-Where Found/How Obtained: When you defeat an enemy, they sometimes drop 
+hearts.
+-Description: The heart is an important item that enemies drop after they meet 
+their demise in battle. Pick them up and one heart container will be refilled 
+on your health meter... not a bad deal.
+
+-----
+
+-Name: FAIRY
+-Use: Refills many heart containers
+-Where Found/How Obtained: Very rare items dropped by enemies after they are 
+defeated.
+-Description: Fairies are famous Zelda "items" but they are actually alive. 
+When they are released by their enemy captor, they fly around the screen. Catch 
+the fairy and she'll refill your health to a certain degree, far more than a 
+single heart can.
+
+------- -----
+Dungeon Items
+------- -----
+
+-Name: MAP
+-Use: See the layout of a dungeon.
+-Where Found/How Obtained: Each dungeon has one map within it. They are hidden 
+all in various places, in various ways, depending on the particular dungeon.
+-Description: The map is a very important item to find within a dungeon, 
+especially if you're attempting to defeat a dungeon on your own, with no 
+outside help. It should be your first objective upon entering any new dungeon, 
+and is usually located around the beginning of the dungeon.
+
+-----
+
+-Name: COMPASS
+-Use: Puts the location of the dungeon boss on the map.
+-Where Found/How Obtained: Each dungeon has one compass within it. They are 
+hidden all in various places, in various ways, depending on the particular 
+dungeon.
+-Description: The compass isn't quite as vital an item as the map, but it's 
+pretty important none-the-less, and should be sought out after the map is 
+acquired in each dungeon. The compass, once you have the map, pin points the 
+location of the dungeon boss on the map, for your convenience.
+
+-----
+
+-Name: KEY
+-Use: Opens regular locked doors.
+-Where Found/How Obtained: Found in various places, hidden in various ways, in 
+dungeons. You can also buy them at various stores around Hyrule.
+-Description: The Key is a vital item, found in all the dungeons in the game. 
+You need them to open locked doors within the dungeon, of which there are 
+usually several, to many. If you can't seem to find a key in a dungeon, but 
+there's a locked door within the dungeon, you can go to stores around Hyrule 
+and buy a key. There is ALWAYS a key for a door, however, within the dungeon... 
+you just have to find it.
+
+-------
+Weapons [in order of how you acquire them in the game, sequentially]
+-------
+
+-Name: WOODEN SWORD
+-Use: Hack and slash enemies
+-Where Found/How Obtained: In the beginning of the game, go to the cave in the 
+north of the screen you're in, and the old man there will give you the Wooden 
+Sword.
+-Description: The Wooden Sword is the first weapon Link recieves in the game, 
+and is pretty weak indeed. However, if you play the game correctly, you'll have 
+to use it for all of 15 or 20 minutes. Once you get six heart containers, which 
+can be done before you even go to the first dungeon, you can get the White 
+Sword from a mysterious old man, which is twice as powerful as the Wooden 
+Sword. So don't worry about it too much. =)
+
+-----
+
+-Name: BOMBS
+-Use: Blow up walls, rocks, and enemies.
+-Where Found/How Obtained: Many enemies drop these after you defeat them, and 
+you can also buy them for 20 rupees (for four bombs) at several shops around 
+Hyrule.
+-Description: The Bombs are fundamental Zelda weapons. Although you can use 
+them as weapons, to blow enemies up, their real important use is to blow holes 
+in faulty walls in dungeons, or to make cave entrances on the overworld. You 
+can only carry eight bombs at a time.
+
+-----
+
+-Name: WHITE SWORD
+-Use: A sword that is twice as powerful as the Wooden Sword
+-Where Found/How Obtained: Once the hearts in your reserve equal six or over, 
+you are eligable to get the White Sword. Go to the old man in a cave around 
+Hyrule (see the map above the walkthrough section, or the walkthrough itself 
+for an exact location), and he'll give it to you in exchange for the weaker 
+Wooden Sword.
+-Description: The White Sword is the sword you'll be using almost the entire 
+game, being that you use the Wooden Sword for maybe 20 minutes, and you can't 
+get the stronger Magical Sword (which is twice as powerful as the White Sword) 
+until you get 12 hearts in your reserve. The White Sword is quite ample, 
+however, as it is twice as strong as the Wooden Sword, and does its job rather 
+nicely, indeed.
+
+-----
+
+-Name: BOOMERANG
+-Use: Stun enemies, kill weaker, smaller enemies.
+-Where Found/How Obtained: Kill the three Goriyas in the first dungeon, and 
+they'll drop the Boomerang.
+-Description: The Boomerang is a pretty useful weapon to have, for it's a 
+projectile weapon that can stun almost all enemies, not allowing them to move. 
+In this paralyzed state, you can easily walk up to an enemy and slash his non-
+moving body to bits and pieces. Smaller, weaker enemies, like Gels, can be 
+killed completly with one hit of the Boomerang.
+
+-----
+
+-Name: BOW AND ARROW
+-Use: The ultimate projectile weapon... use it to kill enemies from afar.
+-Where Found/How Obtained: The bow is found in the basement of the first 
+dungeon. Arrows are dropped by enemies, and can also be bought for 80 gold from 
+many shops around Hyrule.
+-Description: The Bow and Arrow is truly the ultimate projectile weapon. Once 
+you acquire it, you'll find that it's almost always in the B button box, ready 
+to be used. Use it to kill enemies from a safe distance, or to kill out of 
+reach or strong enemies from a distance, where you can hurt them, but they 
+can't hurt you. It's that simple with the Bow and Arrow. Link can carry up to 
+30 arrows at one time in his reserve.
+
+-----
+
+-Name: MAGIC BOOMERANG
+-Use: A stronger version of the regular Boomerang that flies farther than its 
+predecessor.
+-Where Found/How Obtained: The Magic Boomerang is the special item found in the 
+second dungeon... grab it from a group of nasty Goriyas. =)
+-Description: There's not much to be said about the Magic Boomerang... it's 
+identical to the regular Boomerang... it just does more damage and can fly 
+farther, that's basically it. It's almost like our friends at Nintendo ran out 
+of ideas for items, so they threw this garbage into the game for shits and 
+giggles. =P
+
+-----
+
+-Name: MAGICAL SWORD
+-Use: A sword that's twice as strong as the White Sword, and four times 
+stronger than the Wooden Sword.
+-Where Found/How Obtained: It's in the graveyard... at coordinate C2. See the 
+big map above the walkthrough, if you so please.
+-Description: The Magical Sword is the most powerful sword in the game. Four 
+times stronger than the Wooden Sword, and twice as strong as the White Sword, 
+it makes mincemeat out of all the enemies in Hyrule, making your life a whole 
+lot easier, indeed. The only catch is, you have to have at least 12 hearts in 
+your reserves to be able to get the Magical Sword. Hence, the earliest you can 
+get the Magical Sword is right before going to the fifth dungeon. That's when 
+you should get it.
+
+-----
+
+-Name: MAGIC WAND
+-Use: The most powerful non-sword weapon in the game, it can shoot magical 
+energy straight across any room, seriously damaging all enemies but Wizzrobes.
+-Where Found/How Obtained: It's the special item found in the sixth dungeon of 
+the game.
+-Description: The Magic Wand is a pretty useful weapon, believe it or not. 
+Consider it a stronger version of the bow and arrow, one that does more damage, 
+travels faster, and doesn't take rupees or anything else to use. Once you get 
+the Magic Wand, use it as a long distance attacking powerhouse, with no penalty 
+to use it at all. Use it with regularity, and you'll learn that it'll be your 
+best friend for the rest of the game after you acquire it... just know that it 
+doesn't damage the powerful Wizzrobes, who use an identical weapon. Just 
+letting you know, so you're informed. =)
+
+-----
+
+-Name: SILVER ARROW
+-Use: Ganon's weakness, the only way he can be totally destroyed. Takes the 
+place of the regular arrow when obtained.
+-Where Found/How Obtained: It's one of two items found in Death Mountain at the 
+end of the game, before you battle Ganon in the final fight.
+-Description: The Silver Arrow is nothing special, and you'll likely only use 
+it once, in the final battle of the game, and not before that. It takes the 
+place of the regular arrow, and is Ganon's weakness after you slash him enough 
+with the Magical Sword, and he turns brown. That's when you know to give him 
+one shot with the Silver Arrow to end his reign of terror, and turn him into 
+dust, permanently.
+
+----- ----- -----
+Other Vital Items
+----- ----- -----
+
+-Name: BLUE CANDLE
+-Use: Burns secret bushes, revealing new passageways, stairs, et cetera.
+-Where Found/How Obtained: You can buy it from a few shops around Hyrule.
+-Description: The Blue Candle isn't exactly a must have item, but you should 
+definetly pick it up first thing as you start a new journey. It's uses are 
+immeasureable... use the Blue Candle to burn down certain bushes around Hyrule 
+to reveal secret passageways and staircases, that often reveal valuable items. 
+You can only use the Blue Candle once per screen, so to use it again on a 
+screen you've already used it on, you'll have to leave the screen and then go 
+back to use it again.
+
+-----
+
+-Name: BLUE RING
+-Use: Cuts damage inflicted by enemies onto Link by half.
+-Where Found/How Obtained: Purchase from a certain shop in Hyrule for 250 
+rupees... it's worth EVERY rupee, and then some.
+-Description: The Blue Ring is a vital item. Thankfully, you can acquire it 
+before you even get to the first dungeon... you just have to save up the 250 
+rupees it costs to buy. The Blue Ring cuts the damage inflicted by enemies onto 
+Link in half, meaning that if an enemy takes away one heart on Link normally, 
+he'll now take half a heart away. If an enemy usually takes half a heart away, 
+it not takes him two hits to take away that half a heart. It turns Link's tunic 
+blue, too, which makes you know it's working. Very useful indeed!
+
+-----
+
+-Name: LETTER
+-Use: Allows various old women around Hyrule to sell you potions of healing.
+-Where Found/How Obtained: An old man in the northeastern corner of Hyrule, 
+hiding in a cave, will give you the letter.
+-Description: The Letter has one use; to make the old women around Hyrule sell 
+you the Red and Blue Potions they are famous for (see below), which gives you a 
+portable healing device to bring with you around Hyrule, and more importantly, 
+to dungeons.
+
+-----
+
+-Name: RED AND BLUE POTIONS [Medicine]
+-Use: Refills your heart containers.
+-Where Found/How Obtained: After you get the Letter from the old man in Hyrule, 
+show it to old women scattered in caves across Hyrule, and they'll sell you 
+Blue Potion for 40 rupees, and Red Potion for 68 rupees.
+-Description: The potions are very important items to have. When you select to 
+
+use the potions, your empty heart containers will be filled up. It's that 
+simple. The difference between the two colors is simple - they both have the 
+same healing properties, it's just that you can use the Red Potion twice, while 
+the Blue Potion can be used only once. So a Red Potion that is used once will 
+turn into a Blue Potion, you see.
+
+-----
+
+-Name: RAFT
+-Use: Allows you to cross bodies of water.
+-Where Found/How Obtained: It's the main item to find in Dungeon three, but you 
+don't actually use it until you are trying to get to the fourth dungeon... but 
+you still need it.
+-Description: The raft simply allows Link to cross various bodies of water 
+around Hyrule, and it's the only way you can get to Dungeon Four, so naturally, 
+it's considered a "vital" item, just like every other item in the game you find 
+in the dungeons. =P Not much else could be said about the Raft... it's a boring 
+item, but a necessary one, none-the-less.
+
+-----
+
+-Name: STEPLADDER
+-Use: Allows you to cross bodies of water one square long.
+-Where Found/How Obtained: It's the main item to find in Dungeon four, and 
+unlike the Raft, you'll actually need it in the dungeon you find it in. Go 
+figure. =)
+-Description: The Stepladder is a step down from the Raft, which makes me 
+wonder why we get it after the Raft, but whatever... I didn't design the game, 
+now did I. =) Use the Stepladder to cross bodies of water one square wide in 
+the game, or as I call them in the walkthrough, rivers. You can use it on the 
+overworld, but it's more useful in dungeons than anywhere else. You can't get 
+through dungeon four without it, either, so make sure to find it, or you won't 
+go very far!
+
+-----
+
+-Name: POWER BRACELET
+-Use: Use it to push, lift, and move large rocks and boulders around the lands 
+of Hyrule.
+-Where Found/How Obtained: Underneath an Armos chillin' at coordinate C5, on 
+the map above the walkthrough.
+-Description: The Power Bracelet is another vital item to have in the game. 
+With it, you can push, lift, and move rocks and boulders, opening up new areas 
+of Hyrule for you to explore, as well as allowing you to find many a new 
+secret, making the game longer, more fun, and more enjoyable. All in all, it's 
+a good item to have, and you'll need it sooner or later, so why not get it 
+sooner?
+
+-----
+
+-Name: WHISTLE
+-Use: Use it in the fifth dungeon on Digdogger, to make him smaller, and in 
+that case, easier to kill. Oh, and it's a teleporter... so to speak.
+-Where Found/How Obtained: Grab it in the fifth dungeon in the game, in the 
+basement of the dungeon.
+-Description: The Whistle is a pretty useless item... one of those infamous 
+Zelda items you get for one reason, and one reason only - to kill a boss. Well 
+that, and to get to the last dungeon in the game When you get the Whistle, you 
+can blow it at any time to make some pretty music with it, but its primary use 
+is when you're battling the fifth dungeon's boss, Digdogger. Use it on him and 
+he'll shrink in size, becoming helpless to the might of your Magical Sword, 
+which you can they slay him with in two slashes. Other than that, a pretty 
+useless item if I do say so myself.
+
+-----
+
+-Name: RED CANDLE
+-Use: The Red Candle is basically a hyped up, more useful version of the old 
+Blue Candle we used for most of the game.
+-Where Found/How Obtained: It's the special item/weapon found in dungeon seven.
+-Description: The Red Candle is pretty lame, they just threw it in the seventh 
+dungeon of the game so you'd have something to get. =) The Red Candle takes 
+care of the annoyance of the Blue Candle, however. That is to say, with the 
+Blue Candle, you can only use it once per screen, and you have to leave the 
+screen and go back to the screen to use it again in case you messed up or 
+needed to try it again. The Red Candle aleviates that problem by allowing you 
+unlimited use of the candle's fire in any room, on any screen, as much as you 
+want. It's a cool upgrade, but such a "blah" item. =)
+
+-----
+
+-Name: MAGIC BOOK
+-Use: Simply makes the Magic Wand shoot a more powerful magic, in the form of 
+fire.
+-Where Found/How Obtained: It's one of two items found in the eighth dungeon.
+-Description: The Magic Book is pretty useless, but it's also pretty cool, 
+because it gives your Magic Wand a huge power up, because the magic shot out of 
+it is now fire, which apparently does more damage to enemies in the land of 
+Hyrule. While many people go the entire game without using the Magic Wand 
+period, you might wanna try the Magic Wand with the Magic Book in your 
+inventory on certain enemies. It's a very powerful long range weapon that is 
+often overlooked by many Zelda players, even those who are experienced in the 
+game. Give it a whirl if you feel like it. Of course, it's not necessary.
+
+-----
+
+-Name: MAGIC KEY
+-Use: The Magic Key is basically a regular key that can be used over and over 
+again, negating all other keys in the game. Makes life easier.
+-Where Found/How Obtained: It's one of two items found in the eighth dungeon.
+-Description: Ah yes, the Magic Key. A very useful item indeed. When you get 
+the Magic Key, it's in the eighth dungeon, which is basically late in the game 
+where you don't need Keys anyway, but the Magic Key... well, the Magic Key 
+works wonders because it negates all other keys in the game. No more key 
+hunting! Use this key over and over and over again, on all locked doors in the 
+game, and it won't go away! A beautiful, beautious thing indeed. At least you 
+get it earlier in the game in the second quest...
+
+-----
+
+-Name: RED RING
+-Use: Cuts damage you receive in one fourth, or one half, if you already have 
+the Blue Ring equipped.
+-Where Found/How Obtained: It's one of two items found in Death Mountain, 
+before your final battle with Ganon.
+-Description: The Red Ring is an extremly vaulable item, that not only turns 
+Link a pretty shade of red, but also cuts damage he sustains in battle in one 
+fourth, or one half, if you have the Blue Ring equipped already.  The Red Ring 
+is found super late in the game, in Death Mountain, actually, which makes it 
+kind of useless by the time you get it, but it gives you a fighting chance 
+against the numerous Patras, Wizzrobes, et cetera, you find in Death Mountain, 
+as well as the nemesis of the entire game, Ganon, who can do serious damage to 
+you unless you have the Red Ring equipped. So definetly make sure you have it 
+equipped before you go to fight Ganon, to give yourself a better chance to slay 
+him.
+
+
+   /\                                                                     /\
+  /__\===================================================================/__\
+ /\  /\ XII      S E C T I O N   T W E L V E  |  E N E M I E S      XII /\  /\
+/__\/__\===============================================================/__\/__\
+
+This part of the FAQ/Walkthrough is a list of enemies. Along with the enemies 
+is a description of them, which is straight out of The Legend of Zelda 
+instruction manual that came with the game. So those words are Nintendo's, not 
+mine. Underneath that, there is a small "battle strategy" (which I wrote, yes), 
+to help you in defeat the enemy. It's super straight-forward, you'll see.
+
+[the enemies are in alphabetical order]
+
+----------
+
+-Name: AQUAMENTUS
+-Description: "A type of dragon that some call a unicorn. As well as having 
+lots of attack power, it's a fearful opponent. It emits beams."
+-Location: Underworld
+-Battle Strategy: Aquamentus is the first boss character in the game, yes, 
+which you can find inside the first dungeon. However, in later dungeons, he 
+appears as a regular old enemy, which is why he is in both the enemy section 
+and boss section of my guide. So leave me alone about it! =D Aquamentus is easy 
+to defeat. Although his description in the instruction manual makes him sound 
+menacing, he's not. He hardly moves, and shoots three fireballs every few 
+seconds that can be avoided if you place yourself right. Then you can get in 
+close for the kill with your sword, although if you have full health, sword 
+beams do the trick, and from a safe distance. It'll just take you a bit longer 
+to defeat him with the weaker sword beams.
+
+----------
+
+-Name: ARMOS
+-Description: "A soldier who has been turned into a stone statue. He moves and 
+attacks if touched by Link. He has a fair amount of attacking power."
+-Location: Overworld
+-Battle Strategy: You never have to fight an Armos. The only way you can wake 
+them up is if you physically touch them, which can always be avoided if you're 
+careful. They are often in huge packs, however, and you'll have to carefull 
+wind yourself through them in order to not touch them, which can be a tricky 
+and difficult proposition. If you do fight one, they move fast, so hack, run a 
+bit, turn around and hack again, continuing the process until he's defeated. Be 
+weary of groups of them, if you awaken more than one. That's when they can be 
+particularly tough to defeat.
+
+----------
+
+-Name: BUBBLE
+-Description: "The spirit of the dead. When it clings onto Link, he won't be 
+able to unsheath his sword for a while."
+-Location: Underworld
+-Battle Strategy: The Bubble is an enemy that is better left alone then 
+anything. You can't damage him with your sword... actually, quite the opposite. 
+If he touches you, Link can get his sword out of his sheath for a few seconds, 
+making Bubbles extremly annoying when teamed up with our enemies that you CAN 
+kill, and that are trying to kill you at the same time. Bubbles move fast and 
+eratically, so do your best to avoid them, and kill everything else in the 
+room, while leaving them be. It's your best bet to get out of a room with them 
+alive.
+
+----------
+
+-Name: DARKNUT
+-Description: "The knight who lives in the labyrinths. He has lots of attacking 
+power. He repels Link's attacks from the front with his shield."
+-Location: Underworld
+-Battle Strategy: Darknuts start appearing in the dungeons about midway through 
+the game. While they aren't difficult to defeat at all, they are simply a pain 
+in the butt because they can use a shield, and they use it well. You can't 
+attack them head on, while they're facing you. You have to get to the side or 
+back of them and take some shots at them. Two hits with the White Sword will do 
+them in for good, but be careful, as they often change directions and can run 
+into you easily while you're attacking them. That's why you want to be careful 
+with them. They don't have any active attacks, but running into you still does 
+pretty good damage... half a heart with the Blue Ring equipped.
+
+----------
+
+-Name: DIGDOGGER
+-Description: "Big sea urchins. In spite of their big bodies, they shrivel up 
+when attacked. But watch out! They come on pretty strong."
+-Location: Underworld
+-Battle Strategy: Digdogger is indeeed the fifth dungeon's boss enemy, but you 
+encounter him in later levels as a regular enemy. He's large at first, but if 
+you use the Whistle on him (like you did when you fought him as a boss in 
+dungeon five), he'll shrink in size tremendously, therefore making him easy to 
+slay with your slew of weaponry. He's easy to defeat and has no attacks, but is 
+usually stationed in a room with other enemies that can attack, or with statues 
+that do the attacking for him. Either way, equipped with the Whistle, he can do 
+you know harm. As the old man says, he hates noise!
+
+----------
+
+-Name: DODONGO
+-Description: "A giant rhinoceros. It hasn't got so much attacking power, but 
+it bounces off attacks with its thick hide."
+-Location: Underworld
+-Battle Strategy: Our friend Dodongo. The boss character in the second dungeon, 
+the Dodongo becomes a run of the mill enemy in later dungeons in the game. He 
+doesn't attack, he just walks around. His only weakness is to bombs. Nothing 
+else can penetrate his thick skin, but bombs can! Place a bomb in his path as 
+he walks, and the Dodongo will eat it up, and explode from the inside. All it 
+takes is two bombs and a little patience (and love!), and the Dodongo will bite 
+the dust.
+
+----------
+
+-Name: GEL
+-Description: "Jelly-like monsters that walk about bouncing around in the 
+labyrinths. When Link cuts Zol, it splits into two Gels. Gel has little 
+attacking power, but Zol has twice the power of Gels."
+-Location: Underworld
+-Battle Strategy: Gels are little slime-like enemies that hop slowly around 
+dungeons. They are far more dangerous in their bigger, stronger version, Zol, 
+but when they are in their Gel like state, they're little more than easy 
+targets. Take them out and grab whatever they drop... their attack power is 
+non-existant, and one slash or hit with basically any weapon will do them in 
+easily.
+
+----------
+
+-Name: GHINI
+-Description: "The ghost who lives in the graveyard. There are two types. There 
+are Ghinis who are there from the beginning of the game, and those who appear 
+when Link touches the gravestones. Ghinis have about the same attacking force 
+as Armos."
+-Location: Overworld
+-Battle Strategy: Ghinis are found exclusivly in the graveyards of the Hyrule 
+overworlds, and are one of the more difficult overworld enemies to do battle 
+with. While they automatically appear in the graveyards as you enter them, 
+touching a grave will make them appear as well. They can take quite a beating 
+when you attack them, and although they move slow and have no attacks, they 
+often drop rupees and other valuables, making them enticing to fight, even if 
+you don't want to. However, they are slow enough to give you an option to fight 
+them or not... so do whatever you'd like, m'friends. 
+
+----------
+
+-Name: GIBDO
+-Description: "The mummy man. He's got some strange powers, and some pretty 
+powerful attacking force."
+-Location: Underworld
+-Battle Strategy: Gibdos are hardly fierce, and they have no real attacks, 
+although if they run into you, they can do some pretty nice damage. These guys 
+are basically mummies that move around in packs. They move fast and 
+sporatically, but are still easy to slay, especially with the Magical Sword 
+equipped in hand. Slash at them once or twice, then move away to avoid getting 
+hit in their path of speed, and then repeat the process if necessary on any 
+other ones. These enemies shouldn't be feared too much, and starting in dungeon 
+five, they can easily be called "dungeon commons", for they appear with great 
+regularity in dungeons from the fifth dungeon on in the game... but you should 
+be glad you're fighting these guys than say... Darknuts. =)
+
+----------
+
+-Name: GLEEOK
+-Description: "A huge dragon that has 2 to 4 heads and spits out beams at Link. 
+Heads that Link cuts off from its body fly around in the air."
+-Location: Underworld
+-Battle Strategy: Yes, Gleeok is the fourth dungoen boss, but later on in the 
+game, he appears as a regular enemy for you to battle with. He's a lot like 
+Aquamentus in looks (except Aquamentus is green, while Gleeok is blue), but his 
+battle pattern is the same. He stays still and shoots fireballs at you. That's 
+all. =) However, you have to get in close to attack him (unless you have full 
+energy, in which case you can shoot sword beams at him from afar), and since 
+Gleeok's attack power is pretty high, it can make life difficult for certain. 
+Simply avoid or block his fireballs and hack away at his head. When you do 
+enough damage, one of his heads will come off of his body (see HEAD OF GLEEOK 
+in this section for more on that). Just be tenacious with your attacks on 
+Gleeok, and he'll fall quickly to your mighty sword. ^_~
+
+----------
+
+-Name: GOHMA
+-Description: "The super huge crab that lives in the labyrinths. Its hard shell 
+will repulse any attack. Attacks its weak point with a special weapon."
+-Location: Underworld
+-Battle Strategy: Gohma is the boss enemy of the sixth dungeon in the game, but 
+is also found in later dungeons after the sixth dungeon as a regular old enemy, 
+that you can fight. The strategy against any Gohma you encounter is the same, 
+however. Avoid or block the fireballs he shoots at you as he wonders and runs 
+around his lair. His eye is almost always closed, but you're waiting for it to 
+open. Why? Because that's the only time he's vulnerable to attack. When he 
+opens his eye for a second or two, equip the bow and arrow and shoot an arrow 
+at his eye. If you shoot it accuratly, it'll hit his eye and do him in with one 
+measly hit of an arrow! Excellent! =)
+
+----------
+
+-Name: GORIYA
+-Description: "A little devil that lives underground. He uses boomerangs. There 
+are two of his type, blue ones and red ones. Watch out for the blue ones! They 
+are strong."
+-Location: Underworld
+-Battle Strategy: Goriyas come in two varities - blue and red. Both attack in 
+the same way though, with Boomerangs. Being that they use their boomerangs with 
+great accuracy and skill, avoid their projectile attacks the best you can. Your 
+best bet is to get to them from behind, and slash away with your sword, 
+although your bow and arrow is also an ample weapon to use against these 
+enemies. Using a boomerang on them is pretty futile, but if you use one with as 
+much skill as the Goriya himself, perhaps it's worth a shot to freeze up the 
+enemy and take him out when he's paralyzed.
+
+----------
+
+-Name: HEAD OF GLEEOK
+-Description: -
+-Location: Underworld
+-Battle Strategy: The Head of Gleeok is the boss/dungeon enemy Gleeok's head, 
+that turns red and flies around the room, after you do enough damage to a 
+regular old Gleeok. While it flies around the room quickly, it shoots fireballs 
+at you from all angles, making your job difficult. But don't worry too much 
+about the Head of Gleeok. Focus your attacks on the regular Gleeok even after 
+the Head of Gleeok dispatches itself from the Gleeok's body and starts shooting 
+at you, and keep hacking away at the Gleeok's body. When the Gleeok's body 
+dies, so will the Head of Gleeok, effectivly killing two birds with one stone. 
+Voila. =)
+
+----------
+
+-Name: KEESE
+-Description: "Vire is a devil that controls the Keeses. When Link cuts it with 
+his sword, it turns into two Keeses. Keeses have little attacking power, but 
+Vire is a little stronger."
+-Location: Underworld
+-Battle Strategy: Keese are the weakest dungeon enemies, but they are still 
+pains in the butt, because of their small size and speed. Since these bat-like 
+enemies always attack in groups, they have the tendency to swarm, and thereby 
+confuse, their enemies. Take slashes at them to kill them, and gather the 
+numerous items they drop, but be careful not to be overtaken by them. They can 
+downsize your energy quickly, and you might not even know it. Take advantage of 
+their start-and-stop motions to make them easier targets then they would be if 
+they always just kept on moving.
+
+----------
+
+-Name: LANMOLA
+-Description: "A gigantic centipede. Attacking his head won't work. Boy! Does 
+he move fast!"
+-Location: Underworld
+-Battle Strategy: Lanmola's are underworld enemies that are exclusivly found in 
+Death Mountain, the final dungeon in our Hyrule adventure. They are basically 
+larger, stronger, faster versions of their orange counterparts, Moldorms. These 
+guys move fast, and attack for big damage. You have to keep swining your sword 
+at them to make their bodies smaller, until only a head with no segments behind 
+it is running around the room. Then, you can slay their head (which moves very 
+fast, and is hard to hit with no segments behind it), and kill them for good. 
+They are pretty rare to find, and are only found in Death Mountain, but when 
+you do run across these guys, get ready for a real battle, because these guys 
+will definetly give you a hard time.
+
+----------
+
+-Name: LEEVER
+-Description: "They live in the ground and eat up the energy of creatures that 
+approach them. Blue Leevers are a little stronger, but the red ones don't have 
+much attacking power."
+-Location: Overworld
+-Battle Strategy: Leevers are common overworld enemies that you'll run into 
+often, especially in areas that have water in them, such as beaches and river 
+coastlines. They can dig into the ground and come out of the ground in a 
+completly different area, making them pretty difficult to defeat, especially 
+early on in the game. Until you are confident in your attacking ability, your 
+best bet would probably be to avoid these menaces. Just be careful! They seem 
+to chase you, and can take quite a beating even if you do decide to attack 
+them.
+
+----------
+
+-Name: LIKE LIKE
+-Description: "A tube-like monster that has a soft spot for magic shields - he 
+eats them up."
+-Location: Underworld
+-Battle Strategy: Likes Likes look harmless enough, but they can actually be 
+the most annoying dungeon enemy in the game, hands down. They don't have any 
+attacks. In fact, Like Likes simply walk around the room doing not much of 
+anything. But when you get close enough to hack at them, they are close enough 
+to touch you. And when they do, they steal your Magic Shield, pending you have 
+one equipped. Why does this suck? Because you won't get it back if they take 
+it, and you'll have to go buy another one. And who the hell would want to do 
+that? Like Likes can also take a whole lot of damage, so be weary of that as 
+well. It takes five hits with the White Sword (that means ten hits with the 
+Wooden Sword) to kill a Like Like. So just be careful to not lose that Magic 
+Shield of yours!
+
+----------
+
+-Name: LYNEL
+-Description: "The guardian who attacks all those who come near Death Mountain. 
+Watch out! He's pretty strong, and Link's little shield can't stop his sword."
+-Location: Overworld
+-Battle Strategy: Lynels are extremly strong overworld enemies, that are 
+centaur-like in stature. They hold swords, and like Link at full power, they 
+shoot sword beams out of their swords, giving them both distance and power. 
+Unlike Link, however, they have the ability to use the sword beam even if they 
+have been damaged. Your best bet is to stay away from both the blue and red 
+varieties in the early going of the game, if you want to stay alive. Later on 
+in the game, you can approach and engage these guys in battle with regularity, 
+for they sometimes drop items such as rupees, and whatnot. Otherwise, they are 
+probably the strongest overworld enemy, and should be avoided for the most 
+part.
+
+----------
+
+-Name: MANHANDLA
+-Description: "A large man-eating flower with hands sticking out in all four 
+directions. It moves faster as it loses hands. It's pretty mean. So watch out!"
+-Location: Underworld
+-Battle Strategy: Whilst Manhandla is a boss, the boss in dungeon three, he 
+appears in later dungeons as a regular old enemy. The funny thing about 
+Manhandla is that he LOOKS menacing, while all he really is a big creature that 
+moves fast, but can take a fall really quick. For a nice, quick defeat of the 
+Manhandla, place a bomb in his path so that'll explode right when he gets 
+there. A well placed shot will kill him in one hit. Otherwise, you'll have to 
+kill him limb by limb (and he has four), with your sword. A bomb shot can also 
+destroy some of his limbs, but not all. That's where the well placed bomb comes 
+into play, my friends.
+
+----------
+
+-Name: MOLBLIN
+-Description: "A bulldog-like goblin who lives in the forest. He attacks by 
+throwing spears. A little bit meaner than Octorok."
+-Location: Overworld
+-Battle Strategy: Molblins are pretty annoying creatures, regardless of their 
+weak attacking power, and their even weaker defensive stamina. Their real 
+advantage over Link is the fact that they can chuck their spears straight 
+across the screen, and they always do it in Link's direction, which means that 
+when they are on the screen, it's in your best interest to keep on moving. Bare 
+in mind that their spears can be blocked with any of the two shields in the 
+game, just as long as you're properly positioned in front of the oncoming 
+projectile. Engage them in battle from the beginning of the game... they are 
+good practice for tougher enemies in the game, and often-time hold rupees for 
+Link to take upon their death.
+
+----------
+
+-Name: MOLDORM
+-Description: "The huge worm living in the labyrinths. It grows smaller as link 
+attacks. Not so strong."
+-Location: Underworld
+-Battle Strategy: Moldorms are huge worms, each segment looking like a fireball 
+that a statue would shoot at you. Each attack on the Moldorm takes away 
+anywhere from one to all the segments of his body, depending on how good of a 
+hit you get on it. The Moldorm doesn't have any attacks, it just goes around 
+the room, trying to knock into its foe. They're generally easy to defeat, you 
+just have to be patient, and careful that it doesn't change paths and run right 
+into you.
+
+----------
+
+-Name: OCTOROK
+-Description: "A type of octopus that lives above ground. There are two types, 
+red and blue. Watch out for the blue ones. They're mean. They spit out rocks at 
+Link."
+-Location: Overworld
+-Battle Strategy: Octoroks are considered to be the generic enemy in The Legend 
+of Zelda, and are litered all over Hyrule. As mentioned above, there are two 
+primary types of the Octorok, blue and red, which can obviously be 
+differentiated by their colors. The red ones are weaker than the blues ones as 
+far as how many hits it takes to defeat them, but both forms have the same 
+attack and attack power. They both move around and shoot rocks out of their 
+snouts, which shoot across the screen rapidly. They can be blocked by Link's 
+shield however, so block their projectiles and move in close, to attack and go 
+in for the kill! Initially, with the Wooden Sword, the red ones take one slash 
+to defeat, while the blue ones take two slashes. With a sword upgrade, however, 
+they both take one slash.
+
+----------
+
+-Name: PATRA
+-Description: "The Patra attack in groups, in two types of formations. Both 
+formations groups are strong. So be on your toes!"
+-Location: Underworld
+-Battle Strategy:
+
+----------
+
+-Name: PEAHAT
+-Description: "Has little attacking power. This is the ghost of a flower that 
+bounces and flutters around the place. Link can eliminate it only when its 
+standing still."
+-Location: Overworld
+-Battle Strategy: Peahats are frustrating enemies to defeat, because they move 
+quickly all around the screen, and stop only for a very brief time, which is 
+the only time they're vulnerable to any type of attack. Your best bet is to 
+simply avoid these fast moving menaces, and stay out of their tracks. Trying to 
+figure out exactly where they stop, and then getting to that place to attack is 
+more trouble than it's worth. Even if a Peahat hits you, it's not like it's 
+going to do any amount of major damage. So don't worry about them, my friends.
+
+----------
+
+-Name: POLS VOICE
+-Description: "A ghost with big ears and a weak point - he hates loud noise."
+-Location: Underworld
+-Battle Strategy: Pols Voices look like rabbit heads with huge whiskers that 
+hop around whatever room they're in, looking for a kill. They aren't hard 
+enemies at all, but they do some massive damage to Link if they run into him. 
+Being that they often attack in great numbers, it's sometimes hard to avoid 
+them at all, so you'll have to fight them quickly, and with concise battle 
+tactics. They hop around, and can hop over barriers, rivers, et cetera, making 
+it impossible to isolate yourself from them as you attack them. While arrows 
+are the best weapon to use on them, as they die with one or two hits with the 
+arrow, the Magical Sword can subdue a Pols Voice with a few slashes. Either 
+way, kill them and be careful... their movements and speed (and attack power) 
+make them one of the more formidable dungeon enemies you'll encounter.
+
+----------
+
+-Name: ROCK
+-Description: "These rocks crumble off Death Mountain and fall down to attack 
+Link. He can't destroy these natural nuisances."
+-Location: Overworld
+-Battle Strategy: The rock isn't exactly an enemy, but the instruction manual 
+listed it as such, so I figured I should probably so the same. When you get 
+near the Death Mountain region, there are parts of the game where rocks fall 
+from the mountain onto the land you're walking on. You can't attack them or 
+damage them with any weapon in the game, so you're only choice is to avoid 
+them. Avoiding them can be hard, though, especially when they're all over the 
+screen. Well, you'll see.
+
+----------
+
+-Name: ROPE
+-Description: "A poisonous snake that has made the labyrinths its home. It 
+senses other creatures quickly and suddenly comes after them (and Link, for 
+that matter!) once it has found them out. This one hasn't got a lot of 
+attacking power."
+-Location: Underworld
+-Battle Strategy: These snake-like creatures are very common in almost all of 
+the dungeons in Hyrule. They are weak, and have no attacks, but move very 
+rapidly around the room they patrol, and always attack in huge packs. They're 
+infamous amongst Zelda players, however, of being the creatures most likely to 
+drop goods of all kinds, from Hearts and Clocks to one rupee pieces, and lots 
+and lots of five rupee pieces! Attack these guys and reap all the benefits of 
+what they drop, which is lots and lots of goodness galore!
+
+----------
+
+-Name: STALFOS
+-Description: "A skeleton that's got a sword in each hand. Little attacking 
+power."
+-Location: Underworld
+-Battle Strategy: Stalfos is a common dungeon enemy, and probably one of the 
+weakest. These skelton knights pack a sword in each hand, but they do very 
+little damage, and never actually attack. Instead, they try to run into you to 
+do damage, but even if they do, the damage is very minimal. They take one or 
+two hits to kill each, depending on what sword you have, and often fight in 
+groups, to make themselves look more powerful. Never pass up a group of them 
+however. Slay as many as you can and gather whatever they drop... they're like 
+gifts, compared to other enemies you'll come across in the dungeons.
+
+----------
+
+-Name: STONE STATUE
+-Description: "Somebody places these in the labyrinths a long time ago. They 
+suddenly attack Link when he approaches them. So you've really got to watch 
+out!"
+-Location: Underworld
+-Battle Strategy: Stone Statues are a pain in the ass, for sure, but not really 
+because of what they can do to you attack wise. The fact of the matter is that 
+when you're in a room with one or more of these statues, they continuously 
+shoot fireballs at Link, and they shoot them always in his direction, and it's 
+constant. Although these fireballs can be blocked by use of Link's shield, you 
+can't attack and destroy these statues with any weapon in your aresenal, making 
+them more of a nuisance than an enemy. Just be careful of their fireballs, and 
+try to move quick in any room they occupy.
+
+----------
+
+-Name: TEKTITE
+-Description: "These spidery things jump all over the place. Red ones move 
+about a lost and blue ones only move a little. Tekties have little fighting 
+power."
+-Location: Overworld
+-Battle Strategy: Tektites, like Octoroks, liter the overworld, but also like 
+Octoroks, they are super easy to defeat. These guys don't have the projectile 
+advantage the other enemy has, but they do have the ability to jump all over 
+the screen, including to places that Link can't get to, like rocky and forested 
+areas. Both the red and blue Tektites are easy to defeat, one jumping and 
+moving a bit more than the other, but you should engage these enemies in battle 
+whenever you see them. I've found in my own personal experiences that they drop 
+the most rupees of any enemy, especially blue rupees, which are worth five 
+rupees, which, of course, is a sweet deal.
+
+----------
+
+-Name: PATRA
+-Description: "The Patra attack in groups, in two types of formations. Both 
+formations groups are strong. So be on your toes!"
+-Location: Underworld
+-Battle Strategy: Patras are exclusive underworld enemies, only found in the 
+final dungeon of the game, Death Mountain. They are pains in the butt to fight, 
+and often guard key areas of Death Mountain, meaning you can't really avoid 
+them, you HAVE to fight them. The thing with them is, these pieces of brown 
+debris circle them, protecting them like a shield from sustaining any damage 
+until they are all defeated. They circle quickly around him in orbit, and do 
+some good damage when they hit Link. With the Magical Sword, each piece of 
+debris takes two hits, so be patient! When all the debris is cleared from 
+orbit, move in to hit the defenseless eyeball of the Patra, which takes three 
+hits with the Magical Sword to slay.
+
+----------
+
+-Name: TRAPS
+-Description: "Somebody places these in the labyrinths a long time ago. They 
+suddenly attack Link when he approaches them. So you've really got to watch 
+out!"
+-Location: Underworld
+-Battle Strategy: Traps are just like Stone Statues - dungeon regulars who 
+can't be defeated, or even stopped or stunned, by any weapon or item in Link's 
+arsenal. When you walk in front of one (in any of the four primary directions) 
+they'll shoot at Link with incredible speed, attempting to cut him up and do 
+pretty good damage to him. They're especially dangerous when they're on either 
+side of you and manage to pincer Link and damage him for twice as much! The 
+best bet with them is to trigger them, then move back, and then as they try to 
+get back into position, move across their line of sight, so that they can't do 
+anything about it. Just be weary of them, especially when you enter a new room 
+in a dungeon... they often try to be sneaky, being placed right by entrances 
+all over the dungeon.
+
+----------
+
+-Name: VIRE
+-Description: "Vire is a devil that controls the Keeses. When Link cuts it with 
+his sword, it turns into two Keeses. Keeses have little attacking power, but 
+Vire is a little stronger."
+-Location: Underworld
+-Battle Strategy: Vires are simply larger versions of the Keese enemy, the bat-
+like enemy that you find in every dungeon in the game. Vires, however, are far 
+larger and far stronger versions of the Keese, that can actually do good damage 
+to you. They hop around and try to run into Link when he's in the room. When 
+you hack at them and hit them, they split into two red Keeses, slightly faster 
+versions of the regular old black/blue Keese that we're used to seeing. When 
+they split into these red Keeses, finish them both off, to end the life of the 
+Vire for good. They can be pains in the butt for sure, but are mainstays in 
+many of the dungeons in the game, starting with dungeon four, and going all the 
+way to Death Mountain.
+
+----------
+
+-Name: WALL MASTER
+-Description: "A monster hand that appears out of the labyrinth wall. If it 
+catches Link, it takes him back to the entrance of the labyrinth."
+-Location: Underworld
+-Battle Strategy: Wall Masters are dungeon regulars that can be a real pain in 
+the neck at times. They force you to be on your toes at all times. They 
+especially like to guard the rooms just before the bosses lair, making your 
+life that much more difficult. They don't have an attack, exactly. Instead, if 
+they capture Link, they drag him all the way back to the entrance of the 
+dungeon, forcing you to get all the way back to where you were from the 
+beginning. While you don't have to do certain things you've already done in the 
+dungeon again if you get taken back, it's still an annoyance that you don't 
+really need. Attacking them is dangerous, because if you get too close, you'll 
+get captured. Instead, keep your distance, and do your best to avoid them all 
+together.
+
+----------
+
+-Name: WIZZROBE
+-Description: "The Master of Movement. He appears here and there letting out 
+magic spells that Link's little shield can't hold back. He's pretty strong. 
+Watch out!"
+-Location: Underworld
+-Battle Strategy: Ohhhh Wizzrobes... god almighty, I hate Wizzrobes. Wizzrobes, 
+in most anyone's opinion who has a brain, is the most annoying and difficult 
+enemy in the game, including bosses. Wizzrobes are POWERFUL, and use magic and 
+teleportation to do their damage. These 8-bit incarnations of the annoying 
+enemy found all over Zelda games on every platform are probably their most 
+annoying form, and in this game, they come in two varities. The first variety, 
+the red version, can be killed in one hit with the Magical Sword, but shoots 
+powerful magical energy at Link, and can do several hearts worth of damage. 
+When he shoots, he promptly disappears, and reappears to do this again. The 
+blue ones take three hits with the Magical Sword, and teleport around the room 
+more often, but they are visable during teleportation. Every once in a while, 
+they'll shoot magical energy at Link in huge bursts, which enables them to 
+basically wipe you out in no time if you aren't lucky. Use your Magic Shield to 
+block their attacks, and attack them quickly, and with great accuracy. I 
+promise you if you aren't careful with Wizzrobes, they will take you out before 
+you know what hit you. And that's no joke.
+
+----------
+
+-Name: ZOL
+-Description: "Jelly-like monsters that walk about bouncing around in the 
+labyrinths. When Link cuts Zol, it splits into two Gels. Gel has little 
+attacking power, but Zol has twice the power of Gel."
+-Location: Underworld
+-Battle Strategy: Zols are just as easy as their smaller counterparts, Gels. 
+The difference is their size and speed. Zols move around a bit quicker, and are 
+several times larger than Gels, making them almost as big as Link himself. 
+That's not a big deal, however, for with the White Sword, one hit does the Zol 
+in, and he doesn't even split into little Gels either. With the Wooden Sword, 
+one hit makes Zol split into two Gels, which you then have to give the beatdown 
+to as well, to make them ALL go away. That's why the White Sword is so damn 
+useful! =D
+
+----------
+
+-Name: ZOLA
+-Description: "Half-fish, half-woman who lives in the water. When she sticks 
+here head out of the water she lets out a ball that Link's little shield can't 
+hold back."
+-Location: Overworld
+-Battle Strategy: "Zola is exclusivly a water enemy, which means that you can 
+only damage and kill a Zola with a bow and arrow. When a Zola peeps her head 
+out of the water, she shoots a fireball in the general direction of Link, then 
+promptly sticks her head back under the water. There's honestly not much you 
+can do about here, except block her fireballs with your shield and move on. If 
+you're patient, whip out the bow and arrow and have a few shots at her, but 
+it's not worth it, so I wouldn't even bother.
+
+
+   /\                                                                     /\
+  /__\===================================================================/__\
+ /\  /\ XIII    S E C T I O N   T H I R T E E N  |  B O S S E S    XIII /\  /\
+/__\/__\===============================================================/__\/__\
+
+This section of the guide is information on all of the bosses in the game. They 
+are in order of dungeons, so the first dungeon boss is first, sequentially.
+
+-Name: AQUAMENTUS
+-Description: A Dragon-like enemy with three heads.
+-Location: Dungeon One (The Eagle), Dungeon Seven (The Demon)
+-Battle Strategy: Aquamentus is the first boss battle in the game, and is 
+relativly easy. He moves around very little, staying at the righthand side of 
+the room guarding the doorway there, and shoots three fireballs out of its 
+three heads at the enemy, which are easy to avoid. Move in close with your 
+White Sword and hack him three times to take him down. If you have full hearts, 
+you have the option to fight him from afar by using Sword Beams, but it takes 
+six hits or so to defeat him that way. You might as well just move in close and 
+go for the kill. You'll get hit, but it's easier, and he only does half a 
+heart's worth of damage each time he hits you with the Blue Ring equipped, 
+which you should have by the time you visit the first dungeon.
+
+-----
+
+-Name: DODONGO
+-Description: He looks like a Rhino... what else can be said?
+-Location: Dungeon Two (The Moon)
+-Battle Strategy: The Dodongo is a common enemy in dungeons later in the game, 
+but in dungeon two, he is the boss character. He can't be harmed at all by any 
+weapon in the game, except one - the Bombs. While you can explode the bomb 
+behind him and damage him with the sword whilst he's paralyzed, it's easier to 
+put the bomb in front of him as he walks. When he walks to the bomb, he'll eat 
+it and it'll explode inside of him. Two bombs like this, and he'll take a fall 
+for good. He could be considered easier than Aquamentus, but I think they are 
+both equally as easy. Not to say any of the bosses in this game are 
+particularly hard... none of 'em are. 
+
+-----
+
+-Name: MANHANDLA
+-Description: Big blue creature... has hands that look like oysters... four of 
+'em.
+-Location: Dungeon Three (The Manji)
+-Battle Strategy: Manhandla isn't a difficult boss to defeat at all. While he 
+has plenty of speed in battle, he doesn't have any active attacks, other than 
+the random fireball. He just tries to run into you while you are battling him, 
+which is how he damages and kills his enemies. The trick is to use bombs on 
+him. Place a bomb in his path so that it'll explode when his body is over it. 
+If you do it JUST right, one bomb shot will kill him right away. If you don't 
+do it right, it'll still blow off a few of his limbs. Then you can finish him 
+off with your sword, or use another bomb, if you're into the whole pyrotechnic 
+scene. =)
+
+-----
+
+-Name: GLEEOK
+-Description: Kind of looks like Aquamentus, just more menacing looking... 
+plus, he's blue, not green like Aquamentus.
+-Location: Dungeon Four (The Snake), Dungeon Eight (The Lion)
+-Battle Strategy: Gleeok is the hardest boss that you've come across yet, after 
+a streak of three painfully easy bosses. Gleeok fights a lot like Aquamentus, 
+the boss of the first dungeon, in that he stays still and shoots fireballs at 
+you, and you simply have to avoid them and get some attacks of your own in on 
+him. If you have full energy when you enter this battle, then stand directly in 
+front of him, as far away as you can from him, and shoot sword beams at him. 
+That way, you can damage him from a distance, and be far enough from him that 
+you can avoid his attacks. If you aren't full on energy, then get in close and 
+hack away at him. When you do enough damage, his head flies off and turns red, 
+shooting fireballs at you while you try to do damage to the body of the beast. 
+Just trade blows with him and you'll come out victorious... just make sure you 
+go into battle with Gleeok with a full energy meter if at all possible. It can 
+make all the difference.
+
+-----
+
+-Name: DIGDOGGER
+-Description: Looks like a big red, orange and yellow eyeball... but the 
+instruction booklet says it's some sort of Sea Urchin. Go figure with these 8-
+bit graphics. =)
+-Location: Dungeon Five (The Lizard)
+-Battle Strategy: Digdogger is a very easy boss to defeat. When you encounter 
+him in the fifth dungeon in the game, make sure you have the Whistle on you and 
+equipped that you should find earlier in that same dungeon. When you enter the 
+battle with him, blow that Whistle right away, and watch as the big, mighty 
+Digdogger becomes a little, small, weak and insignificant Digdogger, who can't 
+do much to battle you except sit there, and move around, letting the statues 
+that accompany him in his lair attack you from all angles, while he tries to 
+avoid the wrath of your mighty blade. In this state, simply run up to him and 
+slash him twice with the mighty Magical Sword, and he'll fall quickly. This 
+boss battle shouldn't take you more than ten seconds TOPS, and not even if 
+you're half-way decent at videogames... y'know, not to put any pressure on you 
+or anything. =)
+
+-----
+
+-Name: GOHMA
+-Description: He's basically a crab-loooking enemy... easy enough to describe, 
+surprisingly enough.
+-Location: Dungeon Six (The Dragon)
+-Battle Strategy: Gohma is really easy to defeat, for a boss found as late in 
+the game as he is. Gohma runs around horizontally, and shoots fireballs at his 
+foe(s) from the crab-like pinchers he has as hands. He can battle with his eye 
+shut (he only has one eye, yes), but when he opens his eye, that's when he's 
+vulnerable to your attacks. Make sure to have the bow and arrow equipped while 
+you are fighting him, so that you are ready to shoot one at his open eye, which 
+kills the "mighty" Gohma in one hit... making him the biggest chump boss in the 
+game, if you ask me. Well... you didn't ask me, did you. But I'm telling you 
+anyway!
+
+-----
+
+-Name: GANON
+-Description: This pig-looking enemy, the nemesis of Hyrule.
+-Location: Dungeon Nine (Death Mountain)
+-Battle Strategy: Ganon is the final boss in the game, and comes in two forms 
+for you to fight, both of which are fairly easy indeed. When the battle begins, 
+Ganon has the power to teleport around the room, and make himself invisible, 
+shooting fireballs all around the room at Link. The only way to stop this is to 
+stab your sword around the room until you happen to hit him, which will make 
+him reappear. But then, he'll disappear again, and you'll have to do it all 
+over. It takes four hits like this with the Magical Sword to stop this battle 
+strategy, which then turns him a shade of brown. When he turns this color, 
+equip the Bow and Silver Arrow on Link right away, and give him one good shot 
+with the Silver Arrow, which will end Ganon's reign of terror, and turn him 
+into nothing more than a big pile of dust. Now that he's defeated (for now, he 
+reappears in like ten more Zelda games ^_^), go rescue Princess Zelda in the 
+next room! Go ahead! What are you waiting for!
+
+   /\                                                                     /\
+  /__\===================================================================/__\
+ /\  /\ XIV    S E C T I O N   F O U R T E E N  | D U N G E O N S   XIV /\  /\
+/__\/__\===============================================================/__\/__\
+
+The Dungeon Archive section that you are now reading is a simple archive of the 
+maps of each dungeon, just in case you don't want the full walkthrough and 
+rundown of the dungeons found in the walkthrough, but rather just some guidance 
+via a short description and map of each dungeon. Hope it helps.
+
+-----
+
+DUNGEON ONE - "The Eagle"
+------- ---    --- -----
+
+The first dungeon is naturally the easiest dungeon in the game, with few 
+secrets, and no twists at all. Be weary to get the Bow, however. It's a vital 
+weapon, and you can defeat the boss of the dungeon, Aquamentus, without it... 
+but you need it, so make sure to get it.
+
+        -------
+ A     |   - K |
+        ---|---    -------
+ B     |BW |   |   | B | T |
+    -----------------------
+ C |OM |   - M |BM | K |
+    -----|-------------
+ D     |   | K | C |
+        -----------
+ E         |   |
+        -----|-----
+ F     | K | X | K |
+        -----------
+
+     1   2   3   4   5   6
+
+KEY/LEGEND:
+
+X = Entrance
+K = Key (whether or not you have to do something to get it in the room is based 
+on whatever situation you're in, see the walkthrough for specifics).
+M = Map
+C = Compass
+BM = Boomerang
+BW = Bow
+| = Locked Door
+|| = Bombable Wall
+OM = Old Man
+B = BOSS ROOM
+T = Triforce Piece
+
+-----
+
+DUNGEON TWO - "The Moon"
+------- ---    --- ----
+
+The second dungeon is a slight progression in difficulty and size from the 
+first dungeon, but it's still easy and straight-forward. Enjoy the easyness and 
+straight-forwardness now, though... it quickly fades in the later, larger, more 
+complex dungeons.
+
+         -------
+ A      | T | B |
+         -----|-----
+ B          |   |OM |
+             -------
+ C          |   -   |
+             -------
+ D          | K | B |
+             -------
+ E          | K |MB |
+             -------
+ F          |   - M |
+     ---------------
+ G  | K |   |   - C |
+     ---------------
+ H      | X | K |
+         -------
+
+      1   2   3   4
+
+
+-----
+
+DUNGEON THREE - "The Manji"
+------- -----    --- -----
+
+The Manji dungeon is when the dungeons start to get a bit more complicated, a 
+bit larger in size, and where the enemies start to get more difficult as well. 
+However, what's really startling about this dungeon is its shape. Yes it's a 
+manji, but what ELSE is it. Where's the discretion on the part of Nintendo when 
+they were making this game? Making it in this shape is just plain wrong, no 
+matter what else it means. It can be a manji, but it's also synonomous with 
+hatred, something we don't need in this world. Regardless... whatever.
+
+
+KEY/LEGEND:
+
+X = Entrance
+K = Key (whether or not you have to do something to get it in the room is based 
+on whatever situation you're in, see the walkthrough for specifics).
+M = Map
+C = Compass
+MB = Magic Boomerang
+B = Bombs
+| = Locked Door
+|| = Bombable Wall
+OM = Old Man
+B = BOSS ROOM
+T = Triforce Piece
+
+          -------
+ A       | K |OM |
+          -------     ---
+ B           |   |   | T |
+      ---------|---------   
+ C   |   |   - K - M ||B |
+      ------------------- 
+ D   |   - C |   ||  |   |
+      -------------------
+ E   | R |   | K |
+      ---     -------
+ F           | K | X |
+              -------   
+
+       1   2   3   4   5
+
+
+KEY/LEGEND:
+
+X = Entrance
+K = Key (whether or not you have to do something to get it in the room is based 
+on whatever situation you're in, see the walkthrough for specifics).
+M = Map
+C = Compass
+R = Raft
+BM = Bombs
+| = Locked Door
+|| = Bombable Wall
+OM = Old Man
+B = BOSS ROOM
+T = Triforce Piece
+
+-----
+
+DUNGEON FOUR - "The Snake"
+------- ----    --- -----
+
+The fourth dungeon is where the game starts to get noticably harder. The 
+enemies within the dungeon are pretty difficult, and you'll even run into past 
+dungeon bosses that are now just regular old enemies! Heh heh. Anyway, this 
+
+dungeon is just harder, it's not any bigger or more complicated than the last 
+dungeon. Just wait until the dungeons are both hard and maze-like. That's when 
+the games starts to become a pain in the ass. =)
+
+       ---------------
+ A    |OM -   |   | T |
+       ----||---------
+ B    |   = R =   | B |
+       ----||---------
+ C    |   | M |
+       -----------
+ D    |   |   | S |
+       -----------
+ E    | K |
+       -------
+ F    |   | K |
+       -----------
+ G        |   - C |
+       -----------
+ H    | K | X |
+       -------
+
+        1   2   3   4
+
+KEY/LEGEND:
+
+X = Entrance
+K = Key (whether or not you have to do something to get it in the room is based 
+on whatever situation you're in, see the walkthrough for specifics).
+M = Map
+C = Compass
+S = Stepladder
+R = Rupees
+| = Locked Door
+|| = Bombable Wall
+OM = Old Man
+B = BOSS ROOM
+T = Triforce Piece
+
+-----
+
+DUNGEON FIVE - "The Lizard"
+------- ----    --- ------
+
+The fifth dungeon can get a bit confusing indeed, which is why the map you see 
+below that I've made for you guys is that much more useful. While the dungeon 
+doesn't boast any new powerful underworld enemies (although it does mark the 
+first time you see any Gibdos and Pols Voices), the growing size of the 
+dungeons as you get to each one make the game more difficult... just make sure 
+to find the Whistle... it's vital in defeating the dungeon boss, Digdogger!
+
+
+          -------
+ A       | W |   |
+      ---------------
+ B   | T |   | K | BU|
+      ---------------
+ C   | B -   |   | K |
+      ---------------
+ D   |   |       | C |
+      ---     -------
+ E           | M | K |
+          -----|-----
+ F       | K |   |   |
+      ---------------
+ G   |   =   = K - OM|
+      ------------||-
+ H           | X | K |
+              -------
+
+       1   2   3   4
+
+KEY/LEGEND:
+
+X = Entrance
+K = Key (whether or not you have to do something to get it in the room is based 
+on whatever situation you're in, see the walkthrough for specifics).
+M = Map
+C = Compass
+W = Whistle
+R = Rupees
+| = Locked Door
+|| = Bombable Wall
+OM = Old Man
+BU = Bomb Upgrade [Old Man]
+B = BOSS ROOM
+T = Triforce Piece
+
+-----
+
+DUNGEON SIX - "The Dragon"
+------- ---    --- ------
+
+The sixth dungeon is the biggest pain in the ass dungeon in the game, and not 
+because it's necessarily the hardest dungeon in the game, but rather because 
+it's such a big jump in difficulty, from the fifth dungeon to this one. In this 
+dungeon, you fight the most annoying enemies in the game - Wizzrobes. There is 
+such a huge volume of enemies in this dungeon, and they are pretty difficult, 
+that it makes this dungeon incredibly annoying, but not entirely impossible. 
+Not impossible at all... at least Gohma, the boss of this dungeon, is easy as 
+anything to defeat.
+
+
+            ---------------
+ A         | MW=   = OM| T |
+        -----------------------
+ B     |   | M |   |   | B |   |
+        -----------------------
+ C     |   = K |       |   | K |
+        -----------     -------
+ D     |   |   |   |   |   |
+        -----------     ---
+ E     |   |
+        ---
+ F     | K |
+        ---     ---
+ G     | C |   |   |
+        ---------|-
+ H     |   - X | K |
+        -----------
+
+         1   2   3   4   5   6
+         
+KEY/LEGEND:
+
+X = Entrance
+K = Key (whether or not you have to do something to get it in the room is based 
+on whatever situation you're in, see the walkthrough for specifics).
+M = Map
+C = Compass
+MW = Magic Wand
+R = Rupees
+| = Locked Door
+|| = Bombable Wall
+OM = Old Man
+BU = Bomb Upgrade [Old Man]
+B = BOSS ROOM
+T = Triforce Piece
+
+-----
+
+DUNGEON SEVEN - "The Demon"
+------- -----    --- -----
+
+The seventh dungeon is surprisingly easy, for one found this far in the game, 
+and especially the fact that it's after dungeon six, which was like a thorn in 
+my side compared to dungeon seven, a relativly straightforward and easy 
+dungeon. You just have to keep your eyes open and try lots of things in the 
+seventh dungeon, because there are lots of bombable walls and such for you to 
+fool with. Also, make sure to give the monster the Monster Bait so he'll move, 
+or you won't be getting very far! Other than that, the dungeon is easy, and the 
+dungeon's boss, Aquamentus, is identical to the Aquamentus we fought in the 
+first dungeon. Can you say "easy" ? =)
+
+
+         -----------------------
+  A     |   =   | K |   |   =   |
+         -||--------------------
+  B     |   |   = RC|   |   |
+         -------------------
+  C     |   |   = B | T |
+         -||------------
+  D     |   |   = K |
+         -----------
+  E     | BU|   |
+         -|-----------
+  F     |   |   | C | OM|
+         -----------------------
+  G     |   |   |   |   |   | K |
+         -----------------------
+  H     | K | X |   |
+         -----------
+ 
+          1   2   3   4   5   6
+         
+KEY/LEGEND:
+
+X = Entrance
+K = Key (whether or not you have to do something to get it in the room is based 
+on whatever situation you're in, see the walkthrough for specifics).
+M = Map
+C = Compass
+RC = Red Candle
+R = Rupees
+| = Locked Door
+|| = Bombable Wall
+OM = Old Man
+BU = Bomb Upgrade [Old Man]
+B = BOSS ROOM
+T = Triforce Piece
+
+-----
+
+DUNGEON EIGHT - "The Lion"
+------- -----    --- ----
+
+This dungeon is the final dungeon before going to Death Mountain. It's small 
+and pretty straightforward, and you can actually avoid going to a lot of rooms 
+in the dungeon, because there are so many side rooms and such. There are two 
+vital items in this dungeon - the Magic Book and the Magic Key, both of which 
+you should absolutly find before leaving here en route to Death Mountain. Other 
+than that, enjoy the simplicity of this dungeon now... you'll be yearning for 
+it when you get to Death Mountain. =)
+
+
+                    ---
+  A                |   |
+                -----------
+  B            |   =   | MK|
+            ---------------
+  C        | T |   = M |
+            ---------||----
+  D        | B | OM|   |   |
+        -----||------------
+  E    | OM| K |   -   |
+        -------------------
+  F    | K | K | K | K | C |
+        -------------||----
+  G                |   |
+            ---------------
+  H        | MB|   | X | K |
+            ---------------
+
+         1   2   3   4   5    
+     
+KEY/LEGEND:
+
+X = Entrance
+K = Key (whether or not you have to do something to get it in the room is based 
+on whatever situation you're in, see the walkthrough for specifics).
+M = Map
+C = Compass
+MB = Magic Book
+MC = Magic Key
+R = Rupees
+| = Locked Door
+|| = Bombable Wall
+OM = Old Man
+B = BOSS ROOM
+T = Triforce Piece
+
+-----
+
+DUNGEON NINE - "Death Mountain"
+------- ----    ----- --------
+
+Ah yes, the infamous Death Mountain... this dungeon is huge, and is actually 
+shaped like Ganon's head... as for an explanation of the map below... here's a 
+copy of my "note" about the Death Mountain walkthrough, which explains the 
+segemented style I went for with this massive dungeon:
+
+NOTE: The map of the final dungeon is laid out a bit differently than the 
+previous eight dungeon maps I've provided you with in the walkthrough. Being 
+that Death Mountain is so massive, and you can avoid going to most of it en 
+route to slaying Ganon, I've mapped out the parts you need to go to, and 
+nothing more. The "T1", "T2", et cetera, are teleports, so to speak, like we've 
+seen in other dungeons. Since there are so many, and they lead straight across 
+this massive dungeon, I've now put them on the map. Therefore, T1 in one place 
+corresponds with T1 in another place. As the map segements go down, you are 
+farther into the dungeon, so they are also in sequential order, for ease. Hope 
+they help.
+
+
+
+             -------
+  A         | T1=   |
+             -------
+  B             |   |
+                 ---
+  C             | E |
+                 ---
+To...
+
+                 -----------
+  D             | T2| OM| RR|
+             ---------|---||
+  E         | T1|   |   |   |
+             -----||------||
+  F             |   =   | M |
+                 -----------
+  G             | C |
+                 ---
+
+To...
+
+             ---
+  H         | T4|
+             -|-
+  I         |   |
+             -|-----
+  J         |   |   |
+             ---------------
+  K             | T3|   | T2|
+                 -----------
+
+To...
+
+             ---
+  L         | SA|
+             ---
+  M         | T3|
+             ---
+
+To...
+
+             -------
+  N         | T5| T4|
+             -------
+
+To...
+
+            ---
+  O        | Z |
+            ---
+  P        | B |
+            ---
+  Q        | T5|
+            ---  
+
+             1   2   3   4    
+
+
+KEY/LEGEND:
+
+X = Entrance
+K = Key (whether or not you have to do something to get it in the room is based 
+on whatever situation you're in, see the walkthrough for specifics).
+M = Map
+C = Compass
+SA = Silver Arrow
+RR = Red Ring
+T# = Teleport [_] {Corresponding}
+R = Rupees
+| = Locked Door
+|| = Bombable Wall
+OM = Old Man
+B = BOSS ROOM
+T = Triforce Piece
+
+
+
+   /\                                                                     /\
+  /__\===================================================================/__\
+ /\  /\ XV       S E C T I O N   F I F T E E N  |  S H O P S         XV /\  /\
+/__\/__\===============================================================/__\/__\
+
+This section of the guide holds the shop information. Basically, each shop in 
+the world holds three items. Not all items are the same price, you can shop 
+around and find certain items for better prices than at other places. Each shop 
+below is in order of the way you find them in the game, from first to last. 
+Each shop is given a name of simple "Shop _____", with the underline being the 
+number. Next to each shop is a set of coordinates, which can be matched up to 
+the shop's location via the map at the top of the walkthrough section, for your 
+ease and convenience. With the items themselves, the item is listed, and in 
+parenthesis are the price, in rupees.
+
+-----
+
+SHOP ONE (Coordinate G7)
+
+- Magic Shield (160)
+- Key (100)
+- Blue Candle (60)
+
+-----
+
+SHOP TWO (Coordinate G16)
+
+- Magic Shield (130)
+- Bombs (20)
+- Arrows (80)
+
+-----
+
+SHOP THREE (Coordinate E7)
+
+- Magic Shield (90)
+- Monster Bait (100)
+- Heart (10)
+
+-----
+
+SHOP FOUR (Coordinate E5)
+
+- Magic Shield (130)
+- Bombs (20)
+- Arrows (80)
+
+-----
+
+SHOP FIVE (Coordinate D5)
+
+- Key (80)
+- Blue Ring (250)
+- Monster Bait (60)
+
+-----
+

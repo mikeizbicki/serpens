@@ -2,6 +2,7 @@ from collections import OrderedDict, defaultdict, Counter
 import logging
 import numpy as np
 import gymnasium
+import time
 import torch
 import torch.nn as nn
 from gymnasium import spaces
@@ -204,6 +205,7 @@ class KnowledgeBase:
         self.keys = keys
         self.max_discrete = 256
         self.info = {}
+        self.time_last_warning = 0
 
     def __setitem__(self, name, val):
         self.items[name] = val
@@ -218,8 +220,10 @@ class KnowledgeBase:
     def to_observation(self):
         item_list = self.items.items()
         if len(item_list) >= self.max_objects:
-            logging.warning(f'len(self.items) >= self.max_objects; truncating')
             item_list = list(item_list)[:self.max_objects]
+            if self.time_last_warning - time.time() > 10:
+                logging.warning(f'len(self.items) >= self.max_objects; truncating')
+                self.time_last_warning = time.time()
 
         observations = []
         for item, val in item_list:

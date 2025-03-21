@@ -396,7 +396,11 @@ class RetroKB(RetroWithRam):
         self._text_infos = []
 
         obs, info = super().reset(**kwargs)
-        return self.observation_space.sample(), info
+        kb = self.game_module.generate_knowledge_base(self.ram, self.ram2)
+        kb_obs = kb.to_observation()
+        task = self.tasks[self.episode_task]
+        kb_obs['rewards'] = np.array([task['reward'].get(k, 0) for k in sorted(kb.events)])
+        return kb_obs, info
 
     def _set_episode_task(self, task):
         if task not in self.tasks:
@@ -634,6 +638,7 @@ class RetroKB(RetroWithRam):
             self.env.render()
 
         self._run_register_text_callbacks()
+
         return kb_obs, reward + pseudoreward, terminated, truncated, info
 
     ########################################

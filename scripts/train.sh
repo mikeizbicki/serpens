@@ -21,8 +21,8 @@ common="--comment=$commit"
 
 CUDA_VISIBLE_DEVICES=0 nohup python3 Mundus/train.py $common --features_dim=32 --policy=ChunkedObjectCnn --task_regex='attack' --reset_method='spiders enemy' > nohup/nohup.0 &
 CUDA_VISIBLE_DEVICES=1 nohup python3 Mundus/train.py $common --features_dim=32 --policy=ObjectCnn --task_regex='attack' --reset_method='spiders enemy' > nohup/nohup.1 &
-CUDA_VISIBLE_DEVICES=2 nohup python3 Mundus/train.py $common --features_dim=32 --policy=ChunkedObjectCnn --task_regex='onmouse' --reset_method='spiders enemy'> nohup/nohup.2 &
-CUDA_VISIBLE_DEVICES=3 nohup python3 Mundus/train.py $common --features_dim=32 --policy=ObjectCnn --task_regex='onmouse' --reset_method='spiders enemy' > nohup/nohup.3 &
+CUDA_VISIBLE_DEVICES=2 nohup python3 Mundus/train.py $common --features_dim=32 --policy=ObjectEmbedding --task_regex='attack' --reset_method='spiders enemy'> nohup/nohup.2 &
+CUDA_VISIBLE_DEVICES=3 nohup python3 Mundus/train.py $common --features_dim=32 --policy=ObjectEmbeddingWithDiff --task_regex='attack' --reset_method='spiders enemy' > nohup/nohup.3 &
 
 sleep 1
 tail -f nohup/nohup.?

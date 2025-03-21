@@ -3,6 +3,7 @@ import hashlib
 import logging
 import numpy as np
 import gymnasium
+import struct
 import time
 import torch
 import torch.nn as nn
@@ -196,7 +197,7 @@ class History:
 
 
 class KnowledgeBase:
-    def __init__(self, observation_format, max_objects=32):
+    def __init__(self, observation_format, max_objects=64):
         self.items = defaultdict(lambda: {})
         self.events = {}
         self.info = {}
@@ -220,65 +221,58 @@ class KnowledgeBase:
                 val[k] = int(v)
 
     def to_observation(self):
-        item_list = self.items.items()
+        item_list = list(self.items.values())
 
         # if we have exceeded the maximum number of objects,
         # then truncate the list
         if len(item_list) > self.max_objects:
-            item_list = list(item_list)[:self.max_objects]
+            item_list = item_list[:self.max_objects]
             logging.warning(f'len(self.items) [={len(self.items)}] >= self.max_objects [={self.max_objects}]; truncating')
 
-        #logging.info(f"self.observation_format={self.observation_format}")
-        observations = []
-        for item, val in item_list:
+        # observations have a weird structure due to:
+        # (1) backwards compatibility with previous code,
+        # (2) limitations in SB3 library;
+        # the following code converts the item_list into the appropriate structure
+
+        # group all of the item's keys into appropriate observation keys;
+        items_formatted = []
+        for val in item_list:
             observation = {}
             for observation_key in self.observation_format:
+                # FIXME:
+                # the % in the 'discrete' case exists only for backwards compatibility
                 if 'discrete' in observation_key:
                     arr = [val[k]%self.max_discrete for k in self.observation_format[observation_key]]
-                elif 'string' in observation_key:
-                    arr = [val[k] for k in self.observation_format[observation_key]]
                 else:
                     arr = [val[k] for k in self.observation_format[observation_key]]
                 observation[observation_key] = arr
-            #observation = {
-                #'objects_discrete': [val[k]%self.max_discrete for k in self.observation_format['objects_discrete']],
-                #'objects_continuous': [val[k] for k in self.observation_format['objects_continuous']],
-                #}
-            observations.append(observation)
-        # FIXME:
-        # currently we pad the observation space because SB3
-        # doesn't like variable sized observations
-        pad = {k: ['' if 'string' in k else 0] * len(self.observation_format[k]) for k in self.observation_format}
-        #pad = {
-            #'objects_discrete': [0] * len(self.observation_format['objects_discrete']),
-            #'objects_continuous': [0] * len(self.observation_format['objects_continuous']),
-            #}
-        observations += [pad] * (self.max_objects - len(observations))
-        #print(f"observations={observations}")
+            items_formatted.append(observation)
 
-        ret = {}
+        # pad the observation space
+        # (SB3 does not like variable sized observations)
+        empty_item = {k: ['' if 'string' in k else 0] * len(self.observation_format[k]) for k in self.observation_format}
+        items_formatted += [empty_item] * (self.max_objects - len(item_list))
+        assert len(items_formatted) == self.max_objects
+
+        # restructure the items formatting from a list of dicts to an dict of lists
+        observation = {}
         for observation_key in self.observation_format:
             if 'discrete' in observation_key:
-                arr = np.array([x[observation_key] for x in observations], dtype=self.dtype_discrete)
+                arr = np.array([x[observation_key] for x in items_formatted], dtype=np.uint8)
             elif 'string' in observation_key:
-                def hash_to_64bit(s):
-                    hash_object = hashlib.blake2b(s.encode(), digest_size=8)
-                    num = int.from_bytes(hash_object.digest(), 'big')
-                    #print(f"s, num={s, num}")
-                    return num
-                arr = [[s for s in x[observation_key]] for x in observations]
-                #print(f"arr={arr}")
-                arr = np.array([[hash_to_64bit(s) for s in x[observation_key]] for x in observations], dtype=np.uint64)
+                # FIXME:
+                # str_has_as_float is a janky work around to the fact that SB3 doesn't like Text spaces
+                arr = np.array([[str_hash_as_float(s) for s in x[observation_key]] for x in items_formatted], dtype=np.float32)
             else:
-                arr = np.array([x[observation_key] for x in observations], dtype=self.dtype_continuous)
-            ret[observation_key] = arr
+                arr = np.array([x[observation_key] for x in items_formatted], dtype=self.dtype_continuous)
+            observation[observation_key] = arr
 
         # compute event information
         events_array = np.array([v for k, v in sorted(self.events.items())])
         events_array = np.clip(events_array, -1, 1)
-        ret['events'] = events_array
+        observation['events'] = events_array
 
-        return ret
+        return observation
 
     def get_observation_space(self):
         observation = self.to_observation()
@@ -288,17 +282,9 @@ class KnowledgeBase:
                 d[k] = gymnasium.spaces.Box(0, 255, observation[k].shape, self.dtype_discrete)
             elif 'string' in k:
                 d[k] = gymnasium.spaces.Box(0, 255, observation[k].shape, np.uint64)
-                #d[k] = gymnasium.spaces.Discrete(255)
-                #d[k] = gymnasium.spaces.Box(0, 255, [32])
-                #d[k] = gymnasium.spaces.Text(32)
             else:
                 d[k] = gymnasium.spaces.Box(-1, 1, observation[k].shape, self.dtype_continuous)
         space = gymnasium.spaces.Dict(d)
-        #space = gymnasium.spaces.Dict({
-            #'objects_continuous': gymnasium.spaces.Box(-1, 1, observation['objects_continuous'].shape, self.dtype_continuous),
-            #'objects_discrete': gymnasium.spaces.Box(0, 255, observation['objects_discrete'].shape, self.dtype_discrete),
-            #'events': gymnasium.spaces.Box(-1, 1, observation['events'].shape, self.dtype_continuous)
-            #})
         return space
 
     def display(self):
@@ -395,8 +381,6 @@ class ChunkedObjectCnn(BaseFeaturesExtractor):
             #print(f"observations['objects_string_chunk'].dtype={observations['objects_string_chunk'].dtype}")
             chunk_idxs = observations['objects_string_chunk'][:, :, i]
             #print(f"chunk_idxs={chunk_idxs}")
-            #print(f"chunk_idxs.dtype={chunk_idxs.dtype}")
-            #chunk_strings = ascii_tensor_to_strings(observations['objects_string_chunk'])
             #print(f"chunk_idxs.shape={chunk_idxs.shape}")
             #print(f"chunk_idxs={chunk_idxs}")
             #asd
@@ -412,6 +396,87 @@ class ChunkedObjectCnn(BaseFeaturesExtractor):
         ret = self.cnn(ret)
         ret = self.pool(ret)
         ret = self.linear(ret)
+        return ret
+
+
+class ObjectEmbedding(BaseFeaturesExtractor):
+    def __init__(
+        self,
+        observation_space: gymnasium.Space,
+        embedding_dim: int = 64,
+        pooling: str = 'mean',
+    ) -> None:
+        num_continuous = observation_space['objects_continuous'].shape[1]
+        total_features = num_continuous + embedding_dim
+        super().__init__(observation_space, total_features)
+
+        num_ids = int(np.max(observation_space['objects_discrete'].high)) + 1 # +1 to include 0 id
+        self.embedding = ChunkedEmbedding(embedding_dim, num_ids)
+
+        if pooling == 'lstm':
+            self.pool = LSTMPool(total_features, total_features, batch_first=True, bidirectional=True)
+        elif pooling == 'max':
+            self.pool = MaxPool()
+        elif pooling == 'mean':
+            self.pool = MeanPool()
+        else:
+            raise ValueError(f'pooling type "{pooling}" not supported')
+
+    def forward(self, observations: torch.Tensor) -> torch.Tensor:
+        idxs = observations['objects_discrete_id'][:, :, 0].int()
+        chunk_idxs = observations['objects_string_chunk'][:, :, 0]
+        embeds = self.embedding(idxs, chunk_idxs)
+        cont = observations['objects_continuous']
+        ret = torch.concat([cont, embeds], dim=2)
+        ret = ret.transpose(1,2)
+        ret = self.pool(ret)
+        return ret
+
+class ObjectEmbeddingWithDiff(BaseFeaturesExtractor):
+    def __init__(
+        self,
+        observation_space: gymnasium.Space,
+        embedding_dim: int = 64,
+        difference_dim: int = 8,
+        pooling: str = 'mean',
+    ) -> None:
+        num_continuous = observation_space['objects_continuous'].shape[1]
+        total_features = num_continuous + embedding_dim + difference_dim * num_continuous
+        super().__init__(observation_space, total_features)
+
+        num_ids = int(np.max(observation_space['objects_discrete'].high)) + 1 # +1 to include 0 id
+        self.embedding = ChunkedEmbedding(embedding_dim, num_ids)
+        self.diff_weights = ChunkedEmbedding(difference_dim)
+
+        if pooling == 'lstm':
+            self.pool = LSTMPool(total_features, total_features, batch_first=True, bidirectional=True)
+        elif pooling == 'max':
+            self.pool = MaxPool()
+        elif pooling == 'mean':
+            self.pool = MeanPool()
+        else:
+            raise ValueError(f'pooling type "{pooling}" not supported')
+
+    def forward(self, observations: torch.Tensor) -> torch.Tensor:
+        idxs = observations['objects_discrete_id'][:, :, 0].int()
+        chunk_idxs = observations['objects_string_chunk'][:, :, 0]
+        embeds = self.embedding(idxs, chunk_idxs)
+
+        diff_weights = self.diff_weights(idxs, chunk_idxs)
+        #print(f"diff_weights.shape={diff_weights.shape}")
+
+        cont = observations['objects_continuous']
+        #print(f"cont.shape={cont.shape}")
+
+        diff_side1 = torch.einsum('abc,abd->abcd', cont, diff_weights)
+        #print(f"diff_side1.shape={diff_side1.shape}")
+        diff = diff_side1 - cont.unsqueeze(3)
+        diff = diff.reshape(diff.shape[0], diff.shape[1], diff.shape[2] * diff.shape[3])
+        #print(f"diff.shape={diff.shape}")
+
+        ret = torch.concat([cont, diff, embeds], dim=2)
+        ret = ret.transpose(1,2)
+        ret = self.pool(ret)
         return ret
 
 
@@ -462,3 +527,13 @@ class ChunkedEmbedding(nn.Module):
         output = flat_output.reshape(output_shape)
 
         return output
+
+
+################################################################################
+# MARK: debug utils
+################################################################################
+
+def str_hash_as_float(s):
+    hash_object = hashlib.blake2b(s.encode(), digest_size=4)
+    hash_as_float = struct.unpack('f', hash_object.digest())[0]
+    return hash_as_float

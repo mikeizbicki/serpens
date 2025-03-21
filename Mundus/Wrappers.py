@@ -10,6 +10,33 @@ import os
 import glob
 import logging
 
+
+class TerminatedTimeLimit(gymnasium.Wrapper):
+    '''
+    For some reason the built-in TimeLimit wrapper is giving problems;
+    this class fixes those problems by using terminated=True instead of truncated=True
+    '''
+    def __init__(self, env, max_episode_steps):
+        super().__init__(env)
+        self._max_episode_steps = max_episode_steps
+
+    def reset(self, **kwargs):
+        self._elapsed_steps = 0
+        return super().reset(**kwargs)
+
+    def step(self, action):
+        observation, reward, terminated, truncated, info = self.env.step(action)
+        self._elapsed_steps += 1
+
+        if self._elapsed_steps >= self._max_episode_steps:
+            terminated = True
+            # Save the terminal observation before any auto-reset happens
+            if 'terminal_observation' not in info:
+                info['terminal_observation'] = copy.deepcopy(observation)
+
+        return observation, reward, terminated, truncated, info
+
+
 class RenderSkip(gymnasium.Wrapper):
     def __init__(self, env, render_every=4):
         super().__init__(env)

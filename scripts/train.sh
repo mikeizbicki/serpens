@@ -17,12 +17,12 @@ commit=$(sh scripts/get_sane_commit_hash.sh)
 #fi
 
 # start the new scripts
-common="--comment=$commit --policy=ContinuousEventExtractor" 
+common="--comment=$commit" 
 
-CUDA_VISIBLE_DEVICES=0 nohup python3 Mundus/train.py $common --features_dim=32 --warmstart=ad7d16c6 --task_regex='' --reset_state='level1*' > nohup/nohup.0 &
-CUDA_VISIBLE_DEVICES=1 nohup python3 Mundus/train.py $common --features_dim=32 --warmstart=ad7d16c6 --task_regex='' > nohup/nohup.1 &
-CUDA_VISIBLE_DEVICES=2 nohup python3 Mundus/train.py $common --features_dim=32                      --task_regex='' --reset_state='level1*' > nohup/nohup.2 &
-CUDA_VISIBLE_DEVICES=3 nohup python3 Mundus/train.py $common --features_dim=32                      --task_regex='' > nohup/nohup.3 &
+CUDA_VISIBLE_DEVICES=0 nohup python3 Mundus/train.py $common --features_dim=32 --policy=ChunkedObjectCnn --task_regex='attack' > nohup/nohup.0 &
+CUDA_VISIBLE_DEVICES=1 nohup python3 Mundus/train.py $common --features_dim=32 --policy=ObjectCnn --task_regex='attack' > nohup/nohup.1 &
+CUDA_VISIBLE_DEVICES=2 nohup python3 Mundus/train.py $common --features_dim=32 --policy=ChunkedObjectCnn --task_regex='' > nohup/nohup.2 &
+CUDA_VISIBLE_DEVICES=3 nohup python3 Mundus/train.py $common --features_dim=32 --policy=ObjectCnn --task_regex='' > nohup/nohup.3 &
 
 sleep 1
 tail -f nohup/nohup.?

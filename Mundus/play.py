@@ -11,6 +11,19 @@ COLORS = {
     'CRITICAL': '\033[91m\033[43m'  # red on yellow
 }
 
+class DuplicateFilter:
+    def __init__(self):
+        self.msg_dict = {}
+
+    def filter(self, record):
+        import time
+        current_time = time.time()
+        if record.msg in self.msg_dict:
+            if current_time - self.msg_dict[record.msg] < 5:
+                return False
+        self.msg_dict[record.msg] = current_time
+        return True
+
 class CustomFormatter(logging.Formatter):
     def format(self, record):
         levelname = record.levelname
@@ -20,6 +33,7 @@ class CustomFormatter(logging.Formatter):
             return super().format(record)
 
 logger = logging.getLogger()
+logger.addFilter(DuplicateFilter())
 handler = logging.StreamHandler()
 handler.setFormatter(CustomFormatter(
     '%(asctime)s.%(msecs)03d %(name)-10s [pid=%(process)d] %(levelname)s: %(message)s',

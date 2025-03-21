@@ -394,7 +394,9 @@ class RetroKB(RetroWithRam):
         self.episode_pseudoreward = 0
         self.episode_task = self.random.choice(self.valid_tasks)
         self._text_infos = []
-        return super().reset(**kwargs)
+
+        obs, info = super().reset(**kwargs)
+        return self.observation_space.sample(), info
 
     def _set_episode_task(self, task):
         if task not in self.tasks:

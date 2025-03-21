@@ -224,7 +224,7 @@ def main():
     group.add_argument("--total_timesteps", default=1_000_000_000_000, type=int)
 
     group = parser.add_argument_group('hyperparameters: architecture')
-    group.add_argument('--policy', choices=['ObjectCnn', 'EventExtractor', 'ContinuousEventExtractor'], default='ObjectCnn')
+    group.add_argument('--policy', choices=['ChunkedObjectCnn', 'ObjectCnn', 'EventExtractor', 'ContinuousEventExtractor'], default='ObjectCnn')
     group.add_argument('--pooling', choices=['lstm', 'mean', 'max'], default='mean')
     group.add_argument('--net_arch', type=int, nargs='*', default=[])
     group.add_argument('--features_dim', type=int, default=256)
@@ -301,6 +301,12 @@ def main():
         }
     if args.policy == 'ObjectCnn':
         policy_kwargs['features_extractor_class'] = ObjectCnn
+        policy_kwargs['features_extractor_kwargs'] = {
+            'pooling': args.pooling,
+            'features_dim': args.features_dim,
+            }
+    elif args.policy == 'ChunkedObjectCnn':
+        policy_kwargs['features_extractor_class'] = ChunkedObjectCnn
         policy_kwargs['features_extractor_kwargs'] = {
             'pooling': args.pooling,
             'features_dim': args.features_dim,

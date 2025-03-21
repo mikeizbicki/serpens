@@ -584,7 +584,7 @@ class ZeldaWrapper(RetroKB):
 # MARK: knowledge base
 ########################################
 
-def generate_knowledge_base2(ram, ram2, include_background=True, use_subtiles=False):
+def generate_knowledge_base(ram, ram2, include_background=True, use_subtiles=False):
     kb = KnowledgeBase(observation_format={
         'objects_discrete': ['id'],
         'objects_discrete_id': ['id'],
@@ -647,7 +647,7 @@ def generate_knowledge_base2(ram, ram2, include_background=True, use_subtiles=Fa
     return kb
 
 
-def generate_knowledge_base(ram, ram2, include_background=True, use_subtiles=False):
+def generate_knowledge_base2(ram, ram2, include_background=True, use_subtiles=False):
     '''
     Enemy Type:
     There are many different memory locations that seem to store the enemy type;

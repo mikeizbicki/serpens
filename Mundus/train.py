@@ -224,7 +224,7 @@ def main():
     group.add_argument("--total_timesteps", default=1_000_000_000_000, type=int)
 
     group = parser.add_argument_group('hyperparameters: architecture')
-    group.add_argument('--policy', choices=['ChunkedObjectCnn', 'ObjectCnn', 'EventExtractor', 'ContinuousEventExtractor'], default='ObjectCnn')
+    group.add_argument('--policy', default='ObjectCnn')
     group.add_argument('--pooling', choices=['lstm', 'mean', 'max'], default='mean')
     group.add_argument('--net_arch', type=int, nargs='*', default=[])
     group.add_argument('--features_dim', type=int, default=256)
@@ -284,7 +284,7 @@ def main():
                 reset_method=args.reset_method,
                 reset_state=args.reset_state,
                 )
-        env = TimeLimit(env, max_episode_steps=30*60*5)
+        env = TerminatedTimeLimit(env, max_episode_steps=30*60*5)
         env = StochasticFrameSkip(env, 4, 0.25, seed=seed)
         return env
 
@@ -311,6 +311,18 @@ def main():
             'pooling': args.pooling,
             'features_dim': args.features_dim,
             }
+    elif args.policy == 'ObjectEmbedding':
+        policy_kwargs['features_extractor_class'] = ObjectEmbedding
+        policy_kwargs['features_extractor_kwargs'] = {
+            'pooling': args.pooling,
+            'embedding_dim': args.features_dim,
+            }
+    elif args.policy == 'ObjectEmbeddingWithDiff':
+        policy_kwargs['features_extractor_class'] = ObjectEmbeddingWithDiff
+        policy_kwargs['features_extractor_kwargs'] = {
+            'pooling': args.pooling,
+            'embedding_dim': args.features_dim,
+            }
     elif args.policy == 'EventExtractor':
         policy_kwargs['features_extractor_class'] = EventExtractor
         policy_kwargs['features_extractor_kwargs'] = {
@@ -329,6 +341,8 @@ def main():
             'events_dim': args.events_dim,
             'rewards_dim': args.rewards_dim,
             }
+    else:
+        assert False, "bad args.policy"
 
 
     if args.alg == 'ppo':

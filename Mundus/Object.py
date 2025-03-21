@@ -437,7 +437,7 @@ class ChunkedEmbedding(nn.Module):
         # in a typical application, we expect a small number of chunk_ids,
         # and so this for loop will run only 1-2 times,
         # and inside we perform vectorized update operations
-        unique_chunk_ids = np.unique(chunk_ids).tolist()
+        unique_chunk_ids = set(chunk_ids.flatten().tolist())
         for chunk_id in unique_chunk_ids:
 
             # FIXME:
@@ -450,7 +450,7 @@ class ChunkedEmbedding(nn.Module):
             # we create a new embedding
             if chunk_id_str not in self.chunk_embeddings:
                 logging.info(f'ChunkedEmbedding: chunk_id={chunk_id} not in self.chunk_embeddings; creating new embedding')
-                self.chunk_embeddings[chunk_id_str] = nn.Embedding(self.chunk_size, self.embedding_dim)
+                self.chunk_embeddings[chunk_id_str] = nn.Embedding(self.chunk_size, self.embedding_dim).to(ids.device)
 
             # update the output tensor with the embeddings from this chunk
             mask = flat_chunk_ids == chunk_id

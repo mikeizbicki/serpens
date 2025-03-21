@@ -642,7 +642,7 @@ def generate_knowledge_base(ram, ram2, include_background=True, use_subtiles=Fal
         kb.items[item]['rely'] /= 120
 
     # add events
-    #kb.events = get_events(ram, ram2)
+    kb.events = get_events(ram, ram2)
 
     return kb
 

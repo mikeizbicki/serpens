@@ -633,9 +633,11 @@ def generate_knowledge_base(ram, ram2, include_background=True, use_subtiles=Fal
     # center and normalize all items
     kb.columns.add('relx')
     kb.columns.add('rely')
+    link_x = ram[112]
+    link_y = ram[132]
     for item, val in kb.items.items():
-        kb.items[item]['relx'] = kb.items[item]['x'] - 120
-        kb.items[item]['rely'] = kb.items[item]['y'] - 120
+        kb.items[item]['relx'] = kb.items[item]['x'] - link_x
+        kb.items[item]['rely'] = kb.items[item]['y'] - link_y
 
         # normalize
         kb.items[item]['relx'] /= 120

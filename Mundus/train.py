@@ -315,13 +315,13 @@ def main():
         policy_kwargs['features_extractor_class'] = ObjectEmbedding
         policy_kwargs['features_extractor_kwargs'] = {
             'pooling': args.pooling,
-            'embedding_dim': args.features_dim,
+            'features_dim': args.features_dim,
             }
     elif args.policy == 'ObjectEmbeddingWithDiff':
         policy_kwargs['features_extractor_class'] = ObjectEmbeddingWithDiff
         policy_kwargs['features_extractor_kwargs'] = {
             'pooling': args.pooling,
-            'embedding_dim': args.features_dim,
+            'features_dim': args.features_dim,
             }
     elif args.policy == 'EventExtractor':
         policy_kwargs['features_extractor_class'] = EventExtractor

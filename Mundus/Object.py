@@ -404,14 +404,25 @@ class ObjectEmbedding(BaseFeaturesExtractor):
         self,
         observation_space: gymnasium.Space,
         embedding_dim: int = 64,
+        features_dim: int = 64,
         pooling: str = 'mean',
     ) -> None:
+        super().__init__(observation_space, features_dim)
+
         num_continuous = observation_space['objects_continuous'].shape[1]
-        total_features = num_continuous + embedding_dim
-        super().__init__(observation_space, total_features)
+        n_features = num_continuous + embedding_dim
 
         num_ids = int(np.max(observation_space['objects_discrete'].high)) + 1 # +1 to include 0 id
         self.embedding = ChunkedEmbedding(embedding_dim, num_ids)
+
+        self.cnn = nn.Sequential(
+            nn.Conv1d(n_features, features_dim, kernel_size=1),
+            nn.ReLU(),
+            nn.Conv1d(features_dim, features_dim, kernel_size=1),
+            nn.ReLU(),
+            nn.Conv1d(features_dim, features_dim, kernel_size=1),
+            nn.ReLU(),
+        )
 
         if pooling == 'lstm':
             self.pool = LSTMPool(total_features, total_features, batch_first=True, bidirectional=True)
@@ -421,6 +432,11 @@ class ObjectEmbedding(BaseFeaturesExtractor):
             self.pool = MeanPool()
         else:
             raise ValueError(f'pooling type "{pooling}" not supported')
+
+        self.linear = nn.Sequential(
+            nn.Linear(features_dim, features_dim),
+            nn.ReLU()
+            )
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
         idxs = observations['objects_discrete_id'][:, :, 0].int()
@@ -429,7 +445,9 @@ class ObjectEmbedding(BaseFeaturesExtractor):
         cont = observations['objects_continuous']
         ret = torch.concat([cont, embeds], dim=2)
         ret = ret.transpose(1,2)
+        ret = self.cnn(ret)
         ret = self.pool(ret)
+        ret = self.linear(ret)
         return ret
 
 class ObjectEmbeddingWithDiff(BaseFeaturesExtractor):
@@ -437,16 +455,27 @@ class ObjectEmbeddingWithDiff(BaseFeaturesExtractor):
         self,
         observation_space: gymnasium.Space,
         embedding_dim: int = 64,
+        features_dim: int = 64,
         difference_dim: int = 8,
         pooling: str = 'mean',
     ) -> None:
+        super().__init__(observation_space, features_dim)
+
         num_continuous = observation_space['objects_continuous'].shape[1]
-        total_features = num_continuous + embedding_dim + difference_dim * num_continuous
-        super().__init__(observation_space, total_features)
+        n_features = num_continuous + embedding_dim + difference_dim * num_continuous
 
         num_ids = int(np.max(observation_space['objects_discrete'].high)) + 1 # +1 to include 0 id
         self.embedding = ChunkedEmbedding(embedding_dim, num_ids)
         self.diff_weights = ChunkedEmbedding(difference_dim)
+
+        self.cnn = nn.Sequential(
+            nn.Conv1d(n_features, features_dim, kernel_size=1),
+            nn.ReLU(),
+            nn.Conv1d(features_dim, features_dim, kernel_size=1),
+            nn.ReLU(),
+            nn.Conv1d(features_dim, features_dim, kernel_size=1),
+            nn.ReLU(),
+        )
 
         if pooling == 'lstm':
             self.pool = LSTMPool(total_features, total_features, batch_first=True, bidirectional=True)
@@ -456,6 +485,11 @@ class ObjectEmbeddingWithDiff(BaseFeaturesExtractor):
             self.pool = MeanPool()
         else:
             raise ValueError(f'pooling type "{pooling}" not supported')
+
+        self.linear = nn.Sequential(
+            nn.Linear(features_dim, features_dim),
+            nn.ReLU()
+            )
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
         idxs = observations['objects_discrete_id'][:, :, 0].int()
@@ -476,7 +510,9 @@ class ObjectEmbeddingWithDiff(BaseFeaturesExtractor):
 
         ret = torch.concat([cont, diff, embeds], dim=2)
         ret = ret.transpose(1,2)
+        ret = self.cnn(ret)
         ret = self.pool(ret)
+        ret = self.linear(ret)
         return ret
 
 

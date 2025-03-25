@@ -279,6 +279,7 @@ class RetroKB(RetroWithRam):
             render_kb=True,
             seed=None,
             lang='en',
+            kb_kwargs={},
             **kwargs
             ):
         
@@ -293,6 +294,7 @@ class RetroKB(RetroWithRam):
         self.lang = lang
         self.render_task = True
         self._text_callbacks = []
+        self.kb_kwargs = kb_kwargs
 
         logging.debug(f"game_module={game_module}")
         if game_module is None:
@@ -355,7 +357,7 @@ class RetroKB(RetroWithRam):
         self._random_reset = random.Random(self.seed)
 
         # create a new observation space
-        kb = self.game_module.generate_knowledge_base(self.ram, self.ram2)
+        kb = self.game_module.generate_knowledge_base(self.ram, self.ram2, **self.kb_kwargs)
         self.observation_space = kb.get_observation_space()
         self.observation_space['rewards'] = self.observation_space['events']
         logging.debug(f'self.observation_space.shape={self.observation_space.shape}')
@@ -396,7 +398,7 @@ class RetroKB(RetroWithRam):
         self._text_infos = []
 
         obs, info = super().reset(**kwargs)
-        kb = self.game_module.generate_knowledge_base(self.ram, self.ram2)
+        kb = self.game_module.generate_knowledge_base(self.ram, self.ram2, **self.kb_kwargs)
         kb_obs = kb.to_observation()
         task = self.tasks[self.episode_task]
         kb_obs['rewards'] = np.array([task['reward'].get(k, 0) for k in sorted(kb.events)])
@@ -455,7 +457,7 @@ class RetroKB(RetroWithRam):
 
         # compute the task information
         self.ram.mouse = self.mouse # FIXME: this should be in only one spot
-        kb = self.game_module.generate_knowledge_base(self.ram, self.ram2)
+        kb = self.game_module.generate_knowledge_base(self.ram, self.ram2, **self.kb_kwargs)
         pseudoreward = 0
         kb_obs = kb.to_observation()
         task = self.tasks[self.episode_task]

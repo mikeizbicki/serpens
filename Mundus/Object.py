@@ -516,6 +516,72 @@ class ObjectEmbeddingWithDiff(BaseFeaturesExtractor):
         return ret
 
 
+class Revents_Linear(BaseFeaturesExtractor):
+    def __init__(
+        self,
+        observation_space,
+        revents_dim,
+        ):
+        super().__init__(observation_space, features_dim=revents_dim*2)
+        self.extractors = nn.ModuleDict({
+            'events': nn.Linear(observation_space['events'].shape[0], revents_dim, bias=False),
+            'rewards': nn.Linear(observation_space['rewards'].shape[0], revents_dim, bias=False),
+            })
+
+    def forward(self, observations):
+        encoded_tensor_list = [
+            self.extractors['events'](observations['events']),
+            self.extractors['rewards'](observations['rewards']),
+            ]
+        return torch.cat(encoded_tensor_list, dim=1)
+
+
+class ExtractorManager(BaseFeaturesExtractor):
+    def __init__(
+        self,
+        observation_space: spaces.Dict,
+        objects_extractor,
+        revents_extractor,
+        **kwargs,
+    ) -> None:
+        # When calling super().__init__, we are supposed to know the output features_dim.
+        # But we do not know features_dim here before going over all the items;
+        # so put something there temporarily, and update features_dim later.
+        # (This trick is copied from the SB3 MultiPolicy implementation.)
+        super().__init__(observation_space, features_dim=1)
+
+        # create the feature networks
+        self.extractors = nn.ModuleDict({
+            'objects': objects_extractor(observation_space, **kwargs['objects_kwargs']),
+            'revents': revents_extractor(observation_space, **kwargs['revents_kwargs']),
+            })
+        # FIXME:
+        # There's a lot of potential modifications to the code above.
+        # For example:
+        # The observation_space could be subdivided so that objects only receives
+        # the objects_* observations;
+        # this change shouldn't change the semantics,
+        # but it might prevent potential bugs and
+        # improve runtime performance due to memory transfer overheads.
+
+        # Update the features dim manually
+        from stable_baselines3.common.preprocessing import get_flattened_obs_dim
+        dim_objects = self.extractors['objects'].features_dim
+        dim_revents = self.extractors['revents'].features_dim
+        self._features_dim = dim_objects + dim_revents
+
+    def forward(self, observations: TensorDict) -> torch.Tensor:
+        encoded_tensor_list = [
+            self.extractors['objects'](observations),
+            self.extractors['revents'](observations),
+            ]
+        return torch.cat(encoded_tensor_list, dim=1)
+
+
+################################################################################
+# MARK: helper modules
+################################################################################
+
 class ChunkedEmbedding(nn.Module):
     def __init__(self, embedding_dim, chunk_size=512):
         super().__init__()

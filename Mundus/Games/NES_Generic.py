@@ -1,6 +1,6 @@
 from Mundus.Object import *
 
-def generate_knowledge_base(ram, ram2, include_background=True, use_subtiles=False):
+def generate_knowledge_base(ram, ram2, **kwargs):
     kb = KnowledgeBase(observation_format={
         'objects_discrete': ['id'],
         'objects_discrete_id': ['id'],

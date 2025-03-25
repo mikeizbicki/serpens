@@ -224,7 +224,9 @@ def main():
     group.add_argument("--total_timesteps", default=1_000_000_000_000, type=int)
 
     group = parser.add_argument_group('hyperparameters: architecture')
-    group.add_argument('--policy', default='ObjectCnn')
+    group.add_argument('--policy', default='ExtractorManager')
+    group.add_argument('--objects_extractor', default='ObjectEmbedding')
+    group.add_argument('--revents_extractor', default='Revents_Linear')
     group.add_argument('--pooling', choices=['lstm', 'mean', 'max'], default='mean')
     group.add_argument('--net_arch', type=int, nargs='*', default=[])
     group.add_argument('--features_dim', type=int, default=256)
@@ -243,6 +245,7 @@ def main():
 
     group = parser.add_argument_group('hyperparameters: environment')
     group.add_argument('--game', default='Zelda')
+    group.add_argument('--center_player', action='store_true')
     group.add_argument('--reset_method', default='map link enemy', type=str)
     group.add_argument('--reset_state', default=None, type=str)
     group.add_argument('--task_regex', default='^attack$')
@@ -281,6 +284,7 @@ def main():
                 seed=seed,
                 frames_without_attack_threshold=args.frames_without_attack_threshold,
                 fast_termination=True,
+                center_player=args.center_player,
                 reset_method=args.reset_method,
                 reset_state=args.reset_state,
                 )
@@ -341,6 +345,22 @@ def main():
             'events_dim': args.events_dim,
             'rewards_dim': args.rewards_dim,
             }
+    elif args.policy == 'ExtractorManager':
+        objects_extractor = globals()[args.objects_extractor]
+        revents_extractor = globals()[args.revents_extractor]
+        policy_kwargs['features_extractor_class'] = ExtractorManager
+        policy_kwargs['features_extractor_kwargs'] = {
+            'objects_extractor': objects_extractor,
+            'objects_kwargs': {
+                'pooling': args.pooling,
+                'features_dim': args.features_dim,
+                },
+            'revents_extractor': revents_extractor,
+            'revents_kwargs': {
+                'revents_dim': args.events_dim,
+                },
+            }
+        assert args.events_dim == args.rewards_dim
     else:
         assert False, "bad args.policy"
 

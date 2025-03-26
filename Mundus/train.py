@@ -224,13 +224,14 @@ def main():
     group.add_argument("--total_timesteps", default=1_000_000_000_000, type=int)
 
     group = parser.add_argument_group('hyperparameters: architecture')
+    group.add_argument('--action_space', default='zelda-all')
     group.add_argument('--policy', default='ExtractorManager')
     group.add_argument('--objects_extractor', default='ObjectEmbedding')
     group.add_argument('--revents_extractor', default='Revents_Linear')
     group.add_argument('--pooling', choices=['lstm', 'mean', 'max'], default='mean')
     group.add_argument('--net_arch', type=int, nargs='*', default=[])
     group.add_argument('--features_dim', type=int, default=256)
-    group.add_argument('--action_space', default='zelda-all')
+    group.add_argument('--difference_dim', type=int, default=8)
     group.add_argument('--events_dim', type=int, default=32)
     group.add_argument('--rewards_dim', type=int, default=32)
 
@@ -354,6 +355,7 @@ def main():
             'objects_kwargs': {
                 'pooling': args.pooling,
                 'features_dim': args.features_dim,
+                'difference_dim': args.difference_dim,
                 },
             'revents_extractor': revents_extractor,
             'revents_kwargs': {

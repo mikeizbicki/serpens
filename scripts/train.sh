@@ -19,10 +19,10 @@ commit=$(sh scripts/get_sane_commit_hash.sh)
 # start the new scripts
 common="--comment=$commit" 
 
-CUDA_VISIBLE_DEVICES=0 nohup python3 Mundus/train.py $common --features_dim=32 --pooling=max --task_regex='attack' --reset_method='spiders enemy' > nohup/nohup.0 &
-CUDA_VISIBLE_DEVICES=1 nohup python3 Mundus/train.py $common --features_dim=32 --pooling=max --task_regex='attack' --reset_method='spiders enemy' --objects_extractor=ObjectEmbeddingWithDiff > nohup/nohup.1 &
-CUDA_VISIBLE_DEVICES=2 nohup python3 Mundus/train.py $common --features_dim=32 --pooling=max --task_regex='attack' --reset_method='spiders enemy' --center_player > nohup/nohup.2 &
-CUDA_VISIBLE_DEVICES=3 nohup python3 Mundus/train.py $common --features_dim=32 --pooling=max --task_regex='attack' --reset_method='spiders enemy' --center_player --objects_extractor=ObjectEmbeddingWithDiff > nohup/nohup.3 &
+CUDA_VISIBLE_DEVICES=0 nohup python3 Mundus/train.py $common --features_dim=32 --pooling=max --task_regex='attack' --reset_method='spiders enemy' --difference_dim=16 --objects_extractor=ObjectEmbeddingWithDiff > nohup/nohup.0 &
+CUDA_VISIBLE_DEVICES=1 nohup python3 Mundus/train.py $common --features_dim=32 --pooling=max --task_regex='attack' --reset_method='spiders enemy' --difference_dim=32 --objects_extractor=ObjectEmbeddingWithDiff > nohup/nohup.1 &
+CUDA_VISIBLE_DEVICES=2 nohup python3 Mundus/train.py $common --features_dim=32 --pooling=max --task_regex='attack' --reset_method='spiders enemy' --difference_dim=64 --objects_extractor=ObjectEmbeddingWithDiff > nohup/nohup.2 &
+CUDA_VISIBLE_DEVICES=3 nohup python3 Mundus/train.py $common --features_dim=32 --pooling=max --task_regex='attack' --center_player --objects_extractor=ObjectEmbeddingWithDiff > nohup/nohup.3 &
 
 sleep 1
 tail -f nohup/nohup.?

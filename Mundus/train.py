@@ -247,6 +247,7 @@ def main():
     group = parser.add_argument_group('hyperparameters: environment')
     group.add_argument('--game', default='Zelda')
     group.add_argument('--center_player', action='store_true')
+    group.add_argument('--background_items', action='store_true')
     group.add_argument('--reset_method', default='map link enemy', type=str)
     group.add_argument('--reset_state', default=None, type=str)
     group.add_argument('--task_regex', default='^attack$')
@@ -286,6 +287,7 @@ def main():
                 frames_without_attack_threshold=args.frames_without_attack_threshold,
                 fast_termination=True,
                 center_player=args.center_player,
+                background_items=args.background_items,
                 reset_method=args.reset_method,
                 reset_state=args.reset_state,
                 )

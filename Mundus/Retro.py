@@ -5,6 +5,7 @@ import multiprocessing
 import random
 import re
 import os
+import sys
 
 import numpy as np
 import gymnasium
@@ -294,14 +295,15 @@ class RetroKB(RetroWithRam):
         self.lang = lang
         self.render_task = True
         self._text_callbacks = []
-        self.kb_kwargs = kb_kwargs
 
-        logging.debug(f"game_module={game_module}")
-        if game_module is None:
-            self.game_module = Mundus.Games.NES_Generic #game_module
-        else:
-            self.game_module = game_module
-        logging.debug(f"self.game_module={self.game_module}")
+        #if game_module is None:
+            #self.game_module = Mundus.Games.NES_Generic #game_module
+        #else:
+        self.game_module = game_module
+
+        self.kb_kwargs = kb_kwargs
+        self.kb_kwargs['game_module'] = self.game_module
+        logging.debug(f"self.kb_kwargs={self.kb_kwargs}")
 
         # there is lots of important functionality in this class;
         # placing a reference to the RetroKB object in the base RetroEnv class
@@ -323,7 +325,6 @@ class RetroKB(RetroWithRam):
             # the code above doesn't cause print the traceback to the main screen;
             # the code below does, but it also immediately causes the program to crash for some reason;
             # this didn't used to be the case before moving the code into this file.
-            '''
             # if python crashes, we want the exception printed to the main screen
             # and not the alternate screen
             def crash_handler(type, value, tb):
@@ -333,7 +334,6 @@ class RetroKB(RetroWithRam):
                 else:
                     sys.__excepthook__(type, value, tb)
             sys.excepthook = crash_handler
-            '''
 
         # load *_to_text json
         with open(f'data/events.{self.lang}.json') as fin:
@@ -357,7 +357,7 @@ class RetroKB(RetroWithRam):
         self._random_reset = random.Random(self.seed)
 
         # create a new observation space
-        kb = self.game_module.generate_knowledge_base(self.ram, self.ram2, **self.kb_kwargs)
+        kb = generate_knowledge_base(self.ram, self.ram2, **self.kb_kwargs)
         self.observation_space = kb.get_observation_space()
         self.observation_space['rewards'] = self.observation_space['events']
         logging.debug(f'self.observation_space.shape={self.observation_space.shape}')
@@ -398,11 +398,15 @@ class RetroKB(RetroWithRam):
         self._text_infos = []
 
         obs, info = super().reset(**kwargs)
-        kb = self.game_module.generate_knowledge_base(self.ram, self.ram2, **self.kb_kwargs)
+        kb_obs = self._generate_kb_obs()
+        return kb_obs, info
+
+    def _generate_kb_obs(self):
+        kb = generate_knowledge_base(self.ram, self.ram2, **self.kb_kwargs)
         kb_obs = kb.to_observation()
         task = self.tasks[self.episode_task]
         kb_obs['rewards'] = np.array([task['reward'].get(k, 0) for k in sorted(kb.events)])
-        return kb_obs, info
+        return kb_obs
 
     def _set_episode_task(self, task):
         if task not in self.tasks:
@@ -457,7 +461,7 @@ class RetroKB(RetroWithRam):
 
         # compute the task information
         self.ram.mouse = self.mouse # FIXME: this should be in only one spot
-        kb = self.game_module.generate_knowledge_base(self.ram, self.ram2, **self.kb_kwargs)
+        kb = generate_knowledge_base(self.ram, self.ram2, **self.kb_kwargs)
         pseudoreward = 0
         kb_obs = kb.to_observation()
         task = self.tasks[self.episode_task]
@@ -715,25 +719,6 @@ class RetroKB(RetroWithRam):
         masp = np.array(mask, dtype=np.uint8)
         self.unwrapped.em.set_button_mask(mask, 0)
 
-    def parse_state(self):
-        bytes_to_int = lambda x: int.from_bytes(x, byteorder='little')
-        state = self.unwrapped.em.get_state()
-        assert state[:3] == b'FCS'
-        assert state[3] == b'\xff'
-        total_size = bytes_to_int(state[4:8])
-        version = bytes_to_int(state[8:12])
-
-        # FIXME
-        # FIXME
-        # FIXME
-        # FIXME
-        # FIXME
-        # FIXME
-        # FIXME
-        # FIXME
-        # FIXME
-        # FIXME
-
     ########################################
     # MARK: save gamestate
     ########################################
@@ -802,3 +787,101 @@ def parse_state(state):
             ret[subsection_name] = subsection_data
 
     return ret
+
+
+def generate_knowledge_base(ram, ram2, **kwargs):
+    kb = KnowledgeBase(observation_format={
+        'objects_discrete': ['id'],
+        'objects_discrete_id': ['id'],
+        'objects_string_chunk': ['chunk_id'],
+        'objects_continuous': ['relx', 'rely'],
+        })
+
+    if ram.mouse is not None:
+        item = {}
+        item['x'] = ram.mouse['x']
+        item['y'] = ram.mouse['y']
+        item['id'] = 0
+        item['chunk_id'] = 'common'
+        kb['mouse'] = item
+
+    # NOTE:
+    # The NES uses the OAM region of memory $0200-$02FF for storing sprites.
+    # The code below extracts sprites stored in this memory.
+    # This serves as a generic object detector that works for all games.
+    # Some "objects", however, are not stored as sprites but as background tiles.
+    # These objects will not get detected here.
+    #
+    # See the following links for details on NES rendering/hardware:
+    # <https://austinmorlan.com/posts/nes_rendering_overview/>
+    # <https://www.copetti.org/writings/consoles/nes/>
+    for i in range(64):
+        # The following link describes the details of the information being extracted here
+        # <https://www.nesdev.org/wiki/PPU_OAM>
+        base_addr = 0x0200 + 4*i
+        item = {}
+        item['chunk_id'] = kwargs['game_name']
+        item['id'] = ram[base_addr + 1]
+        item['x'] = ram[base_addr + 3]
+        item['y'] = ram[base_addr + 0]
+
+        byte2 = ram[base_addr + 2]
+        item['pal4'] = int(byte2 & 0x3 == 0)
+        item['pal5'] = int(byte2 & 0x3 == 1)
+        item['pal6'] = int(byte2 & 0x3 == 2)
+        item['pal7'] = int(byte2 & 0x3 == 3)
+        item['priority']= int(byte2 & 32  >  0)
+        item['flip_hori'] = int(byte2 & 64  >  0)
+        item['flip_vert'] = int(byte2 & 128 >  0)
+
+        # only add the sprite if it is on screen
+        if item['y'] < 240 and item['x'] < 240:
+            kb[f'sprite_{i:02}'] = item
+
+    # generate background
+    if kwargs.get('background_items'):
+        assert kwargs['game_module']
+        background_items, info = kwargs['game_module'].generate_knowledge_base_background_items(ram)
+        kb.items |= background_items
+
+    # center and normalize all items
+    kb.columns.add('relx')
+    kb.columns.add('rely')
+
+    if kwargs.get('center_player'):
+        assert kwargs['game_module']
+        center_x = kwargs['game_module']._ramstate_player_x(ram)
+        center_y = kwargs['game_module']._ramstate_player_y(ram)
+    else:
+        center_x = 120
+        center_y = 120
+    for item, val in kb.items.items():
+        kb.items[item]['relx'] = kb.items[item]['x'] - 120
+        kb.items[item]['rely'] = kb.items[item]['y'] - 120
+
+        # normalize
+        kb.items[item]['relx'] /= 120
+        kb.items[item]['rely'] /= 120
+
+    # add events
+    kb.events = get_events(ram, ram2)
+    if kwargs['game_module']:
+        kb.events |= kwargs['game_module'].get_events(ram, ram2)
+
+    return kb
+
+
+def get_events(ram, ram2):
+    prefix = '_event_'
+    if not hasattr(get_events, 'event_names'):
+        get_events.event_names = [f for f in globals() if f.startswith(prefix)]
+        get_events.event_names.sort()
+    ret = {}
+    for event_name in get_events.event_names:
+        f = globals()[event_name]
+        if ram2 is not None:
+            ret[event_name[len(prefix):]] = f(ram, ram2)
+        else:
+            ret[event_name[len(prefix):]] = 0
+    return ret
+

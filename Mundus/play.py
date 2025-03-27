@@ -478,6 +478,8 @@ def main():
     group.add_argument('--reset_method', default='None')
     group.add_argument('--reset_state', default=None, type=str)
     group.add_argument('--task_regex', default='attack')
+    group.add_argument('--center_player', action='store_true')
+    group.add_argument('--background_items', action='store_true')
 
     args = parser.parse_args()
 
@@ -505,6 +507,8 @@ def main():
             reset_method=args.reset_method,
             reset_state=args.reset_state,
             fork_emulator=args.fork_emulator,
+            center_player=args.center_player,
+            background_items=args.background_items,
             interactive=True,
             lang=args.lang,
             )

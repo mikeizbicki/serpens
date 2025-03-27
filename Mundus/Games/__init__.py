@@ -29,6 +29,7 @@ def make_game_env(
         interactive=False,
         reset_state=None,
         center_player=False,
+        background_items=False,
         **kwargs):
     '''
     Create a Zelda environment.
@@ -69,6 +70,8 @@ def make_game_env(
             )
     kwargs['kb_kwargs'] = {}
     kwargs['kb_kwargs']['center_player'] = center_player
+    kwargs['kb_kwargs']['background_items'] = background_items
+    kwargs['kb_kwargs']['game_name'] = game
     if fork_emulator:
         env = ForkedRetroEnv(env)
     if 'Zelda' in game:

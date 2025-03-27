@@ -110,6 +110,22 @@ class ZeldaWrapper(RetroKB):
             'button_arrow_nomove': -0.01,
             }
         }
+    tasks['attack_item2'] = copy.deepcopy(tasks['attack'])
+    tasks['attack_item2']['reward'] |= {
+        'add_bomb': 2,
+        'add_clock': 2,
+        'add_heart': 2,
+        'add_keys': 2,
+        'add_ruppees': 2,
+        }
+    tasks['attack_item5'] = copy.deepcopy(tasks['attack'])
+    tasks['attack_item5']['reward'] |= {
+        'add_bomb': 5,
+        'add_clock': 5,
+        'add_heart': 5,
+        'add_keys': 5,
+        'add_ruppees': 5,
+        }
     tasks['attack_noitem'] = copy.deepcopy(tasks['attack'])
     tasks['attack_noitem']['reward'] |= {
         'add_bomb': -1,
@@ -411,11 +427,7 @@ class ZeldaWrapper(RetroKB):
             self._set_random_enemy_positions()
 
         # generate the observation
-        kb = self.game_module.generate_knowledge_base(self.ram, self.ram2)
-        kb_obs = kb.to_observation()
-        task = self.tasks[self.episode_task]
-        kb_obs['rewards'] = np.array([task['reward'].get(k, 0) for k in sorted(kb.events)])
-
+        kb_obs = self._generate_kb_obs()
         return kb_obs, info
 
     def step(self, action):
@@ -590,74 +602,64 @@ class ZeldaWrapper(RetroKB):
 # MARK: knowledge base
 ########################################
 
-def generate_knowledge_base(ram, ram2, **kwargs):
-    kb = KnowledgeBase(observation_format={
-        'objects_discrete': ['id'],
-        'objects_discrete_id': ['id'],
-        'objects_string_chunk': ['chunk_id'],
-        'objects_continuous': ['relx', 'rely'],
-        })
 
-    if ram.mouse is not None:
-        item = {}
-        item['x'] = ram.mouse['x']
-        item['y'] = ram.mouse['y']
-        item['id'] = 0
-        item['chunk_id'] = 'interface'
-        kb['mouse'] = item
+def generate_knowledge_base_background_items(ram):
+    items = {}
+    info = {}
 
-    # NOTE:
-    # The NES uses the OAM region of memory $0200-$02FF for storing sprites;
-    # this code is a generic object detector that extracts sprite information from this region of RAM
-    #
-    # See the following links for details on NES rendering/hardware:
-    # <https://austinmorlan.com/posts/nes_rendering_overview/>
-    # <https://www.copetti.org/writings/consoles/nes/>
-    for i in range(64):
-        # The following link describes the details of the information being extracted here
-        # <https://www.nesdev.org/wiki/PPU_OAM>
-        base_addr = 0x0200 + 4*i
-        item = {}
-        item['chunk_id'] = 'generic'
-        item['id'] = ram[base_addr + 1]
-        item['x'] = ram[base_addr + 3]
-        item['y'] = ram[base_addr + 0]
+    use_subtiles = False
+    subtiles = _get_subtiles(ram)
+    view_radius = 2
 
-        byte2 = ram[base_addr + 2]
-        item['pal4'] = int(byte2 & 0x3 == 0)
-        item['pal5'] = int(byte2 & 0x3 == 1)
-        item['pal6'] = int(byte2 & 0x3 == 2)
-        item['pal7'] = int(byte2 & 0x3 == 3)
-        item['priority']= int(byte2 & 32  >  0)
-        item['flip_hori'] = int(byte2 & 64  >  0)
-        item['flip_vert'] = int(byte2 & 128 >  0)
-
-        # only add the sprite if it is on screen
-        if item['y'] < 240 and item['x'] < 240:
-            kb[f'sprite_{i:02}'] = item
-
-    # center and normalize all items
-    kb.columns.add('relx')
-    kb.columns.add('rely')
-
-    if kwargs.get('center_player'):
-        center_x = ram[112]
-        center_y = ram[132]
+    if use_subtiles:
+        tiles = subtiles
+        tile_size = 8
     else:
-        center_x = 120
-        center_y = 120
-    for item, val in kb.items.items():
-        kb.items[item]['relx'] = kb.items[item]['x'] - center_x
-        kb.items[item]['rely'] = kb.items[item]['y'] - center_y
+        tiles = subtiles[::2,::2]
+        tile_size = 16
+    info['tiles'] = tiles
+    info['tile_size'] = tile_size
 
-        # normalize
-        kb.items[item]['relx'] /= 120
-        kb.items[item]['rely'] /= 120
+    link_x = ram[112]
+    link_y = ram[132]
+    link_tile_x = (link_x+8)//tile_size
+    link_tile_y = (link_y-56)//tile_size
+    if not use_subtiles:
+        link_tile_y = (link_y-48)//tile_size
 
-    # add events
-    kb.events = get_events(ram, ram2)
+    mapstr = ''
+    for y in range(tiles.shape[1]):
+        for x in range(tiles.shape[0]):
+            in_radius = abs(int(x) - int(link_tile_x)) + abs(int(y) - int(link_tile_y)) <= view_radius
+            is_cave = tiles[x, y] == 243
+            if in_radius or is_cave:
+                item = {}
+                item['x'] = x*tile_size 
+                item['y'] = y*tile_size + 61
+                item['id'] = tiles[x, y]
+                item['chunk_id'] = 'Zelda-bg'
+                #item['dx'] = 0
+                #item['dy'] = 0
+                #item['type'] = -4
+                #item['state'] = tiles[x, y]
+                #item['direction'] = 0
+                #item['health'] = 0
+                if tiles[x, y] not in ignore_tile_set:
+                    items[f'tile_{x:0>2d}_{y:0>2d}'] = item
+                prefix = '*'
+            else:
+                prefix = ' '
+            if (x, y) == (link_tile_x, link_tile_y):
+                mapstr += prefix + '# '
+            else:
+                if tiles[x, y] in ignore_tile_set:
+                    mapstr += prefix + '  '
+                else:
+                    mapstr += prefix + f'{hex(tiles[x, y])[2:]:2}'
+        mapstr += '\n'
+        info['mapstr'] = mapstr
 
-    return kb
+    return items, info
 
 
 def generate_knowledge_base2(ram, ram2, include_background=True, use_subtiles=False):
@@ -1374,6 +1376,12 @@ def _ramstate_screen_scrolling_west(ram):
 
 def _ramstate_screen_scrolling_east(ram):
     return int(ram[112] == 240) * _ramstate_is_screen_scrolling(ram)
+
+def _ramstate_player_x(ram):
+    return int(ram[112])
+
+def _ramstate_player_y(ram):
+    return int(ram[132])
 
 def _ramstate_is_drawing_text(ram):
     return ram[0x0605] == 0x10

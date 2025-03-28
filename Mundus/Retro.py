@@ -856,8 +856,8 @@ def generate_knowledge_base(ram, ram2, **kwargs):
         center_x = 120
         center_y = 120
     for item, val in kb.items.items():
-        kb.items[item]['relx'] = kb.items[item]['x'] - 120
-        kb.items[item]['rely'] = kb.items[item]['y'] - 120
+        kb.items[item]['relx'] = kb.items[item]['x'] - center_x
+        kb.items[item]['rely'] = kb.items[item]['y'] - center_y
 
         # normalize
         kb.items[item]['relx'] /= 120

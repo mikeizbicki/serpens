@@ -365,8 +365,8 @@ class Keyboard(gymnasium.Wrapper):
     def __init__(self, env):
         super().__init__(env)
         self.logger = logging.getLogger('Keyboard')
-        self.logger.setLevel(logging.DEBUG)
-        #self.logger.setLevel(logging.INFO)
+        #self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(logging.INFO)
 
         self.logger.info("Keyboard wrapper initialized")
         self.logger.debug(f"self.unwrapped.buttons={self.unwrapped.buttons}")

@@ -7,3 +7,6 @@
 [submodule "stable-retro"]
 	path = stable-retro
 	url = https://github.com/Farama-Foundation/stable-retro
+[submodule "stable-baselines3"]
+	path = stable-baselines3
+	url = https://github.com/DLR-RM/stable-baselines3

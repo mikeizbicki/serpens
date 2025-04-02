@@ -228,12 +228,15 @@ def main():
     group.add_argument('--policy', default='ExtractorManager')
     group.add_argument('--objects_extractor', default='ObjectEmbedding')
     group.add_argument('--revents_extractor', default='Revents_Linear')
-    group.add_argument('--pooling', choices=['lstm', 'mean', 'max'], default='mean')
+    group.add_argument('--screen_extractor', default=None)
+    group.add_argument('--pooling', choices=['lstm', 'mean', 'max'], default='max')
     group.add_argument('--net_arch', type=int, nargs='*', default=[])
     group.add_argument('--features_dim', type=int, default=256)
     group.add_argument('--difference_dim', type=int, default=8)
     group.add_argument('--events_dim', type=int, default=32)
     group.add_argument('--rewards_dim', type=int, default=32)
+    group.add_argument('--screen_dim', type=int, default=32)
+    group.add_argument('--screen_downsample', type=int, default=8)
 
     group = parser.add_argument_group('hyperparameters: training algorithm')
     group.add_argument('--alg', choices=['ppo', 'dqn'], default='ppo')
@@ -290,6 +293,7 @@ def main():
                 background_items=args.background_items,
                 reset_method=args.reset_method,
                 reset_state=args.reset_state,
+                screen_downsample=args.screen_downsample,
                 )
         env = TerminatedTimeLimit(env, max_episode_steps=30*60*5)
         env = StochasticFrameSkip(env, 4, 0.25, seed=seed)
@@ -349,8 +353,10 @@ def main():
             'rewards_dim': args.rewards_dim,
             }
     elif args.policy == 'ExtractorManager':
+        globals()['None'] = None
         objects_extractor = globals()[args.objects_extractor]
         revents_extractor = globals()[args.revents_extractor]
+        screen_extractor = globals()[args.screen_extractor]
         policy_kwargs['features_extractor_class'] = ExtractorManager
         policy_kwargs['features_extractor_kwargs'] = {
             'objects_extractor': objects_extractor,
@@ -362,6 +368,10 @@ def main():
             'revents_extractor': revents_extractor,
             'revents_kwargs': {
                 'revents_dim': args.events_dim,
+                },
+            'screen_extractor': screen_extractor,
+            'screen_kwargs': {
+                'features_dim': args.screen_dim,
                 },
             }
         assert args.events_dim == args.rewards_dim

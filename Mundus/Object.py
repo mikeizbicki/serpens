@@ -197,7 +197,7 @@ class History:
 
 
 class KnowledgeBase:
-    def __init__(self, observation_format, max_objects=64):
+    def __init__(self, observation_format, max_objects=65):
         self.items = defaultdict(lambda: {})
         self.events = {}
         self.info = {}
@@ -261,7 +261,7 @@ class KnowledgeBase:
                 arr = np.array([x[observation_key] for x in items_formatted], dtype=np.uint8)
             elif 'string' in observation_key:
                 # FIXME:
-                # str_has_as_float is a janky work around to the fact that SB3 doesn't like Text spaces
+                # str_hash_as_float is a janky work around to the fact that SB3 doesn't like Text spaces
                 arr = np.array([[str_hash_as_float(s) for s in x[observation_key]] for x in items_formatted], dtype=np.float32)
             else:
                 arr = np.array([x[observation_key] for x in items_formatted], dtype=self.dtype_continuous)
@@ -271,6 +271,14 @@ class KnowledgeBase:
         events_array = np.array([v for k, v in sorted(self.events.items())])
         events_array = np.clip(events_array, -1, 1)
         observation['events'] = events_array
+
+        # compute screen information
+        observation['screen'] = self.screen
+        #observation['screen'] /= 255 # normalize
+
+        # emulator stores images as HxWxC,
+        # but pytorch will process the image as CxHxW
+        observation['screen'] = np.moveaxis(observation['screen'], -1, 0)
 
         return observation
 
@@ -282,6 +290,8 @@ class KnowledgeBase:
                 d[k] = gymnasium.spaces.Box(0, 255, observation[k].shape, self.dtype_discrete)
             elif 'string' in k:
                 d[k] = gymnasium.spaces.Box(0, 255, observation[k].shape, np.uint64)
+            elif 'screen' in k:
+                d[k] = gymnasium.spaces.Box(0, 255, observation[k].shape, np.uint8)
             else:
                 d[k] = gymnasium.spaces.Box(-1, 1, observation[k].shape, self.dtype_continuous)
         space = gymnasium.spaces.Dict(d)
@@ -536,12 +546,41 @@ class Revents_Linear(BaseFeaturesExtractor):
         return torch.cat(encoded_tensor_list, dim=1)
 
 
+class ScreenCNN(BaseFeaturesExtractor):
+    def __init__(
+        self,
+        observation_space,
+        features_dim = 64,
+        ):
+        super().__init__(observation_space, features_dim)
+        # We assume CxHxW images (channels first)
+        # Re-ordering will be done by pre-preprocessing or wrapper
+        n_input_channels = observation_space.shape[0]
+        self.cnn = nn.Sequential(
+            nn.Conv2d(n_input_channels, 8, kernel_size=4, stride=2, padding=0),
+            nn.ReLU(),
+            nn.Conv2d(8, 16, kernel_size=4, stride=2, padding=0),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+        # Compute shape by doing one forward pass
+        with torch.no_grad():
+            n_flatten = self.cnn(torch.as_tensor(observation_space.sample()[None]).float()).shape[1]
+
+        self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
+
+    def forward(self, observations):
+        return self.linear(self.cnn(observations))
+
+
 class ExtractorManager(BaseFeaturesExtractor):
     def __init__(
         self,
         observation_space: spaces.Dict,
         objects_extractor,
         revents_extractor,
+        screen_extractor = None,
         **kwargs,
     ) -> None:
         # When calling super().__init__, we are supposed to know the output features_dim.
@@ -551,31 +590,28 @@ class ExtractorManager(BaseFeaturesExtractor):
         super().__init__(observation_space, features_dim=1)
 
         # create the feature networks
-        self.extractors = nn.ModuleDict({
-            'objects': objects_extractor(observation_space, **kwargs['objects_kwargs']),
-            'revents': revents_extractor(observation_space, **kwargs['revents_kwargs']),
-            })
-        # FIXME:
-        # There's a lot of potential modifications to the code above.
-        # For example:
-        # The observation_space could be subdivided so that objects only receives
-        # the objects_* observations;
-        # this change shouldn't change the semantics,
-        # but it might prevent potential bugs and
-        # improve runtime performance due to memory transfer overheads.
+        self.extractors = nn.ModuleDict({})
+        if objects_extractor is not None:
+            self.extractors['objects'] = objects_extractor(observation_space, **kwargs['objects_kwargs'])
+        if revents_extractor is not None:
+            self.extractors['revents'] = revents_extractor(observation_space, **kwargs['revents_kwargs'])
+        if screen_extractor is not None:
+            self.extractors['screen'] = screen_extractor(observation_space['screen'], **kwargs['screen_kwargs'])
 
         # Update the features dim manually
-        from stable_baselines3.common.preprocessing import get_flattened_obs_dim
-        dim_objects = self.extractors['objects'].features_dim
-        dim_revents = self.extractors['revents'].features_dim
-        self._features_dim = dim_objects + dim_revents
+        self._features_dim = sum([x.features_dim for x in self.extractors.values()])
 
     def forward(self, observations: TensorDict) -> torch.Tensor:
-        encoded_tensor_list = [
-            self.extractors['objects'](observations),
-            self.extractors['revents'](observations),
-            ]
-        return torch.cat(encoded_tensor_list, dim=1)
+        #tensors = [x(observations) for x in self.extractors]
+        features = []
+        if 'objects' in self.extractors:
+            features.append(self.extractors['objects'](observations))
+        if 'revents' in self.extractors:
+            features.append(self.extractors['revents'](observations))
+        if 'screen' in self.extractors:
+            obs = observations['screen']
+            features.append(self.extractors['screen'](obs))
+        return torch.cat(features, dim=1)
 
 
 ################################################################################

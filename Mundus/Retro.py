@@ -11,6 +11,7 @@ import numpy as np
 import gymnasium
 import retro
 import setproctitle
+import xxhash
 
 from Mundus.Object import *
 import Mundus.Games.NES_Generic
@@ -231,14 +232,16 @@ class RetroWithRam(gymnasium.Wrapper):
     def __init__(self, env):
         super().__init__(env)
         self.ram = None
-        self.screen = None
+        #self.screen = None
         self._update_ram()
 
     def _update_ram(self):
         self.ram2 = self.ram
         self.ram = self._IntLookup(self.unwrapped.get_ram())
-        self.screen2 = self.screen
-        self.screen = self.unwrapped.em.get_screen()
+        #self.screen2 = self.screen
+        #self.screen = self.unwrapped.em.get_screen()
+        self.ram.em_state = self.unwrapped.em.get_state()
+        self.ram.screen = self.unwrapped.em.get_screen()
 
     def step(self, action):
         self._update_ram()
@@ -249,8 +252,10 @@ class RetroWithRam(gymnasium.Wrapper):
         obs, info = super().reset(**kwargs)
         self.ram2 = None
         self.ram = self._IntLookup(self.unwrapped.get_ram())
-        self.screen2 = None
-        self.screen = self.unwrapped.em.get_screen()
+        #self.screen2 = None
+        #self.screen = self.unwrapped.em.get_screen()
+        self.ram.em_state = self.unwrapped.em.get_state()
+        self.ram.screen = self.unwrapped.em.get_screen()
         return obs, info
 
 
@@ -271,13 +276,15 @@ class RetroKB(RetroWithRam):
     def __init__(
             self,
             env,
-            game_module=None, #Mundus.Games.NES_Generic,
+            game_module=None,
             task_regex='attack',
             alt_screen=False,
             debug_assert=False,
             no_render_skipped_frames=True,
             skip_boring_frames=True,
             render_kb=True,
+            render_downsample=True,
+            render_task=True,
             seed=None,
             lang='en',
             kb_kwargs={},
@@ -292,13 +299,10 @@ class RetroKB(RetroWithRam):
         self.no_render_skipped_frames=no_render_skipped_frames
         self.skip_boring_frames = skip_boring_frames 
         self.render_kb = render_kb
+        self.render_downsample = render_downsample
+        self.render_task = render_task
         self.lang = lang
-        self.render_task = True
         self._text_callbacks = []
-
-        #if game_module is None:
-            #self.game_module = Mundus.Games.NES_Generic #game_module
-        #else:
         self.game_module = game_module
 
         self.kb_kwargs = kb_kwargs
@@ -340,7 +344,6 @@ class RetroKB(RetroWithRam):
             self.event_to_text = json.load(fin)
         with open(f'data/tasks.{self.lang}.json') as fin:
             self.task_to_text = json.load(fin)
-
 
         # self._valid_tasks contains all the tasks that the reset() function might select
         pattern = re.compile(task_regex)
@@ -545,11 +548,11 @@ class RetroKB(RetroWithRam):
 
             elif self.mouse['mode'] == 'background':
                 crop_size = 4
-                cropped_screen2 = self.screen2[crop_size:-crop_size,crop_size:-crop_size,:]
+                cropped_screen2 = self.ram2.screen[crop_size:-crop_size,crop_size:-crop_size,:]
                 scroll_amounts = [(i, j) for i in [2, 1, 0, -1, 2] for j in [2, 1, 0, -1, -2]]
                 scores = []
                 for i, j in scroll_amounts:
-                    cropped_screen1 = self.screen[crop_size+i:-crop_size+i, crop_size+j:-crop_size+j, :]
+                    cropped_screen1 = self.ram.screen[crop_size+i:-crop_size+i, crop_size+j:-crop_size+j, :]
                     l1_dist = np.sum(np.abs(cropped_screen1 - cropped_screen2))
                     scores.append((l1_dist, (i, j)))
                 scores.sort()
@@ -567,19 +570,20 @@ class RetroKB(RetroWithRam):
 
         # render the environment
         if self.render_kb:
-            
-            # NOTE:
-            # the code below determines whether the NES is using 8 or 16 pixel tall sprites;
-            # see <https://www.nesdev.org/wiki/PPU_registers#PPUCTRL> for details
-            state = parse_state(self.unwrapped.em.get_state())
-            PPUCTRL = state['PPUR'][0]
-            PPUSCROLL = state['XOFF'][0]
-            if PPUCTRL & 32 == 0:
-                sprite_height = 8
-                extra_sprite_y = 0
-            else:
-                sprite_height = 16
-                extra_sprite_y = 8
+
+            if self.render_downsample:
+                # set the screen's datatype to np.uint8 for rendering;
+                # it is stored in kb as a float for training efficiency
+                screen = kb.screen
+                screen = screen.astype(self.unwrapped.img.dtype)
+
+                # rescale the downsampled image back to its original size;
+                # this is important so that the subsequent rendering code
+                # places everything in the correct location
+                screen_downsample = self.kb_kwargs['screen_downsample']
+                screen = np.repeat(screen, screen_downsample, axis=0)
+                screen = np.repeat(screen, screen_downsample, axis=1)
+                self.unwrapped.img = screen
 
             # draw bounding box around objects
             for k, v in kb.items.items():
@@ -588,10 +592,10 @@ class RetroKB(RetroWithRam):
                 # and trying to render them directly crashes without clipping
                 if 'sprite' in k:
                     # sprites are 8x16 or 8x8 pixels
-                    xmin = max(0, min(239, v['x'] - 8))
-                    xmax = max(0, min(239, v['x'] + 0))
-                    ymin = max(0, min(223, v['y'] - 8))
-                    ymax = max(0, min(223, v['y'] + extra_sprite_y))
+                    xmin = max(0, min(239, v['x'] - v['width']//2))
+                    xmax = max(0, min(239, v['x'] + v['width']//2))
+                    ymin = max(0, min(223, v['y'] - v['height']//2))
+                    ymax = max(0, min(223, v['y'] + v['height']//2))
                     self.unwrapped.img[ymin:ymax+1, xmin] = [255, 0, 0]
                     self.unwrapped.img[ymin:ymax+1, xmax] = [255, 0, 0]
                     self.unwrapped.img[ymin, xmin:xmax+1] = [255, 0, 0]
@@ -797,6 +801,7 @@ def generate_knowledge_base(ram, ram2, **kwargs):
         'objects_continuous': ['relx', 'rely'],
         })
 
+    # add the mouse object
     if ram.mouse is not None:
         item = {}
         item['x'] = ram.mouse['x']
@@ -804,6 +809,17 @@ def generate_knowledge_base(ram, ram2, **kwargs):
         item['id'] = 0
         item['chunk_id'] = 'common'
         kb['mouse'] = item
+
+    # add a (potentially downsampled) screen
+    w, h, c = ram.screen.shape
+    screen_downsample = kwargs['screen_downsample']
+    assert w % screen_downsample == 0
+    assert h % screen_downsample == 0
+    new_w = w // screen_downsample
+    new_h = h // screen_downsample
+    screen = ram.screen.reshape(new_w, screen_downsample, new_h, screen_downsample, c)
+    screen = np.mean(screen, axis=(1, 3))
+    kb.screen = screen
 
     # NOTE:
     # The NES uses the OAM region of memory $0200-$02FF for storing sprites.
@@ -815,15 +831,66 @@ def generate_knowledge_base(ram, ram2, **kwargs):
     # See the following links for details on NES rendering/hardware:
     # <https://austinmorlan.com/posts/nes_rendering_overview/>
     # <https://www.copetti.org/writings/consoles/nes/>
+
+    # the code below determines whether the NES is using 8 or 16 pixel tall sprites;
+    # see <https://www.nesdev.org/wiki/PPU_registers#PPUCTRL> for details
+    state = parse_state(ram.em_state)
+    PPUCTRL = state['PPUR'][0]
+    PPUSCROLL = state['XOFF'][0]
+    if PPUCTRL & 32 == 0:
+        sprite_height = 8
+        sprite_width = 8
+        sprite_yoffset = -4
+    else:
+        sprite_width = 8
+        sprite_height = 16
+        sprite_yoffset = 0
+
+    # CHRR (character ram) is the region of ram that stores the sprites' graphics;
+    # item['id'] stores the index into CHRR that is being used to draw the sprite,
+    # item['chunk_id'] uniquely identifies the CHRR table being used;
+    # in some games (e.g. Zelda), the CHRR is stored in the emulator state,
+    # but in other games (e.g. Mario) it is not;
+    # it's not clear to me why this is the case,
+    # and the code below will have "hash conflicts" for games like Mario
+    chrr = state.get('CHRR')
+    if chrr is None:
+        chrr_hash = '_NONE'
+        if not hasattr(generate_knowledge_base, 'chrr_warning'):
+            generate_knowledge_base.chrr_warning = True
+            logging.warning('chrr is None')
+    else:
+        chrr_hash = format(xxhash.xxh32(chrr).intdigest() & 0xFFFFFFFF, '08x')
+    chunk_id = kwargs['game_name'] + '_' + chrr_hash
+    if not hasattr(generate_knowledge_base, 'chunk_ids'):
+        generate_knowledge_base.chunk_ids = set()
+    if chunk_id not in generate_knowledge_base.chunk_ids:
+        logging.debug(f"generate_knowledge_base: chunk_id={chunk_id}")
+        generate_knowledge_base.chunk_ids.add(chunk_id)
+
+    # render the CHRR
+    # (only if it has changed since the last frame)
+    if kwargs.get('display_chrr'):
+        if ram2 is not None:
+            state2 = parse_state(ram2.em_state)
+            if chrr is not None and chrr != state2['CHRR']:
+                render_nes_pattern_table(chrr)
+        else:
+            if chrr is not None:
+                render_nes_pattern_table(chrr)
+
+    # loop over each sprite in the OAM
     for i in range(64):
         # The following link describes the details of the information being extracted here
         # <https://www.nesdev.org/wiki/PPU_OAM>
         base_addr = 0x0200 + 4*i
         item = {}
-        item['chunk_id'] = kwargs['game_name']
+        item['chunk_id'] = chunk_id
         item['id'] = ram[base_addr + 1]
-        item['x'] = ram[base_addr + 3]
-        item['y'] = ram[base_addr + 0]
+        item['x'] = ram[base_addr + 3] - sprite_width // 2
+        item['y'] = ram[base_addr + 0] + sprite_yoffset
+        item['width'] = sprite_width
+        item['height'] = sprite_height
 
         byte2 = ram[base_addr + 2]
         item['pal4'] = int(byte2 & 0x3 == 0)
@@ -834,8 +901,59 @@ def generate_knowledge_base(ram, ram2, **kwargs):
         item['flip_hori'] = int(byte2 & 64  >  0)
         item['flip_vert'] = int(byte2 & 128 >  0)
 
-        # only add the sprite if it is on screen
+        # the NES has no flag for whether a sprite is visible or not;
+        # sprites are made non-visible by moving the off the edge of the screen;
+        # we only want to add sprites to the item list if they are visible
+        add_sprite = False
         if item['y'] < 240 and item['x'] < 240:
+            add_sprite = True
+
+        # if the sprite is adjacent to another sprite in the image,
+        # optionally choose to link the two sprites into a single object;
+        # this can mildly improve inference runtime of downstream models
+        # and make debugging output slightly cleaner;
+        # in most games, the sprite that is being removed will be uniquely determined
+        # by the sprite that it is adjacent to;
+        # if this is the case, then the transformation should have no effect
+        # on the models' ability to represent game states;
+        # but if these adjacent sprites are not uniquely determined by each other,
+        # than this transformation can cause different game states to be represented
+        # with the same sprite information
+        # FIXME:
+        # this code joins some sprites but not all sprites;
+        # in particular I have verified that the vertical code will not join
+        # a chain of sprites together (in e.g. SuperMario),
+        # and I suspect the horizontal code will not as well
+        if add_sprite and kwargs.get('link_sprites'):
+
+            # join sprites horizontally
+            for olditem in kb.items.values():
+                if item['x'] == olditem['x'] + olditem.get('width', -1000) and item['y'] == olditem['y'] and item.get('height') == olditem.get('height'):
+                    olditem['width'] += item['width']
+                    olditem['x'] += sprite_width // 2
+                    add_sprite = False
+                    break
+                if item['x'] == olditem['x'] - olditem.get('width', -1000) and item['y'] == olditem['y'] and item.get('height') == olditem.get('height'):
+                    olditem['width'] += item['width']
+                    olditem['x'] -= sprite_width // 2
+                    add_sprite = False
+                    break
+
+            # we have already linked a sprite horizontally;
+            # now try to link it vertically
+            if not add_sprite:
+                for sprite_name, olditem2 in list(kb.items.items()):
+                    if olditem['x'] == olditem2['x'] and olditem['width'] == olditem2['width'] and olditem['y'] == olditem2['y'] + olditem2.get('height', -1000):
+                        olditem['height'] += olditem2['height']
+                        olditem['y'] -= olditem2['height'] // 2
+                        del kb.items[sprite_name]
+                    if olditem['x'] == olditem2['x'] and olditem['width'] == olditem2['width'] and olditem['y'] == olditem2['y'] - olditem2.get('height', -1000):
+                        olditem['height'] += olditem2['height']
+                        olditem['y'] += olditem2['height'] // 2
+                        del kb.items[sprite_name]
+
+        # finally add the sprite
+        if add_sprite:
             kb[f'sprite_{i:02}'] = item
 
     # generate background
@@ -885,3 +1003,108 @@ def get_events(ram, ram2):
             ret[event_name[len(prefix):]] = 0
     return ret
 
+
+################################################################################
+# MARK: debug functions below
+################################################################################
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Global variables to track state
+_pattern_table_fig = None
+_pattern_table_img = None
+
+def render_nes_pattern_table(chrr, title="NES Pattern Table", use_8x16=True):
+    """
+    Render an NES pattern table to a window based on official NES encoding.
+
+    Args:
+        chrr: Byte array containing the NES pattern table data
+        title: Title for the window
+        use_8x16: If True, render as 8x16 sprites instead of 8x8 sprites
+    """
+    global _pattern_table_fig, _pattern_table_img
+
+    # Calculate dimensions based on the data
+    tiles_per_row = 16  # Standard NES pattern table layout is 16x16
+    chrr_size = len(chrr)
+
+    if use_8x16:
+        tile_height = 16
+        bytes_per_tile = 32  # 16 bytes per 8x8 tile × 2 tiles
+    else:
+        tile_height = 8
+        bytes_per_tile = 16  # 16 bytes per 8x8 tile
+
+    num_complete_tiles = chrr_size // bytes_per_tile
+    rows = (num_complete_tiles + tiles_per_row - 1) // tiles_per_row  # Ceiling division
+
+    # Create image data
+    img_width = tiles_per_row * 8
+    img_height = rows * tile_height
+    img_data = np.zeros((img_height, img_width, 3), dtype=np.uint8)
+
+    # NES default colors for visualization
+    nes_colors = [
+        [0, 0, 0],          # Background/transparent
+        [85, 85, 85],       # Color index 1
+        [170, 170, 170],    # Color index 2
+        [255, 255, 255]     # Color index 3
+    ]
+
+    # Process each tile
+    for tile_idx in range(min(num_complete_tiles, tiles_per_row * rows)):
+        if tile_idx * bytes_per_tile + bytes_per_tile - 1 >= chrr_size:
+            break  # Safety check
+
+        # Calculate tile position in the grid
+        tile_x = tile_idx % tiles_per_row
+        tile_y = tile_idx // tiles_per_row
+
+        tile_offset = tile_idx * bytes_per_tile
+
+        # Handle 8x8 or 8x16 tiles
+        for sub_tile in range(1 if not use_8x16 else 2):
+            sub_offset = sub_tile * 16  # 0 for top half, 16 for bottom half in 8x16 mode
+
+            # Draw the 8x8 tile (or sub-tile for 8x16 mode)
+            for y in range(8):
+                # Get the two bit planes for this row
+                plane0_byte = chrr[tile_offset + sub_offset + y]
+                plane1_byte = chrr[tile_offset + sub_offset + y + 8]
+
+                for x in range(8):
+                    bit_pos = 7 - x
+                    bit0 = (plane0_byte >> bit_pos) & 1
+                    bit1 = (plane1_byte >> bit_pos) & 1
+                    color_idx = (bit1 << 1) | bit0
+
+                    # Set the pixel color
+                    pixel_y = tile_y * tile_height + y + (sub_tile * 8)
+                    pixel_x = tile_x * 8 + x
+
+                    if pixel_y < img_height and pixel_x < img_width:
+                        img_data[pixel_y, pixel_x] = nes_colors[color_idx]
+
+    # The rest of the function remains the same
+    if _pattern_table_fig is None or not plt.fignum_exists(_pattern_table_fig.number):
+        plt.ion()
+        _pattern_table_fig, ax = plt.subplots(figsize=(6, 6))
+        _pattern_table_fig.canvas.manager.set_window_title(title)
+        ax.set_title(title)
+        ax.axis('off')
+        _pattern_table_img = ax.imshow(img_data, interpolation='nearest')
+        plt.tight_layout()
+        plt.show(block=False)
+    else:
+        if _pattern_table_img.get_array().shape != img_data.shape:
+            ax = _pattern_table_fig.axes[0]
+            ax.clear()
+            ax.axis('off')
+            _pattern_table_img = ax.imshow(img_data, interpolation='nearest')
+        else:
+            _pattern_table_img.set_data(img_data)
+
+        _pattern_table_fig.canvas.draw_idle()
+        _pattern_table_fig.canvas.flush_events()

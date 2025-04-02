@@ -19,10 +19,10 @@ commit=$(sh scripts/get_sane_commit_hash.sh)
 # start the new scripts
 common="--comment=$commit" 
 
-CUDA_VISIBLE_DEVICES=0 nohup python3 Mundus/train.py $common --features_dim=64 --pooling=max --difference_dim=64 --objects_extractor=ObjectEmbeddingWithDiff > nohup/nohup.1 &
+CUDA_VISIBLE_DEVICES=0 nohup python3 Mundus/train.py $common --features_dim=32 --pooling=max --center_player --objects_extractor=None --revents_extractor=None --task_regex='^attack$' --screen_extractor=NatureCNN --screen_dim=512 --screen_downsample=1 > nohup/nohup.0 &
 CUDA_VISIBLE_DEVICES=1 nohup python3 Mundus/train.py $common --features_dim=32 --pooling=max --center_player --objects_extractor=ObjectEmbeddingWithDiff --screen_extractor=ScreenCNN > nohup/nohup.1 &
-CUDA_VISIBLE_DEVICES=2 nohup python3 Mundus/train.py $common --features_dim=32 --pooling=max --background_items --center_player --objects_extractor=ObjectEmbeddingWithDiff > nohup/nohup.2 &
-CUDA_VISIBLE_DEVICES=3 nohup python3 Mundus/train.py $common --features_dim=32 --pooling=max --center_player --objects_extractor=ObjectEmbeddingWithDiff > nohup/nohup.3 &
+#CUDA_VISIBLE_DEVICES=2 nohup python3 Mundus/train.py $common --features_dim=32 --pooling=max --background_items --center_player --objects_extractor=ObjectEmbeddingWithDiff > nohup/nohup.2 &
+#CUDA_VISIBLE_DEVICES=3 nohup python3 Mundus/train.py $common --features_dim=32 --pooling=max --center_player --objects_extractor=ObjectEmbeddingWithDiff > nohup/nohup.3 &
 
 sleep 1
 tail -f nohup/nohup.?

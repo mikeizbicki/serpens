@@ -322,7 +322,7 @@ class Interactive(gymnasium.Wrapper):
                 retrokb._set_episode_task('screen_south')
             else:
                 retrokb._set_episode_task('interactive_onmouse')
-            retrokb.set_mouse(newx, newy)
+            retrokb.set_mouse(newx, newy, coord_system='display')
 
         self.unwrapped.viewer.image_frame.bind("<Button-1>", on_mouse_press)
 

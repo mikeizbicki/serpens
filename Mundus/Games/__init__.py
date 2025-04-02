@@ -30,7 +30,7 @@ def make_game_env(
         reset_state=None,
         center_player=False,
         background_items=False,
-        screen_downsample=8,
+        screen_downsample=1,
         **kwargs):
     '''
     Create a Zelda environment.

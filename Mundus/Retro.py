@@ -283,7 +283,7 @@ class RetroKB(RetroWithRam):
             no_render_skipped_frames=True,
             skip_boring_frames=True,
             render_kb=True,
-            render_downsample=False,
+            render_downsample=True,
             render_task=True,
             seed=None,
             lang='en',
@@ -463,13 +463,13 @@ class RetroKB(RetroWithRam):
         info['misc_skipped_frames'] = self.skipped_frames
 
         # compute the task information
-        self.ram.mouse = self.mouse # FIXME: this should be in only one spot
+        self.ram.mouse = self.mouse
         kb = generate_knowledge_base(self.ram, self.ram2, **self.kb_kwargs)
         pseudoreward = 0
         kb_obs = kb.to_observation()
         task = self.tasks[self.episode_task]
         kb_obs['rewards'] = np.array([task['reward'].get(k, 0) for k in sorted(kb.events)])
-
+        
         # register events
         for event in kb.events:
             if kb.events[event] != 0:
@@ -585,6 +585,14 @@ class RetroKB(RetroWithRam):
                 screen = np.repeat(screen, screen_downsample, axis=1)
                 self.unwrapped.img = screen
 
+            if self.kb_kwargs['center_player']:
+                h, w, c = self.unwrapped.img.shape
+                x_offset = kb.display_x_offset
+                y_offset = kb.display_y_offset
+            else:
+                x_offset = 0
+                y_offset = 0
+
             # draw bounding box around objects
             for k, v in kb.items.items():
                 # NOTE: we apply min/max to all values;
@@ -592,28 +600,28 @@ class RetroKB(RetroWithRam):
                 # and trying to render them directly crashes without clipping
                 if 'sprite' in k:
                     # sprites are 8x16 or 8x8 pixels
-                    xmin = max(0, min(239, v['x'] - v['width']//2))
-                    xmax = max(0, min(239, v['x'] + v['width']//2))
-                    ymin = max(0, min(223, v['y'] - v['height']//2))
-                    ymax = max(0, min(223, v['y'] + v['height']//2))
+                    xmin = max(0, min(239, v['x'] + x_offset - v['width']//2))
+                    xmax = max(0, min(239, v['x'] + x_offset + v['width']//2))
+                    ymin = max(0, min(223, v['y'] + y_offset - v['height']//2))
+                    ymax = max(0, min(223, v['y'] + y_offset + v['height']//2))
                     self.unwrapped.img[ymin:ymax+1, xmin] = [255, 0, 0]
                     self.unwrapped.img[ymin:ymax+1, xmax] = [255, 0, 0]
                     self.unwrapped.img[ymin, xmin:xmax+1] = [255, 0, 0]
                     self.unwrapped.img[ymax, xmin:xmax+1] = [255, 0, 0]
                 elif k != 'mouse':
-                    xmin = max(0, min(239, v['x'] - 8))
-                    xmax = max(0, min(239, v['x'] + 8))
-                    ymin = max(0, min(223, v['y'] - 8))
-                    ymax = max(0, min(223, v['y'] + 8))
+                    xmin = max(0, min(239, v['x'] + x_offset - 8))
+                    xmax = max(0, min(239, v['x'] + x_offset + 8))
+                    ymin = max(0, min(223, v['y'] + y_offset - 8))
+                    ymax = max(0, min(223, v['y'] + y_offset + 8))
                     self.unwrapped.img[ymin:ymax+1, xmin] = 255
                     self.unwrapped.img[ymin:ymax+1, xmax] = 255
                     self.unwrapped.img[ymin, xmin:xmax+1] = 255
                     self.unwrapped.img[ymax, xmin:xmax+1] = 255
                 else:
-                    xmin = max(0, min(239, v['x'] - 4))
-                    xmax = max(0, min(239, v['x'] + 4))
-                    ymin = max(0, min(223, v['y'] - 4))
-                    ymax = max(0, min(223, v['y'] + 4))
+                    xmin = max(0, min(239, v['x'] + x_offset - 4))
+                    xmax = max(0, min(239, v['x'] + x_offset + 4))
+                    ymin = max(0, min(223, v['y'] + y_offset - 4))
+                    ymax = max(0, min(223, v['y'] + y_offset + 4))
                     self.unwrapped.img[ymin:ymax+1, xmin:xmax+1] = [255, 0, 255]
 
         if self.render_task:
@@ -655,8 +663,8 @@ class RetroKB(RetroWithRam):
     # MARK: functions for mouse manipulation
     ########################################
 
-    def set_mouse(self, x, y):
-        self.mouse = {'x': x, 'y': y, 'mode': 'click'}
+    def set_mouse(self, x, y, coord_system='screen'):
+        self.mouse = {'x': x, 'y': y, 'mode': 'click', 'coord_system': coord_system}
         self.ram.mouse = self.mouse
 
     ########################################
@@ -801,25 +809,43 @@ def generate_knowledge_base(ram, ram2, **kwargs):
         'objects_continuous': ['relx', 'rely'],
         })
 
+    # add a (potentially downsampled) screen
+    screen = ram.screen
+    h, w, c = screen.shape
+    if kwargs.get('center_player'):
+        assert kwargs['game_module']
+        center_x = kwargs['game_module']._ramstate_player_x(ram)
+        center_y = kwargs['game_module']._ramstate_player_y(ram)
+        kb.display_x_offset = w - center_x - w // 2
+        kb.display_y_offset = h - center_y - h // 2
+        screen = center_image(screen, w - center_x, h - center_y)
+    else:
+        center_x = w // 2
+        center_y = h // 2
+
+    screen_downsample = kwargs['screen_downsample']
+    if screen_downsample > 1:
+        assert w % screen_downsample == 0
+        assert h % screen_downsample == 0
+        new_w = w // screen_downsample
+        new_h = h // screen_downsample
+        screen = screen.reshape(new_h, screen_downsample, new_w, screen_downsample, c)
+        screen = np.mean(screen, axis=(1, 3))
+
+    kb.screen = screen
+
     # add the mouse object
     if ram.mouse is not None:
+        if ram.mouse.get('coord_system') == 'display':
+            ram.mouse['coord_system'] = 'screen'
+            ram.mouse['x'] -= kb.display_x_offset
+            ram.mouse['y'] -= kb.display_y_offset
         item = {}
         item['x'] = ram.mouse['x']
         item['y'] = ram.mouse['y']
         item['id'] = 0
         item['chunk_id'] = 'common'
         kb['mouse'] = item
-
-    # add a (potentially downsampled) screen
-    w, h, c = ram.screen.shape
-    screen_downsample = kwargs['screen_downsample']
-    assert w % screen_downsample == 0
-    assert h % screen_downsample == 0
-    new_w = w // screen_downsample
-    new_h = h // screen_downsample
-    screen = ram.screen.reshape(new_w, screen_downsample, new_h, screen_downsample, c)
-    screen = np.mean(screen, axis=(1, 3))
-    kb.screen = screen
 
     # NOTE:
     # The NES uses the OAM region of memory $0200-$02FF for storing sprites.
@@ -1108,3 +1134,73 @@ def render_nes_pattern_table(chrr, title="NES Pattern Table", use_8x16=True):
 
         _pattern_table_fig.canvas.draw_idle()
         _pattern_table_fig.canvas.flush_events()
+
+
+def center_image(image, center_x, center_y, repeat_edge=False):
+    """
+    Center image at (center_x, center_y), keeping the same shape.
+    
+    Examples:
+        >>> img = np.ones((4, 6, 3))
+        >>> img[0, 0] = [1, 0, 0]  # Red in top-left
+        >>> result = center_image(img, 0, 0, False)
+        >>> result.shape == img.shape  # Shape preserved
+        True
+        >>> np.array_equal(result[2, 3], [1, 0, 0])  # Red now at center
+        True
+        >>> np.array_equal(result[0, 0], [0, 0, 0])  # Black filling
+        True
+        
+        >>> # Test with repeat_edge=True
+        >>> img = np.ones((5, 5, 3))
+        >>> img[0, 0] = [0, 1, 0]  # Green in top-left
+        >>> result = center_image(img, 1, 1, True)
+        >>> result.shape == img.shape  # Shape preserved
+        True
+        >>> np.array_equal(result[2, 2], [0, 1, 0])  # Green now at center
+        True
+        >>> np.array_equal(result[0, 0], [0, 1, 0])  # Edge repeated
+        True
+        
+        >>> # Test extreme shift
+        >>> img = np.ones((3, 3, 3))
+        >>> img[1, 1] = [0, 0, 1]  # Blue at center
+        >>> result = center_image(img, 10, 10, False)
+        >>> np.all(result == 0)  # All black when shifted far
+        True
+    """
+    
+    h, w, c = image.shape
+    center_h, center_w = h // 2, w // 2
+
+    offset_x = center_w - center_x
+    offset_y = center_h - center_y
+
+    # Create coordinate grids for the target image
+    y_coords, x_coords = np.mgrid[0:h, 0:w]
+
+    # Calculate source coordinates
+    src_x = x_coords + offset_x
+    src_y = y_coords + offset_y
+
+    # Initialize result with zeros
+    result = np.zeros_like(image)
+
+    # Find valid coordinates (within bounds)
+    valid_mask = (0 <= src_x) & (src_x < w) & (0 <= src_y) & (src_y < h)
+
+    # Copy valid pixels
+    result[y_coords[valid_mask], x_coords[valid_mask]] = image[src_y[valid_mask], src_x[valid_mask]]
+
+    # For repeat_edge, handle out-of-bounds pixels
+    if repeat_edge:
+        # Clip coordinates to valid image bounds
+        src_x_clipped = np.clip(src_x, 0, w-1)
+        src_y_clipped = np.clip(src_y, 0, h-1)
+
+        # Apply only to the invalid coordinates
+        invalid_mask = ~valid_mask
+        result[y_coords[invalid_mask], x_coords[invalid_mask]] = image[src_y_clipped[invalid_mask],
+                                                                       src_x_clipped[invalid_mask]]
+
+    return result

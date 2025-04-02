@@ -354,6 +354,7 @@ def main():
             }
     elif args.policy == 'ExtractorManager':
         globals()['None'] = None
+        globals()[None] = None
         objects_extractor = globals()[args.objects_extractor]
         revents_extractor = globals()[args.revents_extractor]
         screen_extractor = globals()[args.screen_extractor]

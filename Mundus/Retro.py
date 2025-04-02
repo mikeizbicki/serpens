@@ -283,7 +283,7 @@ class RetroKB(RetroWithRam):
             no_render_skipped_frames=True,
             skip_boring_frames=True,
             render_kb=True,
-            render_downsample=True,
+            render_downsample=False,
             render_task=True,
             seed=None,
             lang='en',

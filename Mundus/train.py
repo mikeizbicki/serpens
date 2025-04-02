@@ -253,7 +253,7 @@ def main():
     group.add_argument('--background_items', action='store_true')
     group.add_argument('--reset_method', default='map link enemy', type=str)
     group.add_argument('--reset_state', default=None, type=str)
-    group.add_argument('--task_regex', default='^attack$')
+    group.add_argument('--task_regex', default='.*') #default='^attack$')
     group.add_argument('--seed', type=int, default=42)
     group.add_argument('--frames_without_attack_threshold', default=None, type=int)
 

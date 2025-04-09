@@ -416,6 +416,7 @@ class ObjectEmbedding(BaseFeaturesExtractor):
         embedding_dim: int = 64,
         features_dim: int = 64,
         pooling: str = 'mean',
+        **kwargs
     ) -> None:
         super().__init__(observation_space, features_dim)
 
@@ -652,7 +653,8 @@ class ChunkedEmbedding(nn.Module):
             # if this is the first time we've seen the chunk_id,
             # we create a new embedding
             if chunk_id_str not in self.chunk_embeddings:
-                logging.info(f'ChunkedEmbedding: chunk_id={chunk_id} not in self.chunk_embeddings; creating new embedding')
+                logging.info(f'ChunkedEmbedding: chunk_id_str={chunk_id_str} not in self.chunk_embeddings; creating new embedding')
+                logging.info(f'ChunkedEmbedding: keys={self.chunk_embeddings.keys()}')
                 self.chunk_embeddings[chunk_id_str] = nn.Embedding(self.chunk_size, self.embedding_dim).to(ids.device)
 
             # update the output tensor with the embeddings from this chunk
@@ -665,6 +667,24 @@ class ChunkedEmbedding(nn.Module):
         output = flat_output.reshape(output_shape)
 
         return output
+
+    def _load_from_state_dict(self, state_dict, *args, **kwargs):
+        '''
+        This function is used internally by pytorch to load a Module from a file.
+        Normally it is not necessary to overload this function,
+        but we must overload it because we are modifying self.chunk_embeddings in forward().
+        ModuleDict will raise an error if we load a dictionary with keys that it does not know about.
+        Normally these keys are only specified in the __init__ function,
+        but we are dynamically adding keys in the forward function.
+        To ensure these keys get added to the model loading and do not result in an error,
+        we add the keys to the ModuleDict before calling the built-in load function.
+        '''
+        for key in state_dict.keys():
+            chunk_id_str = key.split('.')[-2]
+            if chunk_id_str not in self.chunk_embeddings:
+                logging.debug(f'ChunkedEmbedding: chunk_id_str={chunk_id_str} not in self.chunk_embeddings; creating new embedding')
+                self.chunk_embeddings[chunk_id_str] = nn.Embedding(self.chunk_size, self.embedding_dim)
+        super()._load_from_state_dict(state_dict, *args, **kwargs)
 
 
 ################################################################################

@@ -267,7 +267,7 @@ def main():
     # set experiment name
     nondefault_params = [f'comment={args.comment}']
     for arg, value in sorted(vars(args).items()):
-        if arg == 'comment':
+        if arg in ['comment', 'log_dir']:
             continue
         default = parser.get_default(arg)
         if value != default:
@@ -379,7 +379,6 @@ def main():
     else:
         assert False, "bad args.policy"
 
-
     if args.alg == 'ppo':
         model = stable_baselines3.PPO(
             policy=ActorCriticCnnPolicy,
@@ -447,6 +446,8 @@ def main():
             TensorboardCallback(record_every=None if args.disable_video or args.render_mode=='human' else 1),
             ],
     )
+    save_path = args.log_dir + '/' + experiment_name + '/' + 'final_model'
+    model.save(save_path)
 
     # cleanly close resources
     train_env.close()

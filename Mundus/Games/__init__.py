@@ -1,5 +1,6 @@
 import copy
 import glob
+import importlib
 import logging
 import math
 import numpy as np
@@ -76,6 +77,10 @@ def make_game_env(
     kwargs['kb_kwargs']['center_player'] = center_player
     kwargs['kb_kwargs']['background_items'] = background_items
     kwargs['kb_kwargs']['game_name'] = game
+
+    game_module = None
+    game_module = importlib.import_module(f'Mundus.Games.{game}')
+
     if fork_emulator:
         env = ForkedRetroEnv(env)
     if 'Zelda' in game:
@@ -85,7 +90,7 @@ def make_game_env(
             env = Agent(env, SimpleNavigator, RandomObjective)
             env = UnstickLink(env)
     else:
-        env = RetroKB(env, **kwargs)
+        env = RetroKB(env, game_module=game_module, **kwargs)
 
     if reset_state is not None:
         path = f'custom_integrations/{env.unwrapped.gamename}'

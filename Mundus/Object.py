@@ -647,8 +647,7 @@ class ChunkedEmbedding(nn.Module):
             # FIXME:
             # SB3 converts all the inputs into torch.float32 for some reason;
             # this is my hacky way of getting back to a string;
-            # this will result in LOTS of collisions
-            chunk_id_str = str(chunk_id).replace('.', '')
+            chunk_id_str = str(chunk_id).replace('.', '_')
 
             # if this is the first time we've seen the chunk_id,
             # we create a new embedding

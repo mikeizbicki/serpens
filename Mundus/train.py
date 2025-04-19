@@ -21,6 +21,7 @@ import torch
 
 from Mundus.Wrappers import *
 from Mundus.Games import *
+import Mundus.Train.Funky
 
 
 class SaveOnBestTrainingRewardCallback(BaseCallback):
@@ -304,7 +305,7 @@ def main():
     # this ensures that changing args.seed=0 to args.seed=1 doesn't result in many
     # environments with duplicate seeds
     train_env = SubprocVecEnv([lambda seed=seed: make_env((seed*134775813+1)%(2**31)) for seed in range(args.n_env)])
-    train_env = VecMonitor(train_env)
+    train_env = Mundus.Train.Funky.VecMonitor(train_env)
     train_env.reset()
 
     policy_kwargs = {
@@ -380,8 +381,9 @@ def main():
         assert False, "bad args.policy"
 
     if args.alg == 'ppo':
-        model = stable_baselines3.PPO(
-            policy=ActorCriticCnnPolicy,
+        model = Mundus.Train.Funky.PPO(
+            #policy=ActorCriticPolicy,
+            policy=Mundus.Train.Funky.ActorCriticPolicy,
             env=train_env,
             learning_rate=args.lr,
             n_steps=args.n_steps,

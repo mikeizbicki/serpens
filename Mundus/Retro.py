@@ -95,6 +95,8 @@ class ForkedRetroEnv(gymnasium.Wrapper):
                 elif message_in['method'] == 'reset':
                     message_out['return'] = env.reset()
                 message_out['ram'] = env.get_ram()
+                message_out['state'] = env.em.get_state()
+                message_out['screen'] = env.em.get_screen()
                 message_out['img'] = env.img
                 message_out['audio'] = self.env.unwrapped.em.get_audio()
                 self.qout.put(message_out)
@@ -113,6 +115,8 @@ class ForkedRetroEnv(gymnasium.Wrapper):
         # these will be updated by the ._update_state() method
         # when we poll the emulator worker for the current state
         self._internal_ram = oldenv.get_ram()
+        self._internal_state = oldenv.em.get_state()
+        self._internal_screen = oldenv.em.get_screen()
         self._internal_audio = np.array([])
         self._internal_audio_rate = oldenv.em.get_audio_rate()
 
@@ -133,6 +137,8 @@ class ForkedRetroEnv(gymnasium.Wrapper):
         self.env.render_mode = oldenv.render_mode
         self.env.viewer = oldenv.viewer
 
+        self.env.em.get_screen = lambda: self._internal_screen
+        self.env.em.get_state = lambda: self._internal_state
         def _set_button_mask(a, b):
             self._internal_button_mask = (a, b)
         self.env.em.set_button_mask = _set_button_mask
@@ -152,6 +158,8 @@ class ForkedRetroEnv(gymnasium.Wrapper):
     def _update_state(self, message_out):
         self.env.img = message_out['img']
         self._internal_ram = message_out['ram']
+        self._internal_screen = message_out['screen']
+        self._internal_state = message_out['state']
         self._internal_audio = message_out['audio']
 
     def step(self, action):
@@ -257,7 +265,6 @@ class RetroWithRam(gymnasium.Wrapper):
         self.ram.em_state = self.unwrapped.em.get_state()
         self.ram.screen = self.unwrapped.em.get_screen()
         return obs, info
-
 
 class RetroKB(RetroWithRam):
 
@@ -469,6 +476,8 @@ class RetroKB(RetroWithRam):
         kb_obs = kb.to_observation()
         task = self.tasks[self.episode_task]
         kb_obs['rewards'] = np.array([task['reward'].get(k, 0) for k in sorted(kb.events)])
+        event_multiset = MultiSet(kb.events)
+        reward_array = MultiSet({k: v*task['reward'].get(k, 0.0) + v*task['pseudoreward'].get(k, 0.0) for k,v in event_multiset.items()}).to_array()
         
         # register events
         for event in kb.events:
@@ -492,6 +501,9 @@ class RetroKB(RetroWithRam):
             pseudoreward_multiset = MultiSet({k: v * event_multiset[k] for k, v in task['pseudoreward'].items()})
             reward = sum(reward_multiset.values())
             pseudoreward = sum(pseudoreward_multiset.values())
+
+            reward_array = MultiSet({k: v*task['reward'].get(k, 0.0) + v*task['pseudoreward'].get(k, 0.0) for k,v in event_multiset.items()}).to_array()
+
             self.episode_reward += reward
             self.episode_pseudoreward += pseudoreward
             self.episode_event_multiset += event_multiset
@@ -657,7 +669,10 @@ class RetroKB(RetroWithRam):
 
         self._run_register_text_callbacks()
 
-        return kb_obs, reward + pseudoreward, terminated, truncated, info
+        # FIXME
+        # return kb_obs, reward + pseudoreward, terminated, truncated, info
+
+        return kb_obs, reward_array, terminated, truncated, info
 
     ########################################
     # MARK: functions for mouse manipulation
@@ -1009,11 +1024,15 @@ def generate_knowledge_base(ram, ram2, **kwargs):
 
     # add events
     kb.events = get_events(ram, ram2)
-    if kwargs['game_module']:
+    if kwargs['game_module'] and hasattr(kwargs['game_module'], 'get_events'):
         kb.events |= kwargs['game_module'].get_events(ram, ram2)
 
     return kb
 
+
+################################################################################
+# MARK: events
+################################################################################
 
 def get_events(ram, ram2):
     prefix = '_event_'
@@ -1028,6 +1047,9 @@ def get_events(ram, ram2):
         else:
             ret[event_name[len(prefix):]] = 0
     return ret
+
+#def _event_player_onmouse(ram, ram2):
+    #return int(_ramstate_link_onmouse(ram) and not _ramstate_link_onmouse(ram2))
 
 
 ################################################################################

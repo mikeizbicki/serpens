@@ -10,3 +10,6 @@
 [submodule "stable-baselines3"]
 	path = stable-baselines3
 	url = https://github.com/DLR-RM/stable-baselines3
+[submodule "stable-baselines3-contrib"]
+	path = stable-baselines3-contrib
+	url = https://github.com/Stable-Baselines-Team/stable-baselines3-contrib

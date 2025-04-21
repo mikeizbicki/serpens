@@ -75,7 +75,7 @@ class StochasticFrameSkip(gymnasium.Wrapper):
     def step(self, ac):
         terminated = False
         truncated = False
-        totrew = 0
+        totrew = 0.0
         for i in range(self.n):
             # First step after reset, use action
             if self.curac is None:

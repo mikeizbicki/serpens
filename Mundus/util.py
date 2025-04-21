@@ -1,6 +1,7 @@
 import shutil
 from collections import defaultdict
 from typing import Dict, Union, Any
+import numpy as np
 
 
 def find_Wrapper(wrapped_env, wrapper_class):
@@ -24,6 +25,10 @@ class MultiSet:
                 for item in init_data:
                     self.data[item] += 1
 
+    def to_array(self):
+        sorted_values = [v for k,v in sorted(self.data.items())]
+        return np.array(sorted_values)
+
     def keys(self):
         return self.data.keys()
 
@@ -38,6 +43,9 @@ class MultiSet:
 
     def copy(self):
         return MultiSet(self.data.copy())
+
+    def __len__(self) -> int:
+        return self.data.__len__()
 
     def __getitem__(self, key: Any) -> int:
         return self.data[key]
